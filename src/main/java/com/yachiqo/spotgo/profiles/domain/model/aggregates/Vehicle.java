@@ -1,49 +1,60 @@
 package com.yachiqo.spotgo.profiles.domain.model.aggregates;
 
-import com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.entities.UuidIdentifiedAggregateRoot;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import com.yachiqo.spotgo.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
+import com.yachiqo.spotgo.profiles.domain.model.valueobjects.VehicleStatus;
+import static com.yachiqo.spotgo.profiles.domain.model.valueobjects.ProfileText.required;
+import jakarta.persistence.*;
 import lombok.Getter;
+import java.time.Instant;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
-@Table(name = "vehicles", indexes = {
-    @Index(name = "idx_vehicle_clientId", columnList = "clientId")
-})
+@Table(name = "vehicles")
 @Getter
-public class Vehicle extends UuidIdentifiedAggregateRoot<Vehicle> {
-
-    @Column(nullable = false)
-    private String clientId;
-
-    @Column(nullable = false)
-    private String licensePlate;
-
-    @Column(nullable = false)
-    private String vehicleType;
-
-    @Column(nullable = false)
-    private String brand;
-
-    @Column(nullable = false)
+public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "vehicle_id", nullable = false, updatable = false)
+    private UUID id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "profile_id", nullable = false, updatable = false)
+    private Profile profile;
+    @Column(name = "plate", unique = true)
+    private String plate;
+    @Column(name = "make", nullable = false)
+    private String make;
+    @Column(name = "model", nullable = false)
     private String model;
+    @Column(name = "color", nullable = false)
+    private String color;
+    @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false)
+    private VehicleStatus status;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 
-    protected Vehicle() {
+    protected Vehicle() {}
+    public Vehicle(Profile profile, String plate, String make, String model, String color) {
+        this.profile = Objects.requireNonNull(profile, "El perfil es obligatorio");
+        this.plate = normalizePlate(plate);
+        this.make = required(make, "Marca");
+        this.model = required(model, "Modelo");
+        this.color = required(color, "Color");
+        this.status = VehicleStatus.ACTIVE;
     }
-
-    public Vehicle(String clientId, String licensePlate, String vehicleType, String brand, String model) {
-        this.clientId = clientId;
-        this.licensePlate = licensePlate;
-        this.vehicleType = vehicleType;
-        this.brand = brand;
-        this.model = model;
+    public UUID getProfileId() { return profile.getId(); }
+    public static String normalizePlate(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toUpperCase(Locale.ROOT);
     }
-
-    public void update(String licensePlate, String vehicleType, String brand, String model) {
-        if (licensePlate != null) this.licensePlate = licensePlate;
-        if (vehicleType != null) this.vehicleType = vehicleType;
-        if (brand != null) this.brand = brand;
-        if (model != null) this.model = model;
+    public void update(String plate, String make, String model, String color, VehicleStatus status) {
+        if (plate != null) this.plate = normalizePlate(plate);
+        if (make != null) this.make = required(make, "Marca");
+        if (model != null) this.model = required(model, "Modelo");
+        if (color != null) this.color = required(color, "Color");
+        if (status != null) this.status = status;
     }
+    @PrePersist protected void onCreate() { createdAt = updatedAt = Instant.now(); }
+    @PreUpdate protected void onUpdate() { updatedAt = Instant.now(); }
 }

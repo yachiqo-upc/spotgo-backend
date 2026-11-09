@@ -1,3077 +1,875 @@
-﻿{
-    "users": [
+{
+  "accounts": [
+    {
+      "account_id": "00000000-0000-4000-8000-000000000001",
+      "email": "ana.admin@example.com",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "account_id": "00000000-0000-4000-8000-000000000002",
+      "email": "juan.driver@example.com",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "account_id": "00000000-0000-4000-8000-000000000003",
+      "email": "sofia.driver@example.com",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "credentials": [
+    {
+      "credential_id": "00000000-0000-4000-8000-000000000101",
+      "account_id": "00000000-0000-4000-8000-000000000001",
+      "authentication_method": "PASSWORD",
+      "secret_hash": "${DEMO_PASSWORD_HASH}",
+      "external_subject": null,
+      "last_used_at": null,
+      "status": "ACTIVE"
+    },
+    {
+      "credential_id": "00000000-0000-4000-8000-000000000102",
+      "account_id": "00000000-0000-4000-8000-000000000002",
+      "authentication_method": "PASSWORD",
+      "secret_hash": "${DEMO_PASSWORD_HASH}",
+      "external_subject": null,
+      "last_used_at": null,
+      "status": "ACTIVE"
+    },
+    {
+      "credential_id": "00000000-0000-4000-8000-000000000103",
+      "account_id": "00000000-0000-4000-8000-000000000003",
+      "authentication_method": "PASSWORD",
+      "secret_hash": "${DEMO_PASSWORD_HASH}",
+      "external_subject": null,
+      "last_used_at": null,
+      "status": "ACTIVE"
+    }
+  ],
+  "tenants": [
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "name": "Parking Sol - Demo",
+      "status": "ACTIVE",
+      "contact_data": {
+        "email": "ana.admin@example.com",
+        "phone": "900000001"
+      },
+      "coordinates": {
+        "latitude": -12.0464,
+        "longitude": -77.0428
+      },
+      "address": "Av. Demo 123, Lima",
+      "rules": {
+        "tariff_rules": {
+          "period_minutes": 60,
+          "price_per_period": 5,
+          "rounding": "CEILING"
+        },
+        "overstay_tolerance_minutes": 5,
+        "lock_duration_minutes": 10,
+        "allocation_rules": {},
+        "coexistence_rules": [
+          "Velocidad máxima de 10 km/h",
+          "No bloquear las vías de circulación"
+        ]
+      },
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "role_assignments": [
+    {
+      "assignment_id": "00000000-0000-4000-8000-000000000111",
+      "account_id": "00000000-0000-4000-8000-000000000001",
+      "role_type": "PARKING_ADMIN",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "valid_from": "2026-11-09T07:00:00Z",
+      "valid_to": null,
+      "status": "ACTIVE"
+    },
+    {
+      "assignment_id": "00000000-0000-4000-8000-000000000112",
+      "account_id": "00000000-0000-4000-8000-000000000002",
+      "role_type": "DRIVER",
+      "tenant_id": null,
+      "valid_from": "2026-11-09T07:00:00Z",
+      "valid_to": null,
+      "status": "ACTIVE"
+    },
+    {
+      "assignment_id": "00000000-0000-4000-8000-000000000113",
+      "account_id": "00000000-0000-4000-8000-000000000003",
+      "role_type": "DRIVER",
+      "tenant_id": null,
+      "valid_from": "2026-11-09T07:00:00Z",
+      "valid_to": null,
+      "status": "ACTIVE"
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "00000000-0000-4000-8000-000000000011",
+      "account_id": "00000000-0000-4000-8000-000000000001",
+      "first_name": "Ana",
+      "last_name": "Demo",
+      "phone": "900000001",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "account_id": "00000000-0000-4000-8000-000000000002",
+      "first_name": "Juan",
+      "last_name": "Demo",
+      "phone": "900000002",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "profile_id": "00000000-0000-4000-8000-000000000013",
+      "account_id": "00000000-0000-4000-8000-000000000003",
+      "first_name": "Sofia",
+      "last_name": "Demo",
+      "phone": "900000003",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "vehicles": [
+    {
+      "vehicle_id": "00000000-0000-4000-8000-000000000051",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "plate": "DEM-101",
+      "make": "Toyota",
+      "model": "Yaris",
+      "color": "Azul",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "vehicle_id": "00000000-0000-4000-8000-000000000052",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "plate": "DEM-102",
+      "make": "Kia",
+      "model": "Rio",
+      "color": "Rojo",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "vehicle_id": "00000000-0000-4000-8000-000000000053",
+      "profile_id": "00000000-0000-4000-8000-000000000013",
+      "plate": "DEM-103",
+      "make": "Hyundai",
+      "model": "Accent",
+      "color": "Gris",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "driver_classifications": [
+    {
+      "classification_id": "00000000-0000-4000-8000-000000000061",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "profile_type": "EMPLOYEE",
+      "assigned_by": "00000000-0000-4000-8000-000000000011",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "classification_id": "00000000-0000-4000-8000-000000000062",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "profile_id": "00000000-0000-4000-8000-000000000013",
+      "profile_type": "PRIVATE",
+      "assigned_by": "00000000-0000-4000-8000-000000000011",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "sessions": [
+    {
+      "session_id": "00000000-0000-4000-8000-000000000121",
+      "account_id": "00000000-0000-4000-8000-000000000002",
+      "refresh_token_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "created_at": "2026-11-08T07:00:00Z",
+      "expires_at": "2026-11-09T07:00:00Z",
+      "last_activity_at": "2026-11-08T08:00:00Z",
+      "status": "REVOKED",
+      "revoked_at": "2026-11-08T08:00:00Z"
+    }
+  ],
+  "audit_entries": [
+    {
+      "audit_id": "00000000-0000-4000-8000-000000000131",
+      "account_id": "00000000-0000-4000-8000-000000000002",
+      "action": "SIGN_IN",
+      "result": "SUCCESS",
+      "source": "DEMO_SEED",
+      "occurred_at": "2026-11-09T07:00:00Z",
+      "correlation_id": "demo-sign-in-001"
+    },
+    {
+      "audit_id": "00000000-0000-4000-8000-000000000132",
+      "account_id": null,
+      "action": "SIGN_IN",
+      "result": "FAILURE",
+      "source": "DEMO_SEED",
+      "occurred_at": "2026-11-09T07:00:00Z",
+      "correlation_id": "demo-sign-in-002"
+    }
+  ],
+  "parking_zones": [
+    {
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "name": "Piso1-A",
+      "location": {
+        "reference": "Primer piso, acceso principal"
+      },
+      "color_code": "#1976D2",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "name": "Piso2-A",
+      "location": {
+        "reference": "Segundo piso, rampa derecha"
+      },
+      "color_code": "#43A047",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "parking_spots": [
+    {
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "code": "A-01",
+      "spot_type": "STANDARD",
+      "features": {
+        "covered": true,
+        "ev_charger": false
+      },
+      "operational_status": "ACTIVE"
+    },
+    {
+      "spot_id": "00000000-0000-4000-8000-000000000042",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "code": "A-02",
+      "spot_type": "STANDARD",
+      "features": {
+        "covered": true,
+        "ev_charger": false
+      },
+      "operational_status": "ACTIVE"
+    },
+    {
+      "spot_id": "00000000-0000-4000-8000-000000000043",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "code": "A-01",
+      "spot_type": "STANDARD",
+      "features": {
+        "covered": true,
+        "ev_charger": false
+      },
+      "operational_status": "ACTIVE"
+    },
+    {
+      "spot_id": "00000000-0000-4000-8000-000000000044",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "code": "A-02",
+      "spot_type": "STANDARD",
+      "features": {
+        "covered": true,
+        "ev_charger": false
+      },
+      "operational_status": "ACTIVE"
+    }
+  ],
+  "floor_plans": [
+    {
+      "floor_plan_id": "00000000-0000-4000-8000-000000000141",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "version": 1,
+      "file_reference": "demo://croquis/piso1-a",
+      "status": "PUBLISHED",
+      "published_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "floor_plan_id": "00000000-0000-4000-8000-000000000142",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "version": 1,
+      "file_reference": "demo://croquis/piso2-a",
+      "status": "PUBLISHED",
+      "published_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "digital_parking_maps": [
+    {
+      "map_id": "00000000-0000-4000-8000-000000000151",
+      "floor_plan_id": "00000000-0000-4000-8000-000000000141",
+      "version": 1,
+      "elements": [
         {
-            "id": "f1760096-0ed9-4239-9977-f410f4e1849b",
-            "firstName": "Piero",
-            "lastName": "Quiroz Montoya",
-            "email": "piero.quiroz@spotgo.com",
-            "phone": "+51 999 111 222",
-            "password": "Password123!",
-            "role": "admin"
+          "spot_id": "00000000-0000-4000-8000-000000000041",
+          "x": 10,
+          "y": 10
         },
         {
-            "id": "059d28dd-19fb-4bf1-ba25-1ae51d8a337b",
-            "firstName": "Juan",
-            "lastName": "Quispe Mamani",
-            "email": "juan.quispe@spotgo.com",
-            "phone": "+51 999 333 444",
-            "password": "Password123!",
-            "role": "admin"
-        },
-        {
-            "id": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "firstName": "María",
-            "lastName": "García López",
-            "email": "maria.garcia@gmail.com",
-            "phone": "+51 988 777 666",
-            "password": "Password123!",
-            "role": "client"
-        },
-        {
-            "id": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "firstName": "Carlos",
-            "lastName": "Mendoza Torres",
-            "email": "carlos.mendoza@gmail.com",
-            "phone": "+51 977 555 444",
-            "password": "Password123!",
-            "role": "client"
-        },
-        {
-            "id": "a79ea5b5-83bb-4575-9127-8ca921773d7e",
-            "firstName": "Ricardo",
-            "lastName": "Vargas Ponce",
-            "email": "ricardo.vargas@spotgo.com",
-            "phone": "+51 999 555 666",
-            "password": "Password123!",
-            "role": "admin"
-        },
-        {
-            "id": "5ebd73fb-fa97-4061-aaa2-036d108a6e48",
-            "firstName": "Lucía",
-            "lastName": "Fernández Rojas",
-            "email": "lucia.fernandez@spotgo.com",
-            "phone": "+51 999 777 888",
-            "password": "Password123!",
-            "role": "admin"
+          "spot_id": "00000000-0000-4000-8000-000000000042",
+          "x": 30,
+          "y": 10
         }
-    ],
-    "parkings": [
+      ],
+      "status": "PUBLISHED",
+      "generated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "map_id": "00000000-0000-4000-8000-000000000152",
+      "floor_plan_id": "00000000-0000-4000-8000-000000000142",
+      "version": 1,
+      "elements": [
         {
-            "id": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "adminId": "f1760096-0ed9-4239-9977-f410f4e1849b",
-            "name": "Parking Central Lima",
-            "address": "Av. Javier Prado Este 123, San Isidro",
-            "city": "Lima",
-            "totalSpaces": 28,
-            "availableSpaces": 27,
-            "totalFloors": 1,
-            "averageOccupancy": 84.2,
-            "occupancyTrendPercent": 5.3,
-            "peakHour": "14:00",
-            "totalRevenue": 4200,
-            "systemStatus": "active",
-            "rating": 1,
-            "pricePerHour": 3,
-            "revenueTrendPercent": 8.7,
-            "totalCapacity": 120,
-            "efficiencyIndex": 92.5
+          "spot_id": "00000000-0000-4000-8000-000000000043",
+          "x": 10,
+          "y": 10
         },
         {
-            "id": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "adminId": "059d28dd-19fb-4bf1-ba25-1ae51d8a337b",
-            "name": "Parking Miraflores",
-            "address": "Calle Berlín 450, Miraflores",
-            "city": "Lima",
-            "totalSpaces": 28,
-            "availableSpaces": 27,
-            "totalFloors": 1,
-            "averageOccupancy": 72.5,
-            "occupancyTrendPercent": 5.2,
-            "peakHour": "12:00",
-            "totalRevenue": 2800,
-            "systemStatus": "active",
-            "rating": 3,
-            "pricePerHour": 2.8,
-            "revenueTrendPercent": 8.6,
-            "totalCapacity": 112,
-            "efficiencyIndex": 92.6
-        },
-        {
-            "id": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "adminId": "a79ea5b5-83bb-4575-9127-8ca921773d7e",
-            "name": "Parking San Borja",
-            "address": "Av. San Luis 2145, San Borja",
-            "city": "Lima",
-            "totalSpaces": 28,
-            "availableSpaces": 27,
-            "totalFloors": 1,
-            "averageOccupancy": 68.4,
-            "occupancyTrendPercent": 4.1,
-            "peakHour": "13:00",
-            "totalRevenue": 3150,
-            "systemStatus": "active",
-            "rating": 4.2,
-            "pricePerHour": 3.2,
-            "revenueTrendPercent": 6.4,
-            "totalCapacity": 96,
-            "efficiencyIndex": 88.7
-        },
-        {
-            "id": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "adminId": "5ebd73fb-fa97-4061-aaa2-036d108a6e48",
-            "name": "Parking Barranco",
-            "address": "Jr. Unión 318, Barranco",
-            "city": "Lima",
-            "totalSpaces": 28,
-            "availableSpaces": 27,
-            "totalFloors": 1,
-            "averageOccupancy": 76.9,
-            "occupancyTrendPercent": 7.2,
-            "peakHour": "19:00",
-            "totalRevenue": 3890,
-            "systemStatus": "active",
-            "rating": 4.5,
-            "pricePerHour": 3.6,
-            "revenueTrendPercent": 9.1,
-            "totalCapacity": 104,
-            "efficiencyIndex": 91.3
+          "spot_id": "00000000-0000-4000-8000-000000000044",
+          "x": 30,
+          "y": 10
         }
-    ],
-    "employees": [
-        {
-            "id": "b519febd-2ebb-4f76-a774-a07af2b37626",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "firstName": "Piero",
-            "lastName": "Quiroz Montoya",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "09:00",
-            "shiftEnd": "17:00",
-            "status": "on-duty"
-        },
-        {
-            "id": "d49768f5-ffd4-41b3-9860-e9f29dfd7454",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "firstName": "Juan",
-            "lastName": "Quispe Mamani",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "09:00",
-            "shiftEnd": "17:00",
-            "assignedSpot": "D7",
-            "status": "on-duty"
-        },
-        {
-            "id": "581328d6-3d5c-43e3-9464-a6c9f74231c8",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "firstName": "Jesus Andres",
-            "lastName": "Sideral Carreon",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "05:00",
-            "shiftEnd": "23:00",
-            "status": "off-duty"
-        },
-        {
-            "id": "5b88dbd0-644e-4502-960e-717b40be09fc",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "firstName": "Hermenegildo",
-            "lastName": "Villanueva",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "05:00",
-            "shiftEnd": "23:00",
-            "status": "off-duty"
-        },
-        {
-            "id": "e7f0ff06-94ba-43f2-8741-4f2372832eba",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "firstName": "Gabriel",
-            "lastName": "Yanac Villafuente",
-            "role": "cleaning-personnel",
-            "schedule": "all-week",
-            "shiftStart": "09:00",
-            "shiftEnd": "21:00",
-            "status": "on-duty"
-        },
-        {
-            "id": "0a3ddaa7-5204-4a5e-95b6-4c54d4720941",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "firstName": "Andrea",
-            "lastName": "Salazar Rojas",
-            "role": "guard",
-            "schedule": "weekdays",
-            "shiftStart": "07:00",
-            "shiftEnd": "15:00",
-            "assignedSpot": "C2",
-            "status": "on-duty"
-        },
-        {
-            "id": "0d1d8a68-78fd-4d0d-a3d3-b7f874bd97d4",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "firstName": "Luis",
-            "lastName": "Paredes Núñez",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "12:00",
-            "shiftEnd": "20:00",
-            "status": "on-duty"
-        },
-        {
-            "id": "934318f0-b8f2-464f-93d5-e49365f33da7",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "firstName": "Rosa",
-            "lastName": "Vega Campos",
-            "role": "cleaning-personnel",
-            "schedule": "all-week",
-            "shiftStart": "06:00",
-            "shiftEnd": "14:00",
-            "status": "off-duty"
-        },
-        {
-            "id": "a1b2c3d4-e5f6-7890-abcd-100000000001",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "firstName": "Ana Lucía",
-            "lastName": "Flores Quispe",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "07:00",
-            "shiftEnd": "15:00",
-            "assignedSpot": "A1",
-            "status": "on-duty"
-        },
-        {
-            "id": "a1b2c3d4-e5f6-7890-abcd-100000000002",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "firstName": "Miguel Ángel",
-            "lastName": "Torres Ríos",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "14:00",
-            "shiftEnd": "22:00",
-            "assignedSpot": "B4",
-            "status": "on-duty"
-        },
-        {
-            "id": "a1b2c3d4-e5f6-7890-abcd-100000000003",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "firstName": "Rosa Elena",
-            "lastName": "Medina Vega",
-            "role": "cleaning-personnel",
-            "schedule": "weekdays",
-            "shiftStart": "06:00",
-            "shiftEnd": "14:00",
-            "assignedSpot": "C3",
-            "status": "off-duty"
-        },
-        {
-            "id": "a1b2c3d4-e5f6-7890-abcd-100000000004",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "firstName": "Pedro Luis",
-            "lastName": "Gutiérrez Soto",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "08:00",
-            "shiftEnd": "16:00",
-            "assignedSpot": "B6",
-            "status": "on-duty"
-        },
-        {
-            "id": "a1b2c3d4-e5f6-7890-abcd-100000000005",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "firstName": "Sofía Alejandra",
-            "lastName": "Castillo Luna",
-            "role": "guard",
-            "schedule": "all-week",
-            "shiftStart": "16:00",
-            "shiftEnd": "00:00",
-            "assignedSpot": "D2",
-            "status": "on-duty"
-        },
-        {
-            "id": "a1b2c3d4-e5f6-7890-abcd-100000000006",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "firstName": "Juan Carlos",
-            "lastName": "Mendoza Paredes",
-            "role": "cleaning-personnel",
-            "schedule": "all-week",
-            "shiftStart": "07:00",
-            "shiftEnd": "19:00",
-            "assignedSpot": "A7",
-            "status": "on-duty"
-        }
-    ],
-    "reservations": [
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017001",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-1A2B3C",
-            "spot": "A1",
-            "startDate": "2026-07-02T08:00:00.000",
-            "endDate": "2026-07-02T10:00:00.000",
-            "status": "completed",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017002",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-4D5E6F",
-            "spot": "B2",
-            "startDate": "2026-07-02T13:00:00.000",
-            "endDate": "2026-07-02T16:00:00.000",
-            "status": "completed",
-            "amount": 9,
-            "baseAmount": 9,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017003",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-7G8H9I",
-            "spot": "A2",
-            "startDate": "2026-07-03T07:30:00.000",
-            "endDate": "2026-07-03T09:30:00.000",
-            "status": "completed",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017004",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-1J2K3L",
-            "spot": "C3",
-            "startDate": "2026-07-03T12:00:00.000",
-            "endDate": "2026-07-03T14:00:00.000",
-            "status": "completed",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017005",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-4M5N6O",
-            "spot": "D2",
-            "startDate": "2026-07-04T10:00:00.000",
-            "endDate": "2026-07-04T13:00:00.000",
-            "status": "completed",
-            "amount": 9,
-            "baseAmount": 9,
-            "rating": 4
-        },
-        {
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017006",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-7P8Q9R",
-            "spot": "B7",
-            "startDate": "2026-07-04T18:00:00.000",
-            "endDate": "2026-07-04T21:00:00.000",
-            "status": "completed",
-            "amount": 9,
-            "baseAmount": 9,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017007",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-1S2T3U",
-            "spot": "A3",
-            "startDate": "2026-07-05T09:00:00.000",
-            "endDate": "2026-07-05T11:00:00.000",
-            "status": "completed",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017008",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-4V5W6X",
-            "spot": "C6",
-            "startDate": "2026-07-05T14:00:00.000",
-            "endDate": "2026-07-05T17:00:00.000",
-            "status": "completed",
-            "amount": 9,
-            "baseAmount": 9,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017009",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-7Y8Z1A",
-            "spot": "B1",
-            "startDate": "2026-07-06T08:00:00.000",
-            "endDate": "2026-07-06T12:00:00.000",
-            "status": "completed",
-            "amount": 12,
-            "baseAmount": 12,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017010",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-2B3C4D",
-            "spot": "D7",
-            "startDate": "2026-07-06T17:00:00.000",
-            "endDate": "2026-07-06T19:00:00.000",
-            "status": "completed",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017011",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-5E6F7G",
-            "spot": "C8",
-            "startDate": "2026-07-07T11:00:00.000",
-            "endDate": "2026-07-07T15:00:00.000",
-            "status": "completed",
-            "amount": 12,
-            "baseAmount": 12,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017012",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-8H9I1J",
-            "spot": "A6",
-            "startDate": "2026-07-07T19:00:00.000",
-            "endDate": "2026-07-07T21:00:00.000",
-            "status": "cancelled",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017013",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-2K3L4M",
-            "spot": "B6",
-            "startDate": "2026-07-08T08:00:00.000",
-            "endDate": "2026-07-08T10:00:00.000",
-            "status": "active",
-            "amount": 6,
-            "baseAmount": 6,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017014",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "code": "SPG-5N6O7P",
-            "spot": "D8",
-            "startDate": "2026-07-08T13:00:00.000",
-            "endDate": "2026-07-08T16:00:00.000",
-            "status": "active",
-            "amount": 9,
-            "baseAmount": 9,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017015",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-8Q9R1S",
-            "spot": "A5",
-            "startDate": "2026-07-02T09:00:00.000",
-            "endDate": "2026-07-02T11:00:00.000",
-            "status": "completed",
-            "amount": 5.6,
-            "baseAmount": 5.6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017016",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-2T3U4V",
-            "spot": "B6",
-            "startDate": "2026-07-03T12:00:00.000",
-            "endDate": "2026-07-03T15:00:00.000",
-            "status": "completed",
-            "amount": 8.4,
-            "baseAmount": 8.4,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017017",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-5W6X7Y",
-            "spot": "C7",
-            "startDate": "2026-07-04T17:00:00.000",
-            "endDate": "2026-07-04T20:00:00.000",
-            "status": "completed",
-            "amount": 8.4,
-            "baseAmount": 8.4,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017018",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-8Z1A2B",
-            "spot": "D3",
-            "startDate": "2026-07-05T08:00:00.000",
-            "endDate": "2026-07-05T10:00:00.000",
-            "status": "active",
-            "amount": 5.6,
-            "baseAmount": 5.6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017019",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-3C4D5E",
-            "spot": "A8",
-            "startDate": "2026-07-06T14:00:00.000",
-            "endDate": "2026-07-06T18:00:00.000",
-            "status": "completed",
-            "amount": 11.2,
-            "baseAmount": 11.2,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017020",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-6F7G8H",
-            "spot": "B2",
-            "startDate": "2026-07-07T10:00:00.000",
-            "endDate": "2026-07-07T12:00:00.000",
-            "status": "completed",
-            "amount": 5.6,
-            "baseAmount": 5.6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017021",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-9I1J2K",
-            "spot": "C1",
-            "startDate": "2026-07-08T09:00:00.000",
-            "endDate": "2026-07-08T12:00:00.000",
-            "status": "active",
-            "amount": 8.4,
-            "baseAmount": 8.4,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017022",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "code": "SPG-3L4M5N",
-            "spot": "D6",
-            "startDate": "2026-07-08T18:00:00.000",
-            "endDate": "2026-07-08T22:00:00.000",
-            "status": "active",
-            "amount": 11.2,
-            "baseAmount": 11.2,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017023",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-001",
-            "spot": "A1",
-            "startDate": "2026-07-02T08:00:00.000",
-            "endDate": "2026-07-02T10:00:00.000",
-            "status": "completed",
-            "amount": 6.4,
-            "baseAmount": 6.4,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017024",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-002",
-            "spot": "B3",
-            "startDate": "2026-07-03T09:00:00.000",
-            "endDate": "2026-07-03T11:30:00.000",
-            "status": "completed",
-            "amount": 8,
-            "baseAmount": 8,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017025",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-003",
-            "spot": "C5",
-            "startDate": "2026-07-03T14:00:00.000",
-            "endDate": "2026-07-03T15:00:00.000",
-            "status": "completed",
-            "amount": 3.2,
-            "baseAmount": 3.2,
-            "rating": 3
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017026",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-004",
-            "spot": "A6",
-            "startDate": "2026-07-04T10:00:00.000",
-            "endDate": "2026-07-04T14:00:00.000",
-            "status": "completed",
-            "amount": 12.8,
-            "baseAmount": 12.8,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017027",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-005",
-            "spot": "B2",
-            "startDate": "2026-07-05T07:00:00.000",
-            "endDate": "2026-07-05T09:00:00.000",
-            "status": "completed",
-            "amount": 6.4,
-            "baseAmount": 6.4,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017028",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-006",
-            "spot": "D4",
-            "startDate": "2026-07-06T16:00:00.000",
-            "endDate": "2026-07-06T18:30:00.000",
-            "status": "completed",
-            "amount": 8,
-            "baseAmount": 8,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017029",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-007",
-            "spot": "A3",
-            "startDate": "2026-07-07T12:00:00.000",
-            "endDate": "2026-07-07T14:00:00.000",
-            "status": "cancelled",
-            "amount": 6.4,
-            "baseAmount": 6.4,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017030",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "code": "SPG-SB-008",
-            "spot": "C1",
-            "startDate": "2026-07-08T09:00:00.000",
-            "endDate": "2026-07-08T12:00:00.000",
-            "status": "active",
-            "amount": 9.6,
-            "baseAmount": 9.6,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017031",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-001",
-            "spot": "B1",
-            "startDate": "2026-07-02T10:00:00.000",
-            "endDate": "2026-07-02T12:00:00.000",
-            "status": "completed",
-            "amount": 7.2,
-            "baseAmount": 7.2,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017032",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-002",
-            "spot": "A4",
-            "startDate": "2026-07-03T13:00:00.000",
-            "endDate": "2026-07-03T14:00:00.000",
-            "status": "completed",
-            "amount": 3.6,
-            "baseAmount": 3.6,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017033",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-003",
-            "spot": "C2",
-            "startDate": "2026-07-04T08:00:00.000",
-            "endDate": "2026-07-04T10:30:00.000",
-            "status": "completed",
-            "amount": 9,
-            "baseAmount": 9,
-            "rating": 3
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017034",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-004",
-            "spot": "D1",
-            "startDate": "2026-07-05T15:00:00.000",
-            "endDate": "2026-07-05T19:00:00.000",
-            "status": "completed",
-            "amount": 14.4,
-            "baseAmount": 14.4,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017035",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-005",
-            "spot": "B5",
-            "startDate": "2026-07-06T09:00:00.000",
-            "endDate": "2026-07-06T11:00:00.000",
-            "status": "completed",
-            "amount": 7.2,
-            "baseAmount": 7.2,
-            "rating": 4
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017036",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-006",
-            "spot": "A2",
-            "startDate": "2026-07-06T14:00:00.000",
-            "endDate": "2026-07-06T15:00:00.000",
-            "status": "cancelled",
-            "amount": 3.6,
-            "baseAmount": 3.6,
-            "rating": null
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017037",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-007",
-            "spot": "C4",
-            "startDate": "2026-07-07T18:00:00.000",
-            "endDate": "2026-07-07T20:00:00.000",
-            "status": "completed",
-            "amount": 7.2,
-            "baseAmount": 7.2,
-            "rating": 5
-        },
-        {
-            "id": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017038",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "code": "SPG-BR-008",
-            "spot": "D3",
-            "startDate": "2026-07-08T10:00:00.000",
-            "endDate": "2026-07-08T13:00:00.000",
-            "status": "active",
-            "amount": 10.8,
-            "baseAmount": 10.8,
-            "rating": null
-        }
-    ],
-    "clientPlans": [
-        {
-            "id": "d1f7d49e-ec66-4bb8-9e27-8a4e5e05cbed",
-            "type": "free",
-            "name": "Free Plan (Basic)",
-            "monthlyPrice": 0,
-            "description": "Designed for occasional users.",
-            "reservationsPerMonth": 3,
-            "discountPercent": 0,
-            "features": [
-                "Real-time parking availability",
-                "Parking search",
-                "Spot reservation",
-                "Pay-per-use (hourly payment)"
-            ]
-        },
-        {
-            "id": "cb02e1ad-4fe1-4e37-a5f1-01c4410dbaaf",
-            "type": "monthly",
-            "name": "Monthly Plan (Subscription)",
-            "monthlyPrice": 150,
-            "description": "Designed for frequent users.",
-            "reservationsPerMonth": null,
-            "discountPercent": 15,
-            "features": [
-                "Real-time parking availability",
-                "Parking search",
-                "Spot reservation",
-                "15% discount on every reservation",
-                "Access to usage history receipts",
-                "Free reservation extensions"
-            ]
-        },
-        {
-            "id": "c07320b2-458e-43c3-ab9f-e551edf96b78",
-            "type": "annual",
-            "name": "Annual Plan (Subscription)",
-            "monthlyPrice": 400,
-            "description": "Designed for long-term or high-frequency users.",
-            "reservationsPerMonth": null,
-            "discountPercent": 25,
-            "features": [
-                "All Monthly Plan benefits",
-                "25% discount on every reservation",
-                "Valid for 12 months",
-                "Higher priority during peak hours",
-                "Preferred access to specific zones"
-            ]
-        }
-    ],
-    "subscriptions": [
-        {
-            "id": "81d02858-888f-4160-b46d-38fae7cc06e3",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "planId": "cb02e1ad-4fe1-4e37-a5f1-01c4410dbaaf",
-            "status": "active",
-            "renewsOn": "2026-07-16",
-            "pricePerMonth": 150,
-            "sessions": 1,
-            "savedThisMonth": 0.54,
-            "savingsMonth": "2026-06",
-            "memberSince": "2026-06-16",
-            "autoRenewal": false,
-            "paymentMethodLastFour": "3456",
-            "paymentMethodExpiry": "12/28"
-        },
-        {
-            "id": "4d214faf-57d8-4aef-9e18-b4542b052e0f",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "planId": "cb02e1ad-4fe1-4e37-a5f1-01c4410dbaaf",
-            "status": "active",
-            "renewsOn": "2026-07-17",
-            "pricePerMonth": 150,
-            "sessions": 8,
-            "savedThisMonth": 0.03,
-            "savingsMonth": "2026-06",
-            "memberSince": "2026-06-17",
-            "autoRenewal": false,
-            "paymentMethodLastFour": "1234",
-            "paymentMethodExpiry": "12/28"
-        }
-    ],
-    "receipts": [
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38701",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260702-SPG-1A2B3C",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-02T08:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017001"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38702",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260702-SPG-4D5E6F",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-02T13:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 9,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017002"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38703",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260703-SPG-7G8H9I",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-03T07:30:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017003"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38704",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260703-SPG-1J2K3L",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-03T12:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017004"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38705",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260704-SPG-4M5N6O",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-04T10:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 9,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017005"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38706",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260704-SPG-7P8Q9R",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-04T18:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 9,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017006"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38707",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260705-SPG-1S2T3U",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-05T09:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017007"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38708",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260705-SPG-4V5W6X",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-05T14:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 9,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017008"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38709",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260706-SPG-7Y8Z1A",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-06T08:00:00.000",
-            "durationHours": 4,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 12,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017009"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38710",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260706-SPG-2B3C4D",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-06T17:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017010"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38711",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260707-SPG-5E6F7G",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-07T11:00:00.000",
-            "durationHours": 4,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 12,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017011"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38712",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260702-SPG-8Q9R1S",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-02T09:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 5.6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017015"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38713",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260703-SPG-2T3U4V",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-03T12:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 8.4,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017016"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38714",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260704-SPG-5W6X7Y",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-04T17:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 8.4,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017017"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38715",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260705-SPG-8Z1A2B",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-05T08:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 5.6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017018"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38716",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260706-SPG-3C4D5E",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-06T14:00:00.000",
-            "durationHours": 4,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 11.2,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017019"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38717",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260707-SPG-6F7G8H",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-07T10:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 5.6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017020"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38718",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260702-SPG-SB-001",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-02T08:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 6.4,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017023"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38719",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260703-SPG-SB-002",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-03T09:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 30,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 8,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017024"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38720",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260703-SPG-SB-003",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-03T14:00:00.000",
-            "durationHours": 1,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 3.2,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017025"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38721",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260704-SPG-SB-004",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-04T10:00:00.000",
-            "durationHours": 4,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 12.8,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017026"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38722",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260705-SPG-SB-005",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-05T07:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 6.4,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017027"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38723",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260706-SPG-SB-006",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-06T16:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 30,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 8,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017028"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38724",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260702-SPG-BR-001",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-02T10:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 7.2,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017031"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38725",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260703-SPG-BR-002",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-03T13:00:00.000",
-            "durationHours": 1,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 3.6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017032"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38726",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260704-SPG-BR-003",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-04T08:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 30,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 9,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017033"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38727",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260705-SPG-BR-004",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-05T15:00:00.000",
-            "durationHours": 4,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 14.4,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017034"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38728",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260706-SPG-BR-005",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-06T09:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 7.2,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017035"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38729",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260707-SPG-BR-007",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-07T18:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 7.2,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017037"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38730",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260708-SPG-2K3L4M",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-08T08:00:00.000",
-            "durationHours": 2,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017013"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38731",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260708-SPG-3L4M5N",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-08T18:00:00.000",
-            "durationHours": 4,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 11.2,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017022"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38732",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "invoiceNumber": "INV-20260708-SPG-BR-008",
-            "locationName": "Parking Barranco",
-            "date": "2026-07-08T10:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 3456",
-            "amount": 10.8,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017038"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38733",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260708-SPG-5N6O7P",
-            "locationName": "Parking Central Lima",
-            "date": "2026-07-08T13:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 9,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017014"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38734",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260708-SPG-9I1J2K",
-            "locationName": "Parking Miraflores",
-            "date": "2026-07-08T09:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 8.4,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017021"
-        },
-        {
-            "id": "b400f9dd-7f9a-4d6e-88ef-2b35dfe38735",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "invoiceNumber": "INV-20260708-SPG-SB-008",
-            "locationName": "Parking San Borja",
-            "date": "2026-07-08T09:00:00.000",
-            "durationHours": 3,
-            "durationMinutes": 0,
-            "paymentMethod": "Visa •• 1234",
-            "amount": 9.6,
-            "status": "paid",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017030"
-        }
-    ],
-    "clientReports": [
-        {
-            "id": "ea28c016-c813-4d93-b66a-577dbfd92676",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017005",
-            "code": "RPT-AN-001",
-            "date": "2026-07-04T13:15:00.000",
-            "type": "safety-concern",
-            "status": "resolved"
-        },
-        {
-            "id": "7672e1bb-1f7e-4377-9b0d-73b7ab0bf533",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017012",
-            "code": "RPT-AN-002",
-            "date": "2026-07-07T21:10:00.000",
-            "type": "maintenance-issue",
-            "status": "submitted"
-        },
-        {
-            "id": "f7f93098-1f18-4f50-9a75-3d34600cb13f",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017016",
-            "code": "RPT-AN-003",
-            "date": "2026-07-03T15:30:00.000",
-            "type": "billing-dispute",
-            "status": "resolved"
-        },
-        {
-            "id": "59a89af9-cd85-4ca4-9b4b-53f3fd739fda",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017019",
-            "code": "RPT-AN-004",
-            "date": "2026-07-06T18:10:00.000",
-            "type": "other",
-            "status": "resolved"
-        },
-        {
-            "id": "b2c3d4e5-f6a7-8901-bcde-200000000001",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017026",
-            "code": "RPT-AN-005",
-            "date": "2026-07-04T14:15:00.000",
-            "type": "billing-dispute",
-            "status": "resolved"
-        },
-        {
-            "id": "b2c3d4e5-f6a7-8901-bcde-200000000002",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017027",
-            "code": "RPT-AN-006",
-            "date": "2026-07-05T09:10:00.000",
-            "type": "maintenance-issue",
-            "status": "submitted"
-        },
-        {
-            "id": "b2c3d4e5-f6a7-8901-bcde-200000000003",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017033",
-            "code": "RPT-AN-007",
-            "date": "2026-07-04T10:45:00.000",
-            "type": "safety-concern",
-            "status": "resolved"
-        },
-        {
-            "id": "b2c3d4e5-f6a7-8901-bcde-200000000004",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "reservationId": "7c1f24f2-5d1e-41c9-a1e8-bdc0c9017037",
-            "code": "RPT-AN-008",
-            "date": "2026-07-07T20:20:00.000",
-            "type": "other",
-            "status": "submitted"
-        }
-    ],
-    "favorites": [
-        {
-            "id": "ec0bf827-3291-4da2-8c52-a9c2b733d041",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "distanceMi": 1.2,
-            "lastVisited": "2026-07-07T10:05:00.000"
-        },
-        {
-            "id": "caeddfbb-dca9-430b-a1f0-527fc5906b8d",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "distanceMi": 2.1,
-            "lastVisited": "2026-07-08T08:05:00.000"
-        },
-        {
-            "id": "26c808f9-957e-4426-aab0-78167cd72505",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "distanceMi": 0.8,
-            "lastVisited": "2026-07-06T14:02:00.000"
-        },
-        {
-            "id": "7e302c89-0f4e-4655-8e93-a9e4de873f63",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "distanceMi": 3.4,
-            "lastVisited": "2026-07-07T19:15:00.000"
-        }
-    ],
-    "blueprints": [
-        {
-            "id": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "adminId": "f1760096-0ed9-4239-9977-f410f4e1849b",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "name": "Croquis Central Lima",
-            "dataUrl": "data:image/png;base64,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ACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAECLoAQAAAECIoAcAAAAAIYIeAAAAAIQIegAAAAAQIugBAAAAQIigBwAAAAAhgh4AAAAAhAh6AAAAABAi6AEAAABAiKAHAAAAACGCHgAAAACECHoAAAAAEHK5Xq/X2wfvcblcbh/6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"
-        },
-        {
-            "id": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "adminId": "059d28dd-19fb-4bf1-ba25-1ae51d8a337b",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "name": "Croquis Miraflores",
-            "dataUrl": "data:image/png;base64,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"
-        },
-        {
-            "id": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "adminId": "a79ea5b5-83bb-4575-9127-8ca921773d7e",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "name": "Croquis San Borja",
-            "dataUrl": "data:image/png;base64,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"
-        },
-        {
-            "id": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "adminId": "5ebd73fb-fa97-4061-aaa2-036d108a6e48",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "name": "Croquis Barranco",
-            "dataUrl": "data:image/png;base64,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"
-        }
-    ],
-    "occupancyByHour": [
-        {
-            "id": "cd7408a4-be21-4dc4-a2d1-587066cbb2e7",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "06:00",
-            "intensity": 20
-        },
-        {
-            "id": "21c1c5c5-2ca8-43cf-9360-b2bb61beab4e",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "09:00",
-            "intensity": 45
-        },
-        {
-            "id": "f4c1f443-699a-4469-be8b-0020b49f7f9f",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "12:00",
-            "intensity": 70
-        },
-        {
-            "id": "703f444f-8842-451b-9ddf-ff8bf8eaf187",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "15:00",
-            "intensity": 95
-        },
-        {
-            "id": "e9050889-f058-4d7c-a9cf-dc502eb69484",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "18:00",
-            "intensity": 85
-        },
-        {
-            "id": "526c4a6c-6911-4c77-91db-7772f9cfb5c5",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "21:00",
-            "intensity": 40
-        },
-        {
-            "id": "7e14625d-527d-4f7c-a4ef-fda831b98044",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "hour": "24:00",
-            "intensity": 15
-        },
-        {
-            "id": "b5c49f4e-46d5-4310-8a85-90c8b147a221",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "06:00",
-            "intensity": 15
-        },
-        {
-            "id": "06c3cc1c-abde-4668-b2c7-962117962858",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "09:00",
-            "intensity": 35
-        },
-        {
-            "id": "8f87fb5e-daaa-4830-884a-eedac8a95f17",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "12:00",
-            "intensity": 55
-        },
-        {
-            "id": "de6f6522-2788-4cb4-a8f0-d9a7370f37cb",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "15:00",
-            "intensity": 75
-        },
-        {
-            "id": "26eb07b9-d266-42d7-b2d0-0e298eef22fd",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "18:00",
-            "intensity": 68
-        },
-        {
-            "id": "8fd1dca0-6cc5-4018-ba7e-961b1643d8c2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "21:00",
-            "intensity": 38
-        },
-        {
-            "id": "1c16cc6a-c1cb-4816-a7ea-30c64690ec3a",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "hour": "24:00",
-            "intensity": 10
-        }
-    ],
-    "weeklyTrends": [
-        {
-            "id": "4b14a924-8614-4612-821a-6ce1157aad28",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Mon",
-            "value": 0.6
-        },
-        {
-            "id": "e8b952e6-5cce-47bd-a209-7b7b1319e0ab",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Tue",
-            "value": 0.7
-        },
-        {
-            "id": "316e887a-5f9c-41b3-88de-f7fff9e6c15c",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Wed",
-            "value": 0.8
-        },
-        {
-            "id": "495ea23a-7166-4212-b9c3-32dca6e45c64",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Thu",
-            "value": 0.9
-        },
-        {
-            "id": "cd6b3b16-88f4-42bf-8f26-ee4572efc378",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Fri",
-            "value": 0.95
-        },
-        {
-            "id": "2bab7fa3-5801-4d1b-8514-9ba507e07aa5",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Sat",
-            "value": 0.75
-        },
-        {
-            "id": "a0b72eb3-f0f0-4490-8ce7-85b9ee260594",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "day": "Sun",
-            "value": 0.5
-        },
-        {
-            "id": "5c53cd10-16c6-42c7-851c-164fd80f7f43",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Mon",
-            "value": 0.42
-        },
-        {
-            "id": "976cb71d-1ef0-4e0b-bbfd-bbf18f59a385",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Tue",
-            "value": 0.48
-        },
-        {
-            "id": "4847190a-a59a-4c63-8f45-383683f04560",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Wed",
-            "value": 0.57
-        },
-        {
-            "id": "412bf4b4-d78e-4b6e-bdef-166c894c9be8",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Thu",
-            "value": 0.66
-        },
-        {
-            "id": "837f0d44-1cb4-49ef-afb3-e61c2f932235",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Fri",
-            "value": 0.72
-        },
-        {
-            "id": "c158da56-f8ef-413b-a316-e6d95a532457",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Sat",
-            "value": 0.61
-        },
-        {
-            "id": "8b76f252-b5c1-435d-bca6-11d2e0f5e8c2",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "day": "Sun",
-            "value": 0.46
-        }
-    ],
-    "detectedSpots": [
-        {
-            "id": "0a827710-4ac8-439f-afea-6ee20b3f5a4e",
-            "code": 1,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 0,
-            "x_pct": 5.84,
-            "y_pct": 8.05,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "d383dc3c-af02-4eed-841e-809ff3116cd6",
-            "code": 2,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 1,
-            "x_pct": 16.88,
-            "y_pct": 8.39,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "ca5c7121-0fbb-48b5-83c5-63a02f738335",
-            "code": 3,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 2,
-            "x_pct": 28.08,
-            "y_pct": 8.61,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "355e54f0-666f-44ff-a1be-3b6871b47562",
-            "code": 4,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 3,
-            "x_pct": 39.43,
-            "y_pct": 8.61,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "1bbb7998-62c5-4bf8-b622-11ea004c702c",
-            "code": 5,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 4,
-            "x_pct": 50.71,
-            "y_pct": 8.72,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "a12b8d6a-3534-4027-a916-65732d81a9b4",
-            "code": 6,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 5,
-            "x_pct": 61.83,
-            "y_pct": 8.84,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "7f5d0cf1-919c-45cf-9ca5-60f0d6877873",
-            "code": 7,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 6,
-            "x_pct": 72.87,
-            "y_pct": 8.5,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "fb04ff91-6576-4a37-a5ee-df774bb3c017",
-            "code": 8,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 0,
-            "col": 7,
-            "x_pct": 83.83,
-            "y_pct": 8.39,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "e2f5f69a-fb57-4221-9e5f-e7077f3e189e",
-            "code": 9,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 1,
-            "col": 0,
-            "x_pct": 5.76,
-            "y_pct": 31.77,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "982d8fa2-ce1c-4217-9bb2-7290afb608a1",
-            "code": 10,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 1,
-            "col": 1,
-            "x_pct": 16.64,
-            "y_pct": 31.66,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "ef9d60e5-1f3a-43f5-8f47-1593e4802453",
-            "code": 11,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 1,
-            "col": 2,
-            "x_pct": 27.84,
-            "y_pct": 32.55,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "5ca341b8-342e-4a26-8209-eed3907dd4a8",
-            "code": 12,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 1,
-            "col": 5,
-            "x_pct": 61.75,
-            "y_pct": 32.21,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "3650877f-672f-4a55-a1dd-187915445f33",
-            "code": 13,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 1,
-            "col": 6,
-            "x_pct": 72.95,
-            "y_pct": 32.55,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "d7965e3b-1c40-423a-acf7-42c4eba2df78",
-            "code": 14,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 1,
-            "col": 7,
-            "x_pct": 83.83,
-            "y_pct": 32.66,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "2c22870c-bc01-4914-b77b-456d75c1096b",
-            "code": 15,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 2,
-            "col": 0,
-            "x_pct": 5.99,
-            "y_pct": 54.03,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "683cbb74-44bd-4a96-b393-bb89f645cbd0",
-            "code": 16,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 2,
-            "col": 1,
-            "x_pct": 16.56,
-            "y_pct": 53.69,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "b6be6d40-e567-4fff-a9ac-1dfbc4df0a0f",
-            "code": 17,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 2,
-            "col": 2,
-            "x_pct": 28,
-            "y_pct": 54.47,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "22dd5958-f650-4d75-9850-75c6aade631c",
-            "code": 18,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 2,
-            "col": 5,
-            "x_pct": 61.99,
-            "y_pct": 54.47,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "920586ca-e745-477b-b1f1-4fbac570b995",
-            "code": 19,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 2,
-            "col": 6,
-            "x_pct": 72.63,
-            "y_pct": 54.47,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "e5e8f54b-8dc4-43de-bedc-94ad786f6e36",
-            "code": 20,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 2,
-            "col": 7,
-            "x_pct": 83.75,
-            "y_pct": 54.36,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "6625f5a7-d79e-42d8-b27e-0c482e4047f9",
-            "code": 21,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 0,
-            "x_pct": 6.15,
-            "y_pct": 74.05,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "bc774295-14a3-473f-8268-2d6d081916cd",
-            "code": 22,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 1,
-            "x_pct": 17.19,
-            "y_pct": 74.72,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "83f5dabb-d663-4e41-b7a3-a5c3fafe3240",
-            "code": 23,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 2,
-            "x_pct": 28,
-            "y_pct": 74.38,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "86dad9ff-f86d-41cd-a77c-d4475acd5fb8",
-            "code": 24,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 3,
-            "x_pct": 39.27,
-            "y_pct": 75.06,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "537975ef-90ab-43bf-aca5-12366efe5110",
-            "code": 25,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 4,
-            "x_pct": 50.95,
-            "y_pct": 75.06,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "270dd024-c42f-4dd5-af97-cf700a5f7a2c",
-            "code": 26,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 5,
-            "x_pct": 62.22,
-            "y_pct": 75.28,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "534f959d-dfd3-4113-b6f0-7149baf44465",
-            "code": 27,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 6,
-            "x_pct": 73.03,
-            "y_pct": 75.28,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "804ea063-d272-4d72-8c2b-618e66a5d0b9",
-            "code": 28,
-            "blueprintId": "eb612f2d-147e-4096-88c4-adb496bda4f1",
-            "parkingId": "25a9bf40-f866-4c3f-beb8-e800fc4c0e7c",
-            "row": 3,
-            "col": 7,
-            "x_pct": 82.97,
-            "y_pct": 74.61,
-            "w_pct": 7.73,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "6f80ccb5-803d-483f-8d02-b9bee6752b7b",
-            "code": 1,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 0,
-            "col": 0,
-            "x_pct": 6.29,
-            "y_pct": 8.04,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "2d48b6b4-bd4a-44c0-99f5-c4fddd25d5e6",
-            "code": 2,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 0,
-            "col": 1,
-            "x_pct": 17.3,
-            "y_pct": 8.37,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "807dbde3-7cdf-4720-a99c-ff14a6b4e213",
-            "code": 3,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 0,
-            "col": 2,
-            "x_pct": 28.46,
-            "y_pct": 8.59,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "03a098ca-855c-4e4c-b2f7-7f420f67a55c",
-            "code": 4,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 0,
-            "col": 5,
-            "x_pct": 62.19,
-            "y_pct": 8.82,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "75659c0d-a996-4b4a-bea6-41719cb9e48a",
-            "code": 5,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 0,
-            "col": 6,
-            "x_pct": 73.19,
-            "y_pct": 8.48,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "c6733265-adc2-46e7-bf13-5da9d9fab10d",
-            "code": 6,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 0,
-            "col": 7,
-            "x_pct": 84.12,
-            "y_pct": 8.37,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "e679654c-734f-42ce-bdac-e97395578d5f",
-            "code": 7,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 0,
-            "x_pct": 6.21,
-            "y_pct": 31.7,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "4b3a61b6-6272-4a0c-acd7-2146bf70b736",
-            "code": 8,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 1,
-            "x_pct": 17.06,
-            "y_pct": 31.58,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "80f0ef85-1060-417c-8225-cc54fff20648",
-            "code": 9,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 2,
-            "x_pct": 28.22,
-            "y_pct": 32.48,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "76e3e702-4718-4823-bf23-e43a65f259c3",
-            "code": 10,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 3,
-            "x_pct": 39.07,
-            "y_pct": 32.59,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "maintenance"
-        },
-        {
-            "id": "d97444d4-51b5-4cac-bb9d-ae7f4a930be0",
-            "code": 11,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 4,
-            "x_pct": 50.24,
-            "y_pct": 32.7,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "5300a63f-ae91-4946-97a5-6f7cfe2b72c6",
-            "code": 12,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 5,
-            "x_pct": 62.11,
-            "y_pct": 32.14,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "80287876-19d8-430d-b8e0-cf431871f90e",
-            "code": 13,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 6,
-            "x_pct": 73.27,
-            "y_pct": 32.48,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "0faf226e-758e-449f-b50a-f0c3be08bd9c",
-            "code": 14,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 1,
-            "col": 7,
-            "x_pct": 84.12,
-            "y_pct": 32.59,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "c1e11c37-6ab2-4f64-9e01-c71c366d1760",
-            "code": 15,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 0,
-            "x_pct": 6.45,
-            "y_pct": 54.02,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "fb4296bc-3d13-4a4e-9516-8d42df966e73",
-            "code": 16,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 1,
-            "x_pct": 16.98,
-            "y_pct": 53.68,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "0656d51e-0a9e-4a3b-8af1-cf4118cbaff7",
-            "code": 17,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 2,
-            "x_pct": 28.38,
-            "y_pct": 54.46,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "4c9e6282-b54e-474f-b737-043f686848ea",
-            "code": 18,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 3,
-            "x_pct": 38.84,
-            "y_pct": 54.58,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "b9df1359-5339-421d-8a62-79c9559af912",
-            "code": 19,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 4,
-            "x_pct": 50.31,
-            "y_pct": 54.8,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "173610cb-988d-49e1-8294-476f7dd04d09",
-            "code": 20,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 5,
-            "x_pct": 62.34,
-            "y_pct": 54.46,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "0805724e-7caf-4ddf-8460-5bfedb06be69",
-            "code": 21,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 6,
-            "x_pct": 72.96,
-            "y_pct": 54.46,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "ea957641-b2bf-4a03-953a-d5efc7ec0d58",
-            "code": 22,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 2,
-            "col": 7,
-            "x_pct": 84.04,
-            "y_pct": 54.35,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "4e301fb8-fd2a-4d26-9b97-87c6c01a299b",
-            "code": 23,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 3,
-            "col": 0,
-            "x_pct": 6.6,
-            "y_pct": 74,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "fa14c3b0-0355-4a17-b775-59de37389683",
-            "code": 24,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 3,
-            "col": 1,
-            "x_pct": 17.61,
-            "y_pct": 74.67,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "0c278e25-21a4-40db-b3e4-454421399574",
-            "code": 25,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 3,
-            "col": 2,
-            "x_pct": 28.38,
-            "y_pct": 74.33,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "0c5f21e2-9f0f-40ff-a391-058035e2dab2",
-            "code": 26,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 3,
-            "col": 5,
-            "x_pct": 62.58,
-            "y_pct": 75.22,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "fd5ab80c-58cc-4bf4-8def-7faa03928a53",
-            "code": 27,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 3,
-            "col": 6,
-            "x_pct": 73.35,
-            "y_pct": 75.22,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "0316a48f-90eb-4e0b-9b07-4943f1a62911",
-            "code": 28,
-            "blueprintId": "ad91645b-141a-4c39-bbcd-663b8b6f7c90",
-            "parkingId": "ee04d2a9-a374-4c4a-8a93-7b135e9e65e2",
-            "row": 3,
-            "col": 7,
-            "x_pct": 83.25,
-            "y_pct": 74.55,
-            "w_pct": 7.7,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "eed54f02-2060-4dc2-860c-c84439f4940c",
-            "code": 1,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 0,
-            "col": 0,
-            "x_pct": 6.14,
-            "y_pct": 8.37,
-            "w_pct": 7.7,
-            "h_pct": 16.23,
-            "status": "available"
-        },
-        {
-            "id": "e5ae760b-4fa8-432c-b3da-fcd1b20a13ab",
-            "code": 2,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 0,
-            "col": 1,
-            "x_pct": 17.02,
-            "y_pct": 8.54,
-            "w_pct": 7.77,
-            "h_pct": 16.2,
-            "status": "available"
-        },
-        {
-            "id": "0eb661b3-d1f1-49a8-9570-f77284ca0d5c",
-            "code": 3,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 0,
-            "col": 2,
-            "x_pct": 28.25,
-            "y_pct": 8.32,
-            "w_pct": 7.71,
-            "h_pct": 16.22,
-            "status": "available"
-        },
-        {
-            "id": "2dcb3b9e-5baa-4327-a97a-6a1bd17ae3af",
-            "code": 4,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 0,
-            "col": 5,
-            "x_pct": 61.96,
-            "y_pct": 8.59,
-            "w_pct": 7.62,
-            "h_pct": 16.35,
-            "status": "available"
-        },
-        {
-            "id": "8c0c59d5-6b59-41cb-bc05-bfcea44f0d7c",
-            "code": 5,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 0,
-            "col": 6,
-            "x_pct": 73.26,
-            "y_pct": 8.57,
-            "w_pct": 7.69,
-            "h_pct": 16.28,
-            "status": "available"
-        },
-        {
-            "id": "d1c401dc-7a04-4bde-9d55-32bc839b4d2f",
-            "code": 6,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 0,
-            "col": 7,
-            "x_pct": 84.21,
-            "y_pct": 8.62,
-            "w_pct": 7.66,
-            "h_pct": 16.23,
-            "status": "available"
-        },
-        {
-            "id": "00465c0c-1091-49b1-91d8-02432b05c681",
-            "code": 7,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 0,
-            "x_pct": 6.21,
-            "y_pct": 32.06,
-            "w_pct": 7.75,
-            "h_pct": 16.22,
-            "status": "available"
-        },
-        {
-            "id": "040c1714-b68a-4593-a033-b29633dcf535",
-            "code": 8,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 1,
-            "x_pct": 16.96,
-            "y_pct": 31.81,
-            "w_pct": 7.71,
-            "h_pct": 16.31,
-            "status": "available"
-        },
-        {
-            "id": "60902128-de0b-4e5f-8e0f-b7c882830e47",
-            "code": 9,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 2,
-            "x_pct": 28.35,
-            "y_pct": 32.16,
-            "w_pct": 7.67,
-            "h_pct": 16.38,
-            "status": "available"
-        },
-        {
-            "id": "35aab1b5-0c3c-446b-b438-7fbd03c4083a",
-            "code": 10,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 3,
-            "x_pct": 39.13,
-            "y_pct": 32.01,
-            "w_pct": 7.77,
-            "h_pct": 16.25,
-            "status": "available"
-        },
-        {
-            "id": "652f4c3c-fccd-4a72-8a70-2529e8ed5a2d",
-            "code": 11,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 4,
-            "x_pct": 50.26,
-            "y_pct": 31.92,
-            "w_pct": 7.72,
-            "h_pct": 16.25,
-            "status": "available"
-        },
-        {
-            "id": "6b6aac45-abcf-4bc9-90fb-147cfb0ce4d1",
-            "code": 12,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 5,
-            "x_pct": 62.2,
-            "y_pct": 32.17,
-            "w_pct": 7.68,
-            "h_pct": 16.3,
-            "status": "available"
-        },
-        {
-            "id": "54c3f57e-632f-472f-b102-c41e996e0630",
-            "code": 13,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 6,
-            "x_pct": 73.22,
-            "y_pct": 32.09,
-            "w_pct": 7.76,
-            "h_pct": 16.35,
-            "status": "available"
-        },
-        {
-            "id": "27706f92-dd9d-42a2-88ee-fad16afd7f04",
-            "code": 14,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 1,
-            "col": 7,
-            "x_pct": 84.19,
-            "y_pct": 31.88,
-            "w_pct": 7.6,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "15512612-9311-470a-9809-ee922a3a894f",
-            "code": 15,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 0,
-            "x_pct": 6.27,
-            "y_pct": 54.35,
-            "w_pct": 7.65,
-            "h_pct": 16.37,
-            "status": "available"
-        },
-        {
-            "id": "b3710bfc-7618-418b-8450-95000e5648ec",
-            "code": 16,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 1,
-            "x_pct": 17.15,
-            "y_pct": 54.35,
-            "w_pct": 7.64,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "28794fe3-323f-42f8-95f1-a7462f06eb20",
-            "code": 17,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 2,
-            "x_pct": 28.36,
-            "y_pct": 54.64,
-            "w_pct": 7.71,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "ebe67a34-0c95-4b5f-87a4-a4f90ecb2a51",
-            "code": 18,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 3,
-            "x_pct": 39.0,
-            "y_pct": 54.43,
-            "w_pct": 7.62,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "a5e6b085-bc55-437e-be5f-08f5877f12a4",
-            "code": 19,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 4,
-            "x_pct": 50.28,
-            "y_pct": 54.66,
-            "w_pct": 7.6,
-            "h_pct": 16.36,
-            "status": "available"
-        },
-        {
-            "id": "0c97fe60-59bf-431c-9469-1525bea06a0a",
-            "code": 20,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 5,
-            "x_pct": 62.21,
-            "y_pct": 54.4,
-            "w_pct": 7.68,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "4b94fd4e-a8bd-435e-bb81-124c1511f620",
-            "code": 21,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 6,
-            "x_pct": 73.06,
-            "y_pct": 54.55,
-            "w_pct": 7.66,
-            "h_pct": 16.2,
-            "status": "available"
-        },
-        {
-            "id": "18d2ab2c-7325-4976-93c1-1ff074bf916f",
-            "code": 22,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 2,
-            "col": 7,
-            "x_pct": 84.03,
-            "y_pct": 54.59,
-            "w_pct": 7.72,
-            "h_pct": 16.32,
-            "status": "available"
-        },
-        {
-            "id": "13457714-547a-4c5b-92d1-146b8190ff90",
-            "code": 23,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 3,
-            "col": 0,
-            "x_pct": 6.09,
-            "y_pct": 74.93,
-            "w_pct": 7.75,
-            "h_pct": 16.32,
-            "status": "available"
-        },
-        {
-            "id": "b6bb9fa8-7908-473c-bb71-c33efff55278",
-            "code": 24,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 3,
-            "col": 1,
-            "x_pct": 17.19,
-            "y_pct": 74.91,
-            "w_pct": 7.61,
-            "h_pct": 16.28,
-            "status": "available"
-        },
-        {
-            "id": "365ddac7-a62b-4286-80c2-3faaea6b4d51",
-            "code": 25,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 3,
-            "col": 2,
-            "x_pct": 28.16,
-            "y_pct": 74.85,
-            "w_pct": 7.69,
-            "h_pct": 16.31,
-            "status": "available"
-        },
-        {
-            "id": "415cd162-5755-4fd6-88b9-a8296a4ee49f",
-            "code": 26,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 3,
-            "col": 5,
-            "x_pct": 62.23,
-            "y_pct": 74.86,
-            "w_pct": 7.65,
-            "h_pct": 16.24,
-            "status": "available"
-        },
-        {
-            "id": "9256b168-4707-41dc-80fd-c5a7996eec00",
-            "code": 27,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 3,
-            "col": 6,
-            "x_pct": 73.05,
-            "y_pct": 74.81,
-            "w_pct": 7.76,
-            "h_pct": 16.26,
-            "status": "available"
-        },
-        {
-            "id": "7aaea78e-8646-4924-bcab-01fb7bd83e2f",
-            "code": 28,
-            "blueprintId": "d1628e95-3398-4455-88c3-3a4deb0d5011",
-            "parkingId": "2e9db00f-ad00-4077-b991-1edfd42f1ed8",
-            "row": 3,
-            "col": 7,
-            "x_pct": 84.03,
-            "y_pct": 75.12,
-            "w_pct": 7.64,
-            "h_pct": 16.25,
-            "status": "available"
-        },
-        {
-            "id": "81008d3a-bb2f-4151-a218-ec19df0280e3",
-            "code": 29,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 0,
-            "col": 0,
-            "x_pct": 6.21,
-            "y_pct": 8.3,
-            "w_pct": 7.62,
-            "h_pct": 16.33,
-            "status": "available"
-        },
-        {
-            "id": "d6172d7f-6eea-4173-ba63-9161074a5a64",
-            "code": 30,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 0,
-            "col": 1,
-            "x_pct": 17.06,
-            "y_pct": 8.35,
-            "w_pct": 7.78,
-            "h_pct": 16.22,
-            "status": "available"
-        },
-        {
-            "id": "333e47ee-7232-4d88-8c8f-7a6813ebb676",
-            "code": 31,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 0,
-            "col": 2,
-            "x_pct": 28.43,
-            "y_pct": 8.31,
-            "w_pct": 7.75,
-            "h_pct": 16.25,
-            "status": "available"
-        },
-        {
-            "id": "deb075b5-753e-42d7-87ec-22133211442e",
-            "code": 32,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 0,
-            "col": 5,
-            "x_pct": 62.02,
-            "y_pct": 8.65,
-            "w_pct": 7.77,
-            "h_pct": 16.37,
-            "status": "available"
-        },
-        {
-            "id": "51e8e9c8-5bbc-4947-adfe-a44eddccfa4d",
-            "code": 33,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 0,
-            "col": 6,
-            "x_pct": 73.28,
-            "y_pct": 8.36,
-            "w_pct": 7.7,
-            "h_pct": 16.31,
-            "status": "available"
-        },
-        {
-            "id": "abd901e2-755d-44bd-be21-7f974a896b29",
-            "code": 34,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 0,
-            "col": 7,
-            "x_pct": 84.19,
-            "y_pct": 8.32,
-            "w_pct": 7.61,
-            "h_pct": 16.28,
-            "status": "available"
-        },
-        {
-            "id": "5a0c2d2a-8778-479a-b984-65cc8d60b9dd",
-            "code": 35,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 1,
-            "col": 0,
-            "x_pct": 6.05,
-            "y_pct": 31.8,
-            "w_pct": 7.62,
-            "h_pct": 16.32,
-            "status": "available"
-        },
-        {
-            "id": "919abcce-ffb8-4353-8adb-0fb96a9e4631",
-            "code": 36,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 1,
-            "col": 1,
-            "x_pct": 17.1,
-            "y_pct": 31.97,
-            "w_pct": 7.61,
-            "h_pct": 16.37,
-            "status": "available"
-        },
-        {
-            "id": "692f794b-177f-46b3-bb49-bd7db5a1f160",
-            "code": 37,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 1,
-            "col": 2,
-            "x_pct": 28.4,
-            "y_pct": 31.91,
-            "w_pct": 7.61,
-            "h_pct": 16.22,
-            "status": "available"
-        },
-        {
-            "id": "1ba79fa0-1777-4739-ad60-fce6dc633a58",
-            "code": 38,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 1,
-            "col": 5,
-            "x_pct": 62.13,
-            "y_pct": 31.82,
-            "w_pct": 7.72,
-            "h_pct": 16.24,
-            "status": "available"
-        },
-        {
-            "id": "3e187249-50f0-44dc-8205-1df0700abf16",
-            "code": 39,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 1,
-            "col": 6,
-            "x_pct": 73.32,
-            "y_pct": 31.82,
-            "w_pct": 7.7,
-            "h_pct": 16.36,
-            "status": "available"
-        },
-        {
-            "id": "e00566e2-c7ef-4cba-bbd9-aa1d182e280e",
-            "code": 40,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 1,
-            "col": 7,
-            "x_pct": 84.01,
-            "y_pct": 32.16,
-            "w_pct": 7.72,
-            "h_pct": 16.39,
-            "status": "available"
-        },
-        {
-            "id": "63d94df2-7be2-4225-880e-5d5350a460e0",
-            "code": 41,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 2,
-            "col": 0,
-            "x_pct": 6.07,
-            "y_pct": 54.49,
-            "w_pct": 7.7,
-            "h_pct": 16.32,
-            "status": "available"
-        },
-        {
-            "id": "706bfe65-204a-4aea-998c-e56504ed8e90",
-            "code": 42,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 2,
-            "col": 1,
-            "x_pct": 17.19,
-            "y_pct": 54.52,
-            "w_pct": 7.68,
-            "h_pct": 16.37,
-            "status": "available"
-        },
-        {
-            "id": "7da88ccd-b5d1-4649-969f-eee90187c537",
-            "code": 43,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 2,
-            "col": 2,
-            "x_pct": 28.21,
-            "y_pct": 54.39,
-            "w_pct": 7.61,
-            "h_pct": 16.32,
-            "status": "available"
-        },
-        {
-            "id": "baaa9dd2-3858-40c8-a282-6c144f19cab6",
-            "code": 44,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 2,
-            "col": 5,
-            "x_pct": 62.1,
-            "y_pct": 54.31,
-            "w_pct": 7.68,
-            "h_pct": 16.38,
-            "status": "available"
-        },
-        {
-            "id": "2c71920e-7549-4c2f-8d4b-0e23659174f7",
-            "code": 45,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 2,
-            "col": 6,
-            "x_pct": 73.08,
-            "y_pct": 54.65,
-            "w_pct": 7.75,
-            "h_pct": 16.38,
-            "status": "available"
-        },
-        {
-            "id": "908de8ff-70f6-472f-808a-ec29c48cf8fb",
-            "code": 46,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 2,
-            "col": 7,
-            "x_pct": 84.15,
-            "y_pct": 54.37,
-            "w_pct": 7.65,
-            "h_pct": 16.23,
-            "status": "available"
-        },
-        {
-            "id": "ce34bad3-0302-4eee-80ff-d622de6b1ad0",
-            "code": 47,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 3,
-            "col": 0,
-            "x_pct": 6.3,
-            "y_pct": 74.84,
-            "w_pct": 7.7,
-            "h_pct": 16.36,
-            "status": "available"
-        },
-        {
-            "id": "0fa7fac9-762c-4024-ad0e-cd9a549753f6",
-            "code": 48,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 3,
-            "col": 1,
-            "x_pct": 16.99,
-            "y_pct": 75.01,
-            "w_pct": 7.76,
-            "h_pct": 16.36,
-            "status": "available"
-        },
-        {
-            "id": "95c148b1-17b8-4546-b415-08c9e6c95ac8",
-            "code": 49,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 3,
-            "col": 2,
-            "x_pct": 28.31,
-            "y_pct": 75.15,
-            "w_pct": 7.63,
-            "h_pct": 16.23,
-            "status": "available"
-        },
-        {
-            "id": "95f0cc1a-2b76-403f-8b0a-d05ebd995461",
-            "code": 50,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 3,
-            "col": 5,
-            "x_pct": 62.01,
-            "y_pct": 74.91,
-            "w_pct": 7.64,
-            "h_pct": 16.29,
-            "status": "available"
-        },
-        {
-            "id": "663eb790-64cb-4f93-929b-a38bba482969",
-            "code": 51,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 3,
-            "col": 6,
-            "x_pct": 73.3,
-            "y_pct": 74.92,
-            "w_pct": 7.68,
-            "h_pct": 16.21,
-            "status": "available"
-        },
-        {
-            "id": "39da8b6d-f779-4728-b96a-540eb60d7b34",
-            "code": 52,
-            "blueprintId": "2a53e58a-f5b9-4a9a-a1f9-0856638c78a7",
-            "parkingId": "176c9e11-f4e1-400f-8d5d-c278586e7bd0",
-            "row": 3,
-            "col": 7,
-            "x_pct": 84.18,
-            "y_pct": 74.81,
-            "w_pct": 7.77,
-            "h_pct": 16.21,
-            "status": "available"
-        }
-    ],
-    "vehicles": [
-        {
-            "id": "41762186-4efd-4037-8d68-f90cefd23292",
-            "clientId": "24e3f7e3-d472-465a-9dd5-392d44319ee0",
-            "licensePlate": "ABC-123",
-            "vehicleType": "Car / Sedan",
-            "brand": "Toyota",
-            "model": "Corolla"
-        },
-        {
-            "id": "1a914643-a057-4ace-a5a7-8448d8eacf6f",
-            "clientId": "ca33d431-acb4-4445-a4a8-4ad9ba1315e2",
-            "licensePlate": "XYZ-456",
-            "vehicleType": "SUV / Pickup",
-            "brand": "Hyundai",
-            "model": "Tucson"
-        }
-    ]
+      ],
+      "status": "PUBLISHED",
+      "generated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "payment_tokens": [
+    {
+      "token_id": "00000000-0000-4000-8000-000000000071",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "provider_token_ref": "demo-card-not-chargeable-001",
+      "brand": "VISA",
+      "last_four": "4242",
+      "expiration_month": 12,
+      "expiration_year": 2030,
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "revoked_at": null
+    }
+  ],
+  "digital_payments": [
+    {
+      "payment_id": "00000000-0000-4000-8000-000000000081",
+      "token_id": "00000000-0000-4000-8000-000000000071",
+      "operation_type": "RESERVATION",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "amount": 10,
+      "currency": "PEN",
+      "status": "APPROVED",
+      "provider_operation_ref": "demo-payment-1",
+      "idempotency_key": "demo-payment-key-1",
+      "request_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "first_seen_at": "2026-11-09T07:30:00Z",
+      "last_seen_at": "2026-11-09T07:30:00Z",
+      "result_reference": "demo-result-1",
+      "created_at": "2026-11-09T07:30:00Z",
+      "approved_at": "2026-11-09T07:30:00Z"
+    },
+    {
+      "payment_id": "00000000-0000-4000-8000-000000000082",
+      "token_id": "00000000-0000-4000-8000-000000000071",
+      "operation_type": "RESERVATION",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "amount": 5,
+      "currency": "PEN",
+      "status": "APPROVED",
+      "provider_operation_ref": "demo-payment-2",
+      "idempotency_key": "demo-payment-key-2",
+      "request_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+      "first_seen_at": "2026-11-09T07:40:00Z",
+      "last_seen_at": "2026-11-09T07:40:00Z",
+      "result_reference": "demo-result-2",
+      "created_at": "2026-11-09T07:40:00Z",
+      "approved_at": "2026-11-09T07:40:00Z"
+    },
+    {
+      "payment_id": "00000000-0000-4000-8000-000000000083",
+      "token_id": "00000000-0000-4000-8000-000000000071",
+      "operation_type": "ADDITIONAL_CHARGE",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "amount": 2,
+      "currency": "PEN",
+      "status": "APPROVED",
+      "provider_operation_ref": "demo-payment-3",
+      "idempotency_key": "demo-payment-key-3",
+      "request_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+      "first_seen_at": "2026-11-09T10:20:00Z",
+      "last_seen_at": "2026-11-09T10:20:00Z",
+      "result_reference": "demo-result-3",
+      "created_at": "2026-11-09T10:20:00Z",
+      "approved_at": "2026-11-09T10:20:00Z"
+    }
+  ],
+  "reservations": [
+    {
+      "reservation_id": "00000000-0000-4000-8000-000000000091",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "vehicle_id": "00000000-0000-4000-8000-000000000051",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "start_at": "2026-11-09T08:00:00Z",
+      "end_at": "2026-11-09T10:00:00Z",
+      "amount": 10,
+      "status": "COMPLETED",
+      "payment_id": "00000000-0000-4000-8000-000000000081",
+      "lock_status": "RELEASED",
+      "locked_at": null,
+      "lock_expires_at": null,
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "reservation_id": "00000000-0000-4000-8000-000000000092",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "vehicle_id": "00000000-0000-4000-8000-000000000051",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "spot_id": "00000000-0000-4000-8000-000000000042",
+      "start_at": "2026-11-09T11:00:00Z",
+      "end_at": "2026-11-09T12:00:00Z",
+      "amount": 5,
+      "status": "COMPLETED",
+      "payment_id": "00000000-0000-4000-8000-000000000082",
+      "lock_status": "RELEASED",
+      "locked_at": null,
+      "lock_expires_at": null,
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "parking_sessions": [
+    {
+      "session_id": "00000000-0000-4000-8000-000000000161",
+      "reservation_id": "00000000-0000-4000-8000-000000000091",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "vehicle_id": "00000000-0000-4000-8000-000000000051",
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "entry_at": "2026-11-09T08:00:00Z",
+      "exit_at": "2026-11-09T10:15:00Z",
+      "status": "COMPLETED"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000162",
+      "reservation_id": "00000000-0000-4000-8000-000000000092",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "vehicle_id": "00000000-0000-4000-8000-000000000051",
+      "spot_id": "00000000-0000-4000-8000-000000000042",
+      "entry_at": "2026-11-09T11:00:00Z",
+      "exit_at": "2026-11-09T12:00:00Z",
+      "status": "COMPLETED"
+    }
+  ],
+  "guest_parking_sessions": [
+    {
+      "guest_session_id": "00000000-0000-4000-8000-000000000171",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "spot_id": "00000000-0000-4000-8000-000000000043",
+      "manual_plate": "DEM-999",
+      "entry_at": "2026-11-09T07:45:00Z",
+      "exit_at": "2026-11-09T08:45:00Z",
+      "calculated_amount": 5,
+      "physical_payment_method": "CASH",
+      "physical_payment_confirmed": true,
+      "status": "COMPLETED"
+    }
+  ],
+  "payment_attempts": [
+    {
+      "attempt_id": "00000000-0000-4000-8000-000000000181",
+      "payment_id": "00000000-0000-4000-8000-000000000081",
+      "attempt_number": 1,
+      "started_at": "2026-11-09T07:29:00Z",
+      "finished_at": "2026-11-09T07:29:00Z",
+      "status": "FAILED",
+      "error_code": "DEMO_TIMEOUT",
+      "next_attempt_at": "2026-11-09T07:30:00Z"
+    },
+    {
+      "attempt_id": "00000000-0000-4000-8000-000000000182",
+      "payment_id": "00000000-0000-4000-8000-000000000081",
+      "attempt_number": 2,
+      "started_at": "2026-11-09T07:30:00Z",
+      "finished_at": "2026-11-09T07:30:00Z",
+      "status": "APPROVED",
+      "error_code": null,
+      "next_attempt_at": null
+    },
+    {
+      "attempt_id": "00000000-0000-4000-8000-000000000183",
+      "payment_id": "00000000-0000-4000-8000-000000000082",
+      "attempt_number": 1,
+      "started_at": "2026-11-09T07:40:00Z",
+      "finished_at": "2026-11-09T07:40:00Z",
+      "status": "APPROVED",
+      "error_code": null,
+      "next_attempt_at": null
+    },
+    {
+      "attempt_id": "00000000-0000-4000-8000-000000000184",
+      "payment_id": "00000000-0000-4000-8000-000000000083",
+      "attempt_number": 1,
+      "started_at": "2026-11-09T10:20:00Z",
+      "finished_at": "2026-11-09T10:20:00Z",
+      "status": "APPROVED",
+      "error_code": null,
+      "next_attempt_at": null
+    }
+  ],
+  "subscriptions": [
+    {
+      "subscription_id": "00000000-0000-4000-8000-000000000191",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "tenant_id": null,
+      "plan": {
+        "code": "DRIVER_DEMO",
+        "audience": "DRIVER",
+        "billing_period_months": 1,
+        "discount_percent": 10
+      },
+      "start_at": "2026-11-09T07:00:00Z",
+      "end_at": null,
+      "status": "ACTIVE"
+    },
+    {
+      "subscription_id": "00000000-0000-4000-8000-000000000192",
+      "profile_id": null,
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "plan": {
+        "code": "TENANT_DEMO",
+        "audience": "PARKING_ADMIN",
+        "billing_period_months": 1,
+        "included_sensors": 20
+      },
+      "start_at": "2026-11-09T07:00:00Z",
+      "end_at": null,
+      "status": "ACTIVE"
+    }
+  ],
+  "additional_charges": [
+    {
+      "charge_id": "00000000-0000-4000-8000-000000000201",
+      "reservation_id": "00000000-0000-4000-8000-000000000091",
+      "payment_id": null,
+      "amount": 5,
+      "reason": "OVERSTAY",
+      "evidence_ref": "demo://evidence/overstay-001",
+      "status": "PENDING",
+      "created_at": "2026-11-09T10:15:00Z"
+    },
+    {
+      "charge_id": "00000000-0000-4000-8000-000000000202",
+      "reservation_id": "00000000-0000-4000-8000-000000000092",
+      "payment_id": null,
+      "amount": 3,
+      "reason": "DAMAGE",
+      "evidence_ref": "demo://evidence/damage-002",
+      "status": "PENDING",
+      "created_at": "2026-11-09T12:10:00Z"
+    },
+    {
+      "charge_id": "00000000-0000-4000-8000-000000000203",
+      "reservation_id": "00000000-0000-4000-8000-000000000091",
+      "payment_id": "00000000-0000-4000-8000-000000000083",
+      "amount": 2,
+      "reason": "DAMAGE",
+      "evidence_ref": "demo://evidence/damage-001",
+      "status": "PAID",
+      "created_at": "2026-11-09T10:16:00Z"
+    }
+  ],
+  "outstanding_balances": [
+    {
+      "balance_id": "00000000-0000-4000-8000-000000000211",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "charge_id": "00000000-0000-4000-8000-000000000201",
+      "amount": 5,
+      "due_at": "2026-11-09T10:15:00Z",
+      "status": "OPEN",
+      "created_at": "2026-11-09T10:15:00Z",
+      "regularized_at": null
+    },
+    {
+      "balance_id": "00000000-0000-4000-8000-000000000212",
+      "profile_id": "00000000-0000-4000-8000-000000000012",
+      "charge_id": "00000000-0000-4000-8000-000000000202",
+      "amount": 3,
+      "due_at": "2026-11-09T12:10:00Z",
+      "status": "OPEN",
+      "created_at": "2026-11-09T12:10:00Z",
+      "regularized_at": null
+    }
+  ],
+  "refunds": [
+    {
+      "refund_id": "00000000-0000-4000-8000-000000000221",
+      "payment_id": "00000000-0000-4000-8000-000000000082",
+      "amount": 1,
+      "reason": "Ajuste de cobro de demostracion",
+      "status": "COMPLETED",
+      "provider_operation_ref": "demo-refund-001",
+      "requested_at": "2026-11-09T12:20:00Z",
+      "completed_at": "2026-11-09T12:25:00Z"
+    }
+  ],
+  "billing_documents": [
+    {
+      "document_id": "00000000-0000-4000-8000-000000000231",
+      "payment_id": "00000000-0000-4000-8000-000000000081",
+      "document_type": "RECEIPT",
+      "document_number": "00000001",
+      "series": "DEMO",
+      "legal_name": "Juan Demo",
+      "tax_data": {
+        "demo": true
+      },
+      "issued_at": "2026-11-09T07:30:00Z",
+      "status": "ISSUED"
+    },
+    {
+      "document_id": "00000000-0000-4000-8000-000000000232",
+      "payment_id": "00000000-0000-4000-8000-000000000082",
+      "document_type": "RECEIPT",
+      "document_number": "00000002",
+      "series": "DEMO",
+      "legal_name": "Juan Demo",
+      "tax_data": {
+        "demo": true
+      },
+      "issued_at": "2026-11-09T07:40:00Z",
+      "status": "ISSUED"
+    },
+    {
+      "document_id": "00000000-0000-4000-8000-000000000233",
+      "payment_id": "00000000-0000-4000-8000-000000000083",
+      "document_type": "RECEIPT",
+      "document_number": "00000003",
+      "series": "DEMO",
+      "legal_name": "Juan Demo",
+      "tax_data": {
+        "demo": true
+      },
+      "issued_at": "2026-11-09T10:20:00Z",
+      "status": "ISSUED"
+    }
+  ],
+  "occupancy_sensors": [
+    {
+      "sensor_id": "00000000-0000-4000-8000-000000000241",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "protocol": "MQTT",
+      "status": "ACTIVE",
+      "last_seen_at": "2026-11-09T07:55:00Z",
+      "configuration": {
+        "topic": "demo/spotgo/sensors/1/occupancy"
+      },
+      "installed_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "sensor_id": "00000000-0000-4000-8000-000000000242",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "spot_id": "00000000-0000-4000-8000-000000000042",
+      "protocol": "MQTT",
+      "status": "ACTIVE",
+      "last_seen_at": "2026-11-09T07:55:00Z",
+      "configuration": {
+        "topic": "demo/spotgo/sensors/2/occupancy"
+      },
+      "installed_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "sensor_id": "00000000-0000-4000-8000-000000000243",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "spot_id": "00000000-0000-4000-8000-000000000043",
+      "protocol": "MQTT",
+      "status": "ACTIVE",
+      "last_seen_at": "2026-11-09T07:55:00Z",
+      "configuration": {
+        "topic": "demo/spotgo/sensors/3/occupancy"
+      },
+      "installed_at": "2026-11-09T07:00:00Z"
+    },
+    {
+      "sensor_id": "00000000-0000-4000-8000-000000000244",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "spot_id": "00000000-0000-4000-8000-000000000044",
+      "protocol": "MQTT",
+      "status": "ACTIVE",
+      "last_seen_at": "2026-11-09T07:55:00Z",
+      "configuration": {
+        "topic": "demo/spotgo/sensors/4/occupancy"
+      },
+      "installed_at": "2026-11-09T07:00:00Z"
+    }
+  ],
+  "occupancy_readings": [
+    {
+      "reading_id": "00000000-0000-4000-8000-000000000251",
+      "sensor_id": "00000000-0000-4000-8000-000000000241",
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "occupancy_status": "OCCUPIED",
+      "occurred_at": "2026-11-09T07:55:00Z",
+      "received_at": "2026-11-09T07:55:01Z",
+      "quality": 99,
+      "payload_hash": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "reading_id": "00000000-0000-4000-8000-000000000252",
+      "sensor_id": "00000000-0000-4000-8000-000000000242",
+      "spot_id": "00000000-0000-4000-8000-000000000042",
+      "occupancy_status": "AVAILABLE",
+      "occurred_at": "2026-11-09T07:55:00Z",
+      "received_at": "2026-11-09T07:55:01Z",
+      "quality": 99,
+      "payload_hash": "5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    {
+      "reading_id": "00000000-0000-4000-8000-000000000253",
+      "sensor_id": "00000000-0000-4000-8000-000000000243",
+      "spot_id": "00000000-0000-4000-8000-000000000043",
+      "occupancy_status": "OCCUPIED",
+      "occurred_at": "2026-11-09T07:55:00Z",
+      "received_at": "2026-11-09T07:55:01Z",
+      "quality": 99,
+      "payload_hash": "6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    {
+      "reading_id": "00000000-0000-4000-8000-000000000254",
+      "sensor_id": "00000000-0000-4000-8000-000000000244",
+      "spot_id": "00000000-0000-4000-8000-000000000044",
+      "occupancy_status": "AVAILABLE",
+      "occurred_at": "2026-11-09T07:55:00Z",
+      "received_at": "2026-11-09T07:55:01Z",
+      "quality": 99,
+      "payload_hash": "7777777777777777777777777777777777777777777777777777777777777777"
+    }
+  ],
+  "sensor_health_events": [
+    {
+      "health_event_id": "00000000-0000-4000-8000-000000000261",
+      "sensor_id": "00000000-0000-4000-8000-000000000242",
+      "health": "FAILED",
+      "reason": "Sin comunicacion desde las 07:55; causa fisica no determinada",
+      "observed_at": "2026-11-09T08:05:00Z",
+      "recovered_at": null
+    }
+  ],
+  "occupancy_conflicts": [
+    {
+      "conflict_id": "00000000-0000-4000-8000-000000000271",
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "reservation_id": "00000000-0000-4000-8000-000000000091",
+      "reading_id": "00000000-0000-4000-8000-000000000251",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "conflict_type": "UNEXPECTED_OCCUPANCY",
+      "severity": "HIGH",
+      "detected_at": "2026-11-09T07:55:00Z",
+      "status": "OPEN"
+    }
+  ],
+  "occupancy_alerts": [
+    {
+      "alert_id": "00000000-0000-4000-8000-000000000281",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "health_event_id": null,
+      "conflict_id": "00000000-0000-4000-8000-000000000271",
+      "spot_id": "00000000-0000-4000-8000-000000000041",
+      "alert_type": "OCCUPANCY_CONFLICT",
+      "severity": "HIGH",
+      "evidence_ref": "demo://readings/251",
+      "created_at": "2026-11-09T07:56:00Z",
+      "acknowledged_at": null,
+      "closed_at": null,
+      "status": "OPEN"
+    },
+    {
+      "alert_id": "00000000-0000-4000-8000-000000000282",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "health_event_id": "00000000-0000-4000-8000-000000000261",
+      "conflict_id": null,
+      "spot_id": "00000000-0000-4000-8000-000000000042",
+      "alert_type": "SENSOR_FAILURE",
+      "severity": "HIGH",
+      "evidence_ref": "demo://health-events/261",
+      "created_at": "2026-11-09T08:05:00Z",
+      "acknowledged_at": null,
+      "closed_at": null,
+      "status": "OPEN"
+    }
+  ],
+  "capacity_snapshots": [
+    {
+      "snapshot_id": "00000000-0000-4000-8000-000000000291",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "occupied_count": 1,
+      "total_count": 2,
+      "percentage": 50,
+      "observed_at": "2026-11-09T07:55:00Z"
+    },
+    {
+      "snapshot_id": "00000000-0000-4000-8000-000000000292",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000032",
+      "occupied_count": 1,
+      "total_count": 2,
+      "percentage": 50,
+      "observed_at": "2026-11-09T07:55:00Z"
+    },
+    {
+      "snapshot_id": "00000000-0000-4000-8000-000000000293",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": null,
+      "occupied_count": 2,
+      "total_count": 4,
+      "percentage": 50,
+      "observed_at": "2026-11-09T07:55:00Z"
+    }
+  ],
+  "occupancy_reports": [
+    {
+      "report_id": "00000000-0000-4000-8000-000000000301",
+      "tenant_id": "00000000-0000-4000-8000-000000000021",
+      "zone_id": "00000000-0000-4000-8000-000000000031",
+      "interval_start": "2026-11-09T07:00:00Z",
+      "interval_end": "2026-11-09T13:00:00Z",
+      "totals": {
+        "peak_occupancy_percentage": 50,
+        "alerts_count": 2
+      },
+      "generated_at": "2026-11-09T13:05:00Z",
+      "status": "GENERATED"
+    }
+  ]
 }

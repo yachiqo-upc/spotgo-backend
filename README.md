@@ -1,6 +1,6 @@
-﻿# SpotGo Backend
+# SpotGo Backend
 
-REST API for SpotGo. Handles IAM with JWT, parking operations, monitoring, billing, favorites, vehicles, etc. Built with Spring Boot 4.0 and Java 26.
+REST API for SpotGo. Handles IAM with JWT, parking operations, monitoring, billing, profiles, vehicles, etc. Built with Spring Boot 4.0 and Java 26.
 
 ## Tech Stack
 
@@ -22,7 +22,7 @@ src/main/java/com/yaqhiqo/spotgo/
 ├── parking/        # Core domain: parkings, blueprints, spots, reservations
 ├── monitoring/     # Employees, occupancy by hour, weekly trends
 ├── billing/        # Billing domain: receipts, subscriptions, client plans
-├── profiles/       # Favorites and vehicles
+├── profiles/       # Profiles, vehicles and driver classifications
 └── shared/         # Shared kernel: base entities, error handling, config
 ```
 
@@ -76,9 +76,6 @@ Allowed methods: `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`, `HEAD`, `PATCH`. Cre
 | `GET` | `/api/v1/users/{userId}` | Get user by ID (`ADMIN` only) |
 | `PATCH` | `/api/v1/users/{userId}` | Update user profile (`ADMIN` only) |
 | `PATCH` | `/api/v1/users/{userId}/password` | Change password (`ADMIN` only) |
-| `GET` | `/api/v1/favorites` | Get favorites (optional `?clientId=`) |
-| `POST` | `/api/v1/favorites` | Create favorite |
-| `DELETE` | `/api/v1/favorites/{favoriteId}` | Delete favorite |
 | `GET` | `/api/v1/vehicles` | Get vehicles (optional `?clientId=`) |
 | `POST` | `/api/v1/vehicles` | Create vehicle |
 | `PATCH` | `/api/v1/vehicles/{vehicleId}` | Update vehicle |

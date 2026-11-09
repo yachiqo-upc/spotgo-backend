@@ -8,7 +8,6 @@ import com.yachiqo.spotgo.parking.domain.model.aggregates.ClientReport;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.DetectedSpot;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.Reservation;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
-import com.yachiqo.spotgo.profiles.domain.model.aggregates.Favorite;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.Vehicle;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -46,16 +45,11 @@ public class AuthorizationService {
     }
 
     public void requireVehicleOwner(SpotgoUserPrincipal principal, Vehicle vehicle) {
-        if (!vehicle.getClientId().equals(principal.getUserId())) {
+        if (!vehicle.getProfile().getAccountId().toString().equals(principal.getUserId())) {
             throw new AccessDeniedException("Vehicle does not belong to authenticated client");
         }
     }
 
-    public void requireFavoriteOwner(SpotgoUserPrincipal principal, Favorite favorite) {
-        if (!favorite.getClientId().equals(principal.getUserId())) {
-            throw new AccessDeniedException("Favorite does not belong to authenticated client");
-        }
-    }
 
     public void requireReservationAccess(SpotgoUserPrincipal principal, Reservation reservation) {
         if (isClient(principal) && reservation.getClientId().equals(principal.getUserId())) {

@@ -10,9 +10,22 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springdoc.core.models.GroupedOpenApi;
 
 @Configuration
 public class OpenApiConfiguration {
+    @Bean
+    public GroupedOpenApi profilesApi() {
+        return GroupedOpenApi.builder().group("01-profiles-actualizado")
+                .pathsToMatch("/api/v1/profiles/**", "/api/v1/vehicles/**",
+                        "/api/v1/driver-classifications/**", "/api/v1/authentication/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi completeApi() {
+        return GroupedOpenApi.builder().group("02-backend-completo").pathsToMatch("/api/**").build();
+    }
     // Properties
     @Value("${spring.application.name}")
     String applicationName;
