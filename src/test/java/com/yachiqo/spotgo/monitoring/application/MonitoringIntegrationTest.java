@@ -76,8 +76,9 @@ class MonitoringIntegrationTest {
   when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
   for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
    "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
-   "driver_classifications","digital_payments","payment_tokens","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants"))jdbc.update("DELETE FROM "+table);
+   "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts"))jdbc.update("DELETE FROM "+table);
   when(plans.get("DRIVER_TEST")).thenReturn(driverPlan);when(plans.get("TENANT_TEST")).thenReturn(tenantPlan);when(plans.all()).thenReturn(List.of(driverPlan,tenantPlan));
+  when(plans.snapshotForTenant(anyMap(),anyCollection())).thenAnswer(invocation->invocation.getArgument(0));
   when(provider.inspectToken(anyString())).thenAnswer(i->new PaymentProvider.TokenDetails(i.getArgument(0),"Visa","4242",12,2035));
   when(provider.charge(any(),anyInt(),anyString(),any(),anyString())).thenAnswer(i->new PaymentProvider.PaymentResult(outcome.get(),"test-op-"+i.getArgument(0)+"-"+i.getArgument(1),outcome.get()==PaymentStatus.REJECTED?"DECLINED":null));
   when(provider.reconcile(any(),anyInt(),any())).thenAnswer(i->new PaymentProvider.PaymentResult(outcome.get(),"test-op-"+i.getArgument(0)+"-"+i.getArgument(1),null));
@@ -85,9 +86,9 @@ class MonitoringIntegrationTest {
   superAuth=register("super-test");var role=roles.findByAccountId(superAuth.accountId()).orElseThrow();role.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(role);superAdmin=actor(superAuth);
   tenant=parking.createTenant(superAdmin,"Demo","Demo",Map.of("latitude",0,"longitude",0),Map.of(),rules());
   adminAuth=register("admin-test");role=roles.findByAccountId(adminAuth.accountId()).orElseThrow();role.assign(UserRole.PARKING_ADMIN,tenant.getId(),Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(role);admin=actor(adminAuth);adminProfile=profiles.create(admin,"Ana","Demo","900000001");
-  driverAuth=register("driver-test");driver=actor(driverAuth);driverProfile=profiles.create(driver,"Juan","Demo","900000002");vehicle=vehicles.saveAndFlush(new Vehicle(driverProfile,"DEMO-1","Kia","Rio","Rojo"));
-  otherAuth=register("other-test");other=actor(otherAuth);var op=profiles.create(other,"Sofia","Demo","900000003");otherVehicle=vehicles.saveAndFlush(new Vehicle(op,"DEMO-2","Toyota","Yaris","Azul"));
-  var zone=parking.createZone(admin,tenant.getId(),"Piso1-A",Map.of(),"#2563EB");spot=parking.createSpot(admin,zone.getId(),"A-01","STANDARD",Map.of());second=parking.createSpot(admin,zone.getId(),"A-02","STANDARD",Map.of());
+  driverAuth=register("driver-test");driver=actor(driverAuth);driverProfile=profiles.create(driver,"Juan","Demo","900000002");vehicle=vehicles.saveAndFlush(new Vehicle(driverProfile,"DEMO-1","Kia","Rio","Red"));
+  otherAuth=register("other-test");other=actor(otherAuth);var op=profiles.create(other,"Sofia","Demo","900000003");otherVehicle=vehicles.saveAndFlush(new Vehicle(op,"DEMO-2","Toyota","Yaris","Blue"));
+  var zone=parking.createZone(admin,tenant.getId(),"Floor1-A",Map.of(),"#2563EB");spot=parking.createSpot(admin,zone.getId(),"A-01","STANDARD",Map.of());second=parking.createSpot(admin,zone.getId(),"A-02","STANDARD",Map.of());
  }
  PaymentToken token(SpotgoUserPrincipal who){return billing.registerToken(who,"test-card-"+UUID.randomUUID());}
  Reservation reserve(){return parking.reserve(driver,spot.getId(),vehicle.getId(),now.get().plusSeconds(60),now.get().plusSeconds(5460));}
@@ -262,7 +263,7 @@ class MonitoringIntegrationTest {
   assertEquals(1,monitoring.sensors(superAdmin,null).size());
  }
  @Test void swaggerContainsAllSevenCurrentMonitoringResourcesAndNoOldEndpoints() throws Exception {
-  var response=request("GET","/v3/api-docs/06-backend-completo",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).get("paths");
+  var response=request("GET","/v3/api-docs/06-complete-backend",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).get("paths");
   for(var path:List.of("occupancy-sensors","occupancy-readings","sensor-health-events","occupancy-conflicts","occupancy-alerts","capacity-snapshots","occupancy-reports"))assertTrue(paths.has("/api/v1/"+path),path);
   for(var path:List.of("employees","occupancyByHour","weeklyTrends","analytics","receipts","clientPlans"))assertFalse(paths.has("/api/v1/"+path),path);
  }

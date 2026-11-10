@@ -28,7 +28,7 @@ public class BillingDocument {
 
  protected BillingDocument() {}
  public BillingDocument(DigitalPayment payment,BillingDocumentType type,String number,String series,String name,Map<String,Object> tax,Instant now){
-  if(payment.getStatus()!=PaymentStatus.APPROVED)throw new IllegalArgumentException("Solo se emite comprobante de un pago aprobado");
+  if(payment.getStatus()!=PaymentStatus.APPROVED)throw new IllegalArgumentException("A billing document can be issued only for an approved payment.");
   this.payment=payment;documentType=Objects.requireNonNull(type);documentNumber=text(number);this.series=text(series);legalName=text(name);
   taxData=new LinkedHashMap<>(tax);issuedAt=now;status=BillingDocumentStatus.ISSUED;
  }

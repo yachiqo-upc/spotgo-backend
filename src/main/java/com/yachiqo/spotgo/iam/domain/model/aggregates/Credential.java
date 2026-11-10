@@ -36,7 +36,7 @@ public class Credential {
         credential.rotate(hash); return credential;
     }
     public static Credential google(Account account, String subject) {
-        if (subject == null || subject.isBlank()) throw new IllegalArgumentException("Google requiere external_subject verificado");
+        if (subject == null || subject.isBlank()) throw new IllegalArgumentException("Google authentication requires a verified external_subject.");
         var credential = new Credential(account, AuthenticationMethod.GOOGLE);
         credential.externalSubject = subject; return credential;
     }
@@ -44,7 +44,7 @@ public class Credential {
     public void usedAt(Instant now) { this.lastUsedAt = now; }
     public void rotate(String hash) {
         if (authenticationMethod != AuthenticationMethod.PASSWORD || hash == null || hash.isBlank())
-            throw new IllegalArgumentException("Solo una credencial PASSWORD puede recibir un hash");
+            throw new IllegalArgumentException("Only a PASSWORD credential can store a password hash.");
         this.secretHash = hash;
     }
     public void revoke() { status = CredentialStatus.REVOKED; }

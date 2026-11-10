@@ -62,8 +62,9 @@ class BillingIntegrationTest {
   when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
   for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
    "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
-   "driver_classifications","digital_payments","payment_tokens","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants"))jdbc.update("DELETE FROM "+table);
+   "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts"))jdbc.update("DELETE FROM "+table);
   when(plans.get("DRIVER_TEST")).thenReturn(driverPlan);when(plans.get("TENANT_TEST")).thenReturn(tenantPlan);when(plans.all()).thenReturn(List.of(driverPlan,tenantPlan));
+  when(plans.snapshotForTenant(anyMap(),anyCollection())).thenAnswer(invocation->invocation.getArgument(0));
   when(provider.inspectToken(anyString())).thenAnswer(i->new PaymentProvider.TokenDetails(i.getArgument(0),"Visa","4242",12,2035));
   when(provider.charge(any(),anyInt(),anyString(),any(),anyString())).thenAnswer(i->new PaymentProvider.PaymentResult(outcome.get(),"test-op-"+i.getArgument(0)+"-"+i.getArgument(1),outcome.get()==PaymentStatus.REJECTED?"DECLINED":null));
   when(provider.reconcile(any(),anyInt(),any())).thenAnswer(i->new PaymentProvider.PaymentResult(outcome.get(),"test-op-"+i.getArgument(0)+"-"+i.getArgument(1),null));
@@ -71,9 +72,9 @@ class BillingIntegrationTest {
   superAuth=register("super-test");var role=roles.findByAccountId(superAuth.accountId()).orElseThrow();role.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(role);superAdmin=actor(superAuth);
   tenant=parking.createTenant(superAdmin,"Demo","Demo",Map.of("latitude",0,"longitude",0),Map.of(),rules());
   adminAuth=register("admin-test");role=roles.findByAccountId(adminAuth.accountId()).orElseThrow();role.assign(UserRole.PARKING_ADMIN,tenant.getId(),Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(role);admin=actor(adminAuth);adminProfile=profiles.create(admin,"Ana","Demo","900000001");
-  driverAuth=register("driver-test");driver=actor(driverAuth);driverProfile=profiles.create(driver,"Juan","Demo","900000002");vehicle=vehicles.saveAndFlush(new Vehicle(driverProfile,"DEMO-1","Kia","Rio","Rojo"));
-  otherAuth=register("other-test");other=actor(otherAuth);var op=profiles.create(other,"Sofia","Demo","900000003");otherVehicle=vehicles.saveAndFlush(new Vehicle(op,"DEMO-2","Toyota","Yaris","Azul"));
-  var zone=parking.createZone(admin,tenant.getId(),"Piso1-A",Map.of(),"#2563EB");spot=parking.createSpot(admin,zone.getId(),"A-01","STANDARD",Map.of());second=parking.createSpot(admin,zone.getId(),"A-02","STANDARD",Map.of());
+  driverAuth=register("driver-test");driver=actor(driverAuth);driverProfile=profiles.create(driver,"Juan","Demo","900000002");vehicle=vehicles.saveAndFlush(new Vehicle(driverProfile,"DEMO-1","Kia","Rio","Red"));
+  otherAuth=register("other-test");other=actor(otherAuth);var op=profiles.create(other,"Sofia","Demo","900000003");otherVehicle=vehicles.saveAndFlush(new Vehicle(op,"DEMO-2","Toyota","Yaris","Blue"));
+  var zone=parking.createZone(admin,tenant.getId(),"Floor1-A",Map.of(),"#2563EB");spot=parking.createSpot(admin,zone.getId(),"A-01","STANDARD",Map.of());second=parking.createSpot(admin,zone.getId(),"A-02","STANDARD",Map.of());
  }
  PaymentToken token(SpotgoUserPrincipal who){return billing.registerToken(who,"test-card-"+UUID.randomUUID());}
  Reservation reserve(){return parking.reserve(driver,spot.getId(),vehicle.getId(),now.get().plusSeconds(60),now.get().plusSeconds(5460));}
@@ -103,13 +104,13 @@ class BillingIntegrationTest {
   assertEquals(404,request("GET","/api/v1/profiles/me",null,access).statusCode());
   var profile=httpJson("POST","/api/v1/profiles",Map.of("firstName","Luis","lastName","Demo","phone","900000004"),access,201);
   assertEquals(auth.path("accountId"),profile.path("accountId"));
-  var car=httpJson("POST","/api/v1/vehicles",Map.of("plate","REG-01","make","Toyota","model","Yaris","color","Azul"),access,201);
+  var car=httpJson("POST","/api/v1/vehicles",Map.of("plate","REG-01","make","Toyota","model","Yaris","color","Blue"),access,201);
   assertEquals(profile.path("id"),car.path("profileId"));
   assertEquals(profile.path("id"),httpJson("GET","/api/v1/profiles/me",null,access,200).path("id"));
   var list=httpJson("GET","/api/v1/vehicles",null,access,200);
   assertEquals(1,list.size());assertEquals(car.path("id"),list.get(0).path("id"));
   assertEquals(403,request("PATCH","/api/v1/vehicles/"+car.path("id").asText(),Map.of("color","Negro"),otherAuth.accessToken()).statusCode());
-  assertEquals("Azul",httpJson("GET","/api/v1/vehicles",null,access,200).get(0).path("color").asText());
+  assertEquals("Blue",httpJson("GET","/api/v1/vehicles",null,access,200).get(0).path("color").asText());
  }
  @Test void completeHttpReservationPaymentAndOnTimeStayHasNoDebt() throws Exception {
   Instant start=now.get().plusSeconds(60),end=start.plusSeconds(3600);
@@ -139,7 +140,7 @@ class BillingIntegrationTest {
   var auth=httpJson("POST","/api/v1/authentication/sign-up",Map.of("email","journey@example.com","password","Password123!"),null,201);
   String access=auth.path("accessToken").asText();
   var profile=httpJson("POST","/api/v1/profiles",Map.of("firstName","Luis","lastName","Demo","phone","900000004"),access,201);
-  var car=httpJson("POST","/api/v1/vehicles",Map.of("plate","FLOW-01","make","Toyota","model","Yaris","color","Azul"),access,201);
+  var car=httpJson("POST","/api/v1/vehicles",Map.of("plate","FLOW-01","make","Toyota","model","Yaris","color","Blue"),access,201);
   assertEquals(profile.path("id").asText(),car.path("profileId").asText());
   Instant start=now.get().plusSeconds(60),end=start.plusSeconds(3600);
   var body=Map.of("spotId",spot.getId(),"vehicleId",car.path("id").asText(),"startAt",start.toString(),"endAt",end.toString());
@@ -314,7 +315,7 @@ class BillingIntegrationTest {
  }
  @Test void subscriptionStartsWhenPaymentIsApprovedAndKeepsPlanSnapshot(){
   var p=billing.subscriptionPayment(driver,"DRIVER_TEST",token(driver).getId(),"delayed-sub");
-  when(plans.get("DRIVER_TEST")).thenThrow(new IllegalArgumentException("Plan retirado del catalogo"));
+  when(plans.get("DRIVER_TEST")).thenThrow(new IllegalArgumentException("Plan removed from the catalog."));
   now.set(now.get().plusSeconds(3600));outcome.set(PaymentStatus.RECONCILIATION_REQUIRED);billing.process(driver,p.getId(),false);
   assertEquals(0,subscriptions.count());now.set(now.get().plusSeconds(3600));outcome.set(PaymentStatus.APPROVED);billing.reconcile(driver,p.getId());
   var sub=subscriptions.byPayment(p.getId()).orElseThrow();assertEquals(now.get(),sub.getStartAt());assertEquals("DRIVER_TEST",sub.getPlan().get("code"));
@@ -403,7 +404,7 @@ class BillingIntegrationTest {
   assertEquals(BillingDocumentStatus.VOID,billing.voidDocument(admin,doc.getId()).getStatus());
  }
  @Test void swaggerShowsCurrentBillingAndNoOldControllers() throws Exception{
-  var response=request("GET","/v3/api-docs/06-backend-completo",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).path("paths");
+  var response=request("GET","/v3/api-docs/06-complete-backend",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).path("paths");
   for(String path:List.of("payment-tokens","digital-payments","payment-attempts","subscriptions","additional-charges","outstanding-balances","refunds","billing-documents"))assertTrue(paths.has("/api/v1/"+path),path);
   for(String old:List.of("receipts","clientPlans","parkings","detectedSpots","employees","occupancyByHour","weeklyTrends"))assertFalse(paths.has("/api/v1/"+old),old);
  }
@@ -440,7 +441,7 @@ class BillingIntegrationTest {
    assertEquals(expected,actual,table+": columnas reales frente a db.json");
   }
   assertEquals(31,implemented);
-  assertTrue(missing.isEmpty(),"Ninguna tabla del diseño debe quedar sin implementar");
+  assertTrue(missing.isEmpty(),"Every table in the design must be implemented.");
  }
  @Test void everyDocumentedReferenceIsEnforcedByAnActualDatabaseForeignKey() throws Exception {
   var targets=Map.ofEntries(Map.entry("account_id","accounts"),Map.entry("profile_id","profiles"),Map.entry("assigned_by","profiles"),
@@ -466,6 +467,6 @@ class BillingIntegrationTest {
     assertEquals(target+"."+targetColumn,imported.get(field),table+"."+field+" necesita FK fisica");checked++;
    }
   }
-  assertTrue(checked>50,"Se deben verificar referencias de los cinco contextos");
+  assertTrue(checked>50,"References across all five contexts must be verified.");
  }
 }

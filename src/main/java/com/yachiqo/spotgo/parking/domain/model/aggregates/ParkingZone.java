@@ -30,7 +30,7 @@ public class ParkingZone {
  }
  public void update(String name,Map<String,Object> location,String colorCode,ZoneStatus status) {
   this.name=text(name);this.location=object(location);this.colorCode=text(colorCode);
-  if (!this.colorCode.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("colorCode debe ser #RRGGBB");
+  if (!this.colorCode.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("colorCode must use the #RRGGBB format.");
   this.status=Objects.requireNonNull(status);
  }
  public UUID getTenantId() { return tenant.getId(); }

@@ -30,7 +30,7 @@ public class PaymentToken {
  @Column(name="revoked_at") private Instant revokedAt;
  protected PaymentToken() {}
  public PaymentToken(Profile profile,String ref,String brand,String lastFour,int month,int year,Instant now) {
-  if(lastFour==null||!lastFour.matches("[0-9]{4}")||month<1||month>12||year<2000||year>2200)throw new IllegalArgumentException("Datos resumidos de tarjeta invalidos");
+  if(lastFour==null||!lastFour.matches("[0-9]{4}")||month<1||month>12||year<2000||year>2200)throw new IllegalArgumentException("Invalid summarized card details.");
   this.profile=Objects.requireNonNull(profile);providerTokenRef=text(ref);this.brand=text(brand);this.lastFour=lastFour;
   expirationMonth=(short)month;expirationYear=(short)year;createdAt=now;status=PaymentTokenStatus.ACTIVE;
  }

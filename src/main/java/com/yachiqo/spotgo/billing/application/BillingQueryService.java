@@ -20,7 +20,7 @@ public class BillingQueryService {
  }
  public List<PaymentToken> tokens(SpotgoUserPrincipal actor){return tokens.byProfile(access.profile(actor).getId());}
  public DigitalPayment payment(SpotgoUserPrincipal actor,UUID id){
-  var p=payments.findById(id).orElseThrow(()->BillingService.missing("Pago"));access.payment(actor,p);return p;
+  var p=payments.findById(id).orElseThrow(()->BillingService.missing("Payment"));access.payment(actor,p);return p;
  }
  public List<DigitalPayment> payments(SpotgoUserPrincipal actor){
   if(actor.getRole()==UserRole.SUPER_ADMIN)return payments.findAll();
@@ -33,7 +33,7 @@ public class BillingQueryService {
   return subscriptions.byProfile(access.profile(actor).getId());
  }
  public Subscription subscription(SpotgoUserPrincipal actor,UUID id){
-  var s=subscriptions.findById(id).orElseThrow(()->BillingService.missing("Suscripcion"));
+  var s=subscriptions.findById(id).orElseThrow(()->BillingService.missing("Subscription"));
   if(actor.getRole()!=UserRole.SUPER_ADMIN)access.subscription(actor,s);return s;
  }
  public List<AdditionalCharge> charges(SpotgoUserPrincipal actor){

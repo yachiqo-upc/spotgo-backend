@@ -22,7 +22,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 
-/** Loads the README fixtures only into compatible, existing tables. Never creates or deletes tables. */
+/** Loads demo fixtures only into compatible, existing tables. Never creates or deletes tables. */
 @Component
 @Profile({"dev", "local", "profiles-check"})
 @ConditionalOnProperty(name = "app.seeder.enabled", havingValue = "true")
@@ -70,15 +70,20 @@ public class DbSeeder implements CommandLineRunner {
 
 
         int inserted = 0, compatible = 0, skippedRows = 0, existing = 0;
-        var tables = data.fields();
-        while (tables.hasNext()) {
-            var entry = tables.next();
+        var tables = new ArrayList<Map.Entry<String, JsonNode>>();
+        data.fields().forEachRemaining(tables::add);
+        var seedOrder = List.of("accounts", "credentials", "profiles", "payment_tokens", "tenants");
+        tables.sort(Comparator.comparingInt(entry -> {
+            int index = seedOrder.indexOf(entry.getKey());
+            return index < 0 ? seedOrder.size() : index;
+        }));
+        for (var entry : tables) {
             String name = entry.getKey();
             JsonNode rows = entry.getValue();
             if (!rows.isArray() || rows.isEmpty()) continue;
             Table table = schema.get(name);
             if (table == null) {
-                log.info("SEED OMITIDO: {} (tabla todavia no implementada)", name);
+                log.info("SEED SKIPPED: {} (table is not implemented yet)", name);
                 continue;
             }
             List<String> missing = new ArrayList<>();
@@ -88,15 +93,15 @@ public class DbSeeder implements CommandLineRunner {
             Set<String> supplied = new HashSet<>();
             rows.get(0).fieldNames().forEachRemaining(column -> supplied.add(lower(column)));
             for (Column column : table.columns.values()) {
-                if (column.required && !supplied.contains(lower(column.name))) missing.add("valor requerido: " + column.name);
+                if (column.required && !supplied.contains(lower(column.name))) missing.add("required value: " + column.name);
             }
             rows.get(0).fieldNames().forEachRemaining(column -> {
                 Column actual = table.columns.get(lower(column));
                 if (actual != null && !column.equals("correlation_id") && (column.endsWith("_id") || column.equals("assigned_by")) && !lower(actual.typeName).equals("uuid"))
-                    missing.add("tipo UUID requerido: " + column);
+                    missing.add("required UUID type: " + column);
             });
             if (!missing.isEmpty() || table.primaryKeys.size() != 1 || field(rows.get(0), table.primaryKeys.get(0)) == null) {
-                log.warn("SEED OMITIDO: {} conserva un esquema incompatible. Columnas faltantes: {}", name, missing);
+                log.warn("SEED SKIPPED: {} has an incompatible schema. Missing columns: {}.", name, missing);
                 continue;
             }
             compatible++;
@@ -109,7 +114,7 @@ public class DbSeeder implements CommandLineRunner {
                 else existing++;
             }
         }
-        log.info("SEED FINAL: {} tablas del JSON; {} compatibles; {} filas nuevas; {} ya existentes; {} sin referencias disponibles",
+        log.info("SEED SUMMARY: {} JSON tables; {} compatible; {} new rows; {} already existed; {} skipped due to unavailable references.",
             data.size(), compatible, inserted, existing, skippedRows);
     }
 
@@ -156,7 +161,7 @@ public class DbSeeder implements CommandLineRunner {
             }
 
             if (parent == null || !parent.columns.containsKey(key) || !exists(parent, key, field.getValue())) {
-                log.info("SEED FILA OMITIDA: {}.{} necesita un registro disponible en {}", name, field.getKey(), destination);
+                log.info("SEED ROW SKIPPED: {}.{} requires an available record in {}.", name, field.getKey(), destination);
                 return false;
             }
         }
@@ -173,13 +178,13 @@ public class DbSeeder implements CommandLineRunner {
     private boolean insert(Table table, JsonNode row, String passwordHash) {
         String key = table.primaryKeys.get(0);
         JsonNode id = field(row, key);
-        if (id == null || id.isNull()) throw new IllegalArgumentException("Falta PK en fixture de " + table.name);
+        if (id == null || id.isNull()) throw new IllegalArgumentException("Missing primary key in fixture for " + table.name);
         if (exists(table, key, id)) return false;
         List<Column> columns = new ArrayList<>();
         List<JsonNode> values = new ArrayList<>();
         row.fields().forEachRemaining(entry -> {
             Column column = table.columns.get(lower(entry.getKey()));
-            if (column == null) throw new IllegalArgumentException("Columna incompatible en " + table.name + ": " + entry.getKey());
+            if (column == null) throw new IllegalArgumentException("Incompatible column in " + table.name + ": " + entry.getKey());
             columns.add(column); values.add(entry.getValue());
         });
         String names = String.join(",", columns.stream().map(c -> quote(c.name)).toList());

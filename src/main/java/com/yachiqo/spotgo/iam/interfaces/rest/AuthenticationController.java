@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(value = "/api/v1/authentication", produces = "application/json")
-@Tag(name = "Authentication", description = "Cuenta, credencial PASSWORD y sesiones UUID. Authorize recibe accessToken; refreshToken solo se envia a /refresh.")
+@Tag(name = "Authentication", description = "Accounts, PASSWORD credentials, and UUID-based sessions. Swagger Authorize uses accessToken; refreshToken is sent only to /refresh.")
 @ApiResponses({
-    @ApiResponse(responseCode = "400", description = "JSON invalido o contraseña sin al menos 8 caracteres, mayuscula, minuscula, numero y simbolo.", content = @Content),
-    @ApiResponse(responseCode = "401", description = "Credenciales, token o sesion invalidos, vencidos o revocados; cuenta no habilitada.", content = @Content),
-    @ApiResponse(responseCode = "409", description = "Correo duplicado o conflicto de integridad.", content = @Content),
-    @ApiResponse(responseCode = "429", description = "Demasiados intentos. Respetar Retry-After antes de reintentar.", content = @Content),
-    @ApiResponse(responseCode = "500", description = "Error inesperado del servidor.", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Invalid JSON or password. Passwords must contain at least 8 characters, including an uppercase letter, a lowercase letter, a number, and a symbol.", content = @Content),
+    @ApiResponse(responseCode = "401", description = "Credentials, token, or session are invalid, expired, or revoked, or the account is disabled.", content = @Content),
+    @ApiResponse(responseCode = "409", description = "Duplicate email address or integrity conflict.", content = @Content),
+    @ApiResponse(responseCode = "429", description = "Too many attempts. Wait for Retry-After before trying again.", content = @Content),
+    @ApiResponse(responseCode = "500", description = "Unexpected server error.", content = @Content)
 })
 public class AuthenticationController {
     private final AuthenticationService service;
@@ -30,8 +30,8 @@ public class AuthenticationController {
 
     @PostMapping("/sign-in")
     @SecurityRequirements
-    @Operation(summary = "Iniciar sesion", description = "Verifica credentials.secret_hash, registra una sesion y devuelve accessToken y refreshToken. Copia SOLO accessToken en Authorize. La contraseña y los tokens no se guardan en claro.")
-    @ApiResponse(responseCode = "200", description = "Sesion creada. Guarda ambos tokens y sus vencimientos.")
+    @Operation(summary = "Sign in", description = "Verifies credentials.secret_hash, creates a session, and returns accessToken and refreshToken. Paste only accessToken into Swagger Authorize. Passwords and tokens are never stored in plain text.")
+    @ApiResponse(responseCode = "200", description = "Session created. Store both tokens and their expiration times.")
     public AuthenticatedUserResource signIn(@Valid @RequestBody SignInResource body, HttpServletRequest request) {
         return service.signIn(body.email(), body.password(), request.getRemoteAddr());
     }
@@ -39,24 +39,24 @@ public class AuthenticationController {
     @PostMapping("/sign-up")
     @SecurityRequirements
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Registrar cuenta DRIVER", description = "Crea accounts, una credencial PASSWORD, una asignacion DRIVER y una sesion. Los datos personales se crean por separado con POST /profiles; no se duplican en accounts. No permite seleccionar roles privilegiados.")
-    @ApiResponse(responseCode = "201", description = "Cuenta DRIVER y sesion creadas; el perfil todavia puede no existir.")
+    @Operation(summary = "Register a DRIVER account", description = "Creates an account, a PASSWORD credential, a DRIVER role assignment, and a session. Personal profile data is created separately with POST /profiles. Privileged roles cannot be selected.")
+    @ApiResponse(responseCode = "201", description = "DRIVER account and session created; the profile may not exist yet.")
     public AuthenticatedUserResource signUp(@Valid @RequestBody SignUpResource body, HttpServletRequest request) {
         return service.signUp(body.email(), body.password(), request.getRemoteAddr());
     }
 
     @PostMapping("/refresh")
     @SecurityRequirements
-    @Operation(summary = "Renovar access token", description = "Recibe refreshToken sin requerir un access token vigente. Conserva sessionId y el vencimiento original de la sesion; entrega OTRO refreshToken e invalida el anterior. No reutilices el token viejo.")
-    @ApiResponse(responseCode = "200", description = "Nuevos tokens emitidos. Reemplaza ambos en el cliente.")
+    @Operation(summary = "Refresh access and refresh tokens", description = "Accepts refreshToken without a valid access token. Keeps the sessionId and original session expiration, issues a new refreshToken, and invalidates the previous one. Do not reuse the old token.")
+    @ApiResponse(responseCode = "200", description = "New tokens issued. Replace both tokens in the client.")
     public AuthenticatedUserResource refresh(@Valid @RequestBody RefreshTokenResource body, HttpServletRequest request) {
         return service.refresh(body.refreshToken(), request.getRemoteAddr());
     }
 
     @PostMapping("/sign-out")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Cerrar la sesion actual", description = "Requiere accessToken en Authorize. Revoca la sesion del token: tanto el access token como su renovacion dejan de ser aceptados.")
-    @ApiResponse(responseCode = "204", description = "Sesion revocada; sin cuerpo de respuesta.", content = @Content)
+    @Operation(summary = "Sign out of the current session", description = "Requires the accessToken in Swagger Authorize. Revokes the token's session so neither its access token nor refresh token is accepted.")
+    @ApiResponse(responseCode = "204", description = "Session revoked; no response body.", content = @Content)
     public void signOut(@AuthenticationPrincipal SpotgoUserPrincipal actor, HttpServletRequest request) {
         service.signOut(actor, request.getRemoteAddr());
     }
@@ -64,9 +64,9 @@ public class AuthenticationController {
     @PostMapping("/password-reset/request")
     @SecurityRequirements
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Solicitar codigo de recuperacion", description = "Requiere configurar Resend. Devuelve la misma respuesta para correos conocidos y desconocidos. El codigo viaja por correo y su hash queda en la tabla auxiliar de recuperacion ya existente.")
-    @ApiResponse(responseCode = "204", description = "Solicitud recibida; no confirma si el correo existe.", content = @Content)
-    @ApiResponse(responseCode = "503", description = "Servicio de correo no configurado o no disponible.", content = @Content)
+    @Operation(summary = "Request a password recovery code", description = "Requires Resend configuration. Returns the same response for known and unknown email addresses. The one-time code is emailed, and only its hash is stored in the existing password recovery table.")
+    @ApiResponse(responseCode = "204", description = "Request received; this does not confirm whether the email address exists.", content = @Content)
+    @ApiResponse(responseCode = "503", description = "Email delivery is not configured or is unavailable.", content = @Content)
     public void requestReset(@Valid @RequestBody PasswordResetRequestResource body, HttpServletRequest request) {
         service.requestPasswordReset(body.email(), request.getRemoteAddr());
     }
@@ -74,8 +74,8 @@ public class AuthenticationController {
     @PostMapping("/password-reset/confirm")
     @SecurityRequirements
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Confirmar recuperacion", description = "Valida codigo, vencimiento, maximo de intentos y uso unico. Cambia el hash de la contraseña y revoca TODAS las sesiones de la cuenta.")
-    @ApiResponse(responseCode = "204", description = "Contraseña cambiada. Inicia sesion nuevamente.", content = @Content)
+    @Operation(summary = "Confirm sensor recovery", description = "Validates the code, expiration, attempt limit, and one-time use. Updates the password hash and revokes every session for the account.")
+    @ApiResponse(responseCode = "204", description = "Password changed. Sign in again.", content = @Content)
     public void confirmReset(@Valid @RequestBody PasswordResetConfirmResource body, HttpServletRequest request) {
         service.confirmPasswordReset(body.email(), body.code(), body.newPassword(), request.getRemoteAddr());
     }

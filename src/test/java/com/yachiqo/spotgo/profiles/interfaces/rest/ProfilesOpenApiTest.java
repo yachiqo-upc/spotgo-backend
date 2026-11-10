@@ -33,24 +33,24 @@ class ProfilesOpenApiTest {
         JsonNode config = new ObjectMapper().readTree(configResponse.body());
         var names = new java.util.ArrayList<String>();
         for (var group : config.path("urls")) names.add(group.path("name").asText());
-        assertEquals(java.util.List.of("01-profiles-actualizado", "02-iam-actualizado", "03-parking-actualizado",
-            "04-payments-billing-actualizado", "05-monitoring-actualizado", "06-backend-completo"), names);
-        assertEquals("06-backend-completo", config.path("urls.primaryName").asText());
-        JsonNode complete = api("06-backend-completo");
+        assertEquals(java.util.List.of("01-profiles", "02-identity-access", "03-parking",
+            "04-payments-billing", "05-monitoring", "06-complete-backend"), names);
+        assertEquals("06-complete-backend", config.path("urls.primaryName").asText());
+        JsonNode complete = api("06-complete-backend");
         java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "swagger-order-review"));
         java.nio.file.Files.writeString(java.nio.file.Path.of("target", "swagger-order-review", "endpoint-inventory.json"), complete.toString());
-        JsonNode paths = api("01-profiles-actualizado").path("paths");
+        JsonNode paths = api("01-profiles").path("paths");
         assertTrue(paths.has("/api/v1/profiles/me"));
         assertTrue(paths.has("/api/v1/vehicles"));
         assertTrue(paths.has("/api/v1/driver-classifications/me"));
         assertTrue(paths.has("/api/v1/authentication/sign-in"));
         assertFalse(paths.has("/api/v1/receipts"));
-        assertTrue(api("06-backend-completo").path("paths").has("/api/v1/digital-payments"));
-        assertFalse(api("06-backend-completo").path("paths").has("/api/v1/receipts"));
+        assertTrue(api("06-complete-backend").path("paths").has("/api/v1/digital-payments"));
+        assertFalse(api("06-complete-backend").path("paths").has("/api/v1/receipts"));
     }
 
     @Test void generatedDocumentationDescribesOperationsCodesAndDistinctUuidExamples() throws Exception {
-        JsonNode document = api("01-profiles-actualizado");
+        JsonNode document = api("01-profiles");
         JsonNode paths = document.path("paths");
         var endpoints = paths.fields();
         int checked = 0;

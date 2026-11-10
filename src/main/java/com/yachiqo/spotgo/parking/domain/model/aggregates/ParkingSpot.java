@@ -27,6 +27,7 @@ public class ParkingSpot {
   this.code=text(code).toUpperCase(Locale.ROOT);this.spotType=text(type).toUpperCase(Locale.ROOT);
   this.features=object(features);this.operationalStatus=Objects.requireNonNull(status);
  }
+ public void setOperationalStatus(OperationalStatus status){this.operationalStatus=Objects.requireNonNull(status);}
  public UUID getZoneId() { return zone.getId(); }
  public UUID getTenantId() { return zone.getTenantId(); }
 

@@ -61,14 +61,14 @@ class ParkingInfrastructureTest {
  ParkingSpot spot,second;
  Vehicle vehicle,otherVehicle;
  Map<String,Object> rules(){return Map.of("tariff_rules",Map.of("period_minutes",60,"price_per_period",5,"rounding","CEILING"),
-  "overstay_tolerance_minutes",5,"lock_duration_minutes",10,"allocation_rules",Map.of(),"coexistence_rules",List.of("No bloquear salidas"));}
+  "overstay_tolerance_minutes",5,"lock_duration_minutes",10,"allocation_rules",Map.of(),"coexistence_rules",List.of("Keep exits clear"));}
  SpotgoUserPrincipal principal(AuthenticatedUserResource auth){return authentication.authenticate(jwt.parseAccessToken(auth.accessToken()));}
  AuthenticatedUserResource register(String name){return iam.signUp(name+"@example.com","Password123!","TEST");}
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
 
   for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
-   "driver_classifications","digital_payments","payment_tokens","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants")) jdbc.update("DELETE FROM "+table);
+   "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts")) jdbc.update("DELETE FROM "+table);
   superAuth=register("super");
   var sr=roles.findByAccountId(superAuth.accountId()).orElseThrow();sr.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(sr);
   superAdmin=principal(superAuth);
@@ -78,11 +78,11 @@ class ParkingInfrastructureTest {
   admin=principal(adminAuth);profiles.create(admin,"Ana","Demo","900000001");
   driverAuth=register("driver");driver=principal(driverAuth);
   var p=profiles.create(driver,"Juan","Demo","900000002");
-  vehicle=vehicles.saveAndFlush(new Vehicle(p,"DEMO-1","Kia","Rio","Rojo"));
+  vehicle=vehicles.saveAndFlush(new Vehicle(p,"DEMO-1","Kia","Rio","Red"));
   otherAuth=register("other");other=principal(otherAuth);
   var op=profiles.create(other,"Sofia","Demo","900000003");
-  otherVehicle=vehicles.saveAndFlush(new Vehicle(op,"DEMO-2","Toyota","Yaris","Azul"));
-  zone=commands.createZone(admin,tenant.getId(),"Piso1-A",Map.of("reference","Norte"),"#2563EB");
+  otherVehicle=vehicles.saveAndFlush(new Vehicle(op,"DEMO-2","Toyota","Yaris","Blue"));
+  zone=commands.createZone(admin,tenant.getId(),"Floor1-A",Map.of("reference","North"),"#2563EB");
   spot=commands.createSpot(admin,zone.getId(),"A-01","STANDARD",Map.of("covered",true));
   second=commands.createSpot(admin,zone.getId(),"A-02","STANDARD",Map.of());
  }
@@ -192,11 +192,11 @@ class ParkingInfrastructureTest {
  }
  @Test void codesAreUniqueWithinZoneAndMayRepeatInOtherZones(){
   assertThrows(org.springframework.dao.DataIntegrityViolationException.class,()->commands.createSpot(admin,zone.getId(),"a-01","STANDARD",Map.of()));
-  var z2=commands.createZone(admin,tenant.getId(),"Piso2-A",Map.of(),"#000000");
+  var z2=commands.createZone(admin,tenant.getId(),"Floor2-A",Map.of(),"#000000");
   assertNotNull(commands.createSpot(admin,z2.getId(),"A-01","STANDARD",Map.of()).getId());
  }
- @Test void croquisAndMapsEnforceZoneAndOnePublishedVersion(){
-  var p=commands.createPlan(admin,zone.getId(),1,"demo/croquis.pdf");assertNull(p.getPublishedAt());
+ @Test void floorPlansAndMapsEnforceZoneAndOnePublishedVersion(){
+  var p=commands.createPlan(admin,zone.getId(),1,"demo/floor-plan.pdf");assertNull(p.getPublishedAt());
   var m1=commands.createMap(admin,p.getId(),1,List.of(Map.of("type","SPOT","spot_id",spot.getId().toString(),"x",0,"y",0)));
   assertThrows(ParkingException.class,()->commands.publishMap(admin,m1.getId(),false));
   commands.publishPlan(admin,p.getId(),false);commands.publishMap(admin,m1.getId(),false);
@@ -218,7 +218,7 @@ class ParkingInfrastructureTest {
   assertEquals(401,request("GET","/api/v1/reservations",null,null).statusCode());
   assertEquals(403,request("POST","/api/v1/parking-zones?tenantId="+tenant.getId(),Map.of("name","X","location",Map.of(),"colorCode","#000000"),driverAuth.accessToken()).statusCode());
   assertEquals(200,request("GET","/api/v1/parking-spots?zoneId="+zone.getId(),null,driverAuth.accessToken()).statusCode());
-  var docs=request("GET","/v3/api-docs/03-parking-actualizado",null,null);assertEquals(200,docs.statusCode());
+  var docs=request("GET","/v3/api-docs/03-parking",null,null);assertEquals(200,docs.statusCode());
   var paths=json.readTree(docs.body()).path("paths");
   for(String endpoint:List.of("tenants","parking-zones","parking-spots","floor-plans","digital-parking-maps","reservations","parking-sessions","guest-parking-sessions"))assertTrue(paths.has("/api/v1/"+endpoint),endpoint);
   assertFalse(paths.has("/api/v1/parkings"));assertFalse(paths.has("/api/v1/detectedSpots"));

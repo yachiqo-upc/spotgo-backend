@@ -36,9 +36,9 @@ public class RoleAssignment {
     }
     public void assign(UserRole role, UUID tenant, Instant from, Instant to, AssignmentStatus status) {
         Objects.requireNonNull(role); Objects.requireNonNull(from); Objects.requireNonNull(status);
-        if (to != null && to.isBefore(from)) throw new IllegalArgumentException("valid_to no puede ser anterior a valid_from");
+        if (to != null && to.isBefore(from)) throw new IllegalArgumentException("valid_to cannot be earlier than valid_from.");
         if ((role == UserRole.PARKING_ADMIN) != (tenant != null))
-            throw new IllegalArgumentException("PARKING_ADMIN requiere tenantId; DRIVER y SUPER_ADMIN tienen alcance global sin tenantId");
+            throw new IllegalArgumentException("PARKING_ADMIN requires tenantId; DRIVER and SUPER_ADMIN have global scope and do not use tenantId.");
         this.roleType = role; this.tenantId = tenant; this.validFrom = from; this.validTo = to; this.status = status;
     }
     public UUID getAccountId() { return account.getId(); }

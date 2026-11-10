@@ -16,15 +16,15 @@ public class ProfilesExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> status(ResponseStatusException ex) {
         return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message",
-            ex.getReason() == null ? "Solicitud invalida" : ex.getReason()));
+            ex.getReason() == null ? "Invalid request." : ex.getReason()));
     }
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> conflict(DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-            "Conflicto de integridad: cuenta, placa o clasificacion duplicada, o referencia invalida"));
+            "Integrity conflict: duplicate account, plate, or classification, or invalid reference."));
     }
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<?> malformed(Exception ex) {
-        return ResponseEntity.badRequest().body(Map.of("message", "UUID, tipo o JSON invalido"));
+        return ResponseEntity.badRequest().body(Map.of("message", "Invalid UUID, type, or JSON."));
     }
 }

@@ -21,8 +21,8 @@ public class JwtTokenService {
     public JwtTokenService(@Value("${authorization.jwt.secret}") String secret,
                            @Value("${authorization.jwt.access-expiration-minutes:15}") long expirationMinutes, Clock clock) {
         if (secret.getBytes(StandardCharsets.UTF_8).length < 32)
-            throw new IllegalArgumentException("JWT_SECRET debe tener al menos 32 bytes");
-        if (expirationMinutes <= 0) throw new IllegalArgumentException("La duracion del access token debe ser positiva");
+            throw new IllegalArgumentException("JWT_SECRET must contain at least 32 bytes.");
+        if (expirationMinutes <= 0) throw new IllegalArgumentException("Access token lifetime must be positive.");
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes; this.clock = clock;
     }
@@ -37,9 +37,9 @@ public class JwtTokenService {
     public AccessClaims parseAccessToken(String token) {
         Claims claims = Jwts.parser().clock(() -> Date.from(clock.instant())).verifyWith(key)
             .build().parseSignedClaims(token).getPayload();
-        if (!"ACCESS".equals(claims.get("type", String.class))) throw new IllegalArgumentException("Tipo de token invalido");
+        if (!"ACCESS".equals(claims.get("type", String.class))) throw new IllegalArgumentException("Invalid token type.");
         if (claims.getSubject() == null || claims.get("sid", String.class) == null)
-            throw new IllegalArgumentException("El token requiere cuenta y sesion");
+            throw new IllegalArgumentException("The token requires an account and a session.");
         return new AccessClaims(UUID.fromString(claims.getSubject()), UUID.fromString(claims.get("sid", String.class)), claims.getExpiration().toInstant());
     }
     public record AccessClaims(UUID accountId, UUID sessionId, Instant expiresAt) {}

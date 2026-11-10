@@ -1,6 +1,7 @@
 package com.yachiqo.spotgo.parking.interfaces.rest.resources;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.*;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.*;
+import com.yachiqo.spotgo.parking.application.ParkingPaymentGateway;
 import jakarta.validation.constraints.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -12,9 +13,9 @@ public final class ParkingResources {
   @NotNull @Schema(example="{\"latitude\":-12.0464,\"longitude\":-77.0428}") Map<String,Object> coordinates,
   @NotNull Map<String,Object> contactData,
   @NotNull @Schema(example="{\"tariff_rules\":{\"period_minutes\":60,\"price_per_period\":5,\"rounding\":\"CEILING\"},\"lock_duration_minutes\":10,\"overstay_tolerance_minutes\":5,\"allocation_rules\":{},\"coexistence_rules\":[]}") Map<String,Object> rules,
-  @Schema(description="En creacion se utiliza ACTIVE; en actualizacion debe indicarse") TenantStatus status) {}
+  @Schema(description="ACTIVE is used on creation; provide a value when updating.") TenantStatus status) {}
  public record ZoneBody(@NotBlank String name,@NotNull Map<String,Object> location,@NotBlank @Schema(example="#2563EB") String colorCode,ZoneStatus status) {}
- public record SpotBody(@NotBlank String code,@NotBlank @Schema(description="Categoria del espacio; no es TAXI/EMPLOYEE/PRIVATE",example="STANDARD") String spotType,@NotNull Map<String,Object> features,OperationalStatus operationalStatus) {}
+ public record SpotBody(@NotBlank String code,@NotBlank @Schema(description="Parking spot category; this is not TAXI/EMPLOYEE/PRIVATE.",example="STANDARD") String spotType,@NotNull Map<String,Object> features,OperationalStatus operationalStatus) {}
  public record PlanBody(@NotNull UUID zoneId,@Min(1) int version,@NotBlank String fileReference) {}
  public record MapBody(@NotNull UUID floorPlanId,@Min(1) int version,@NotNull List<Map<String,Object>> elements) {}
  public record ReserveBody(@NotNull UUID spotId,@NotNull UUID vehicleId,@NotNull Instant startAt,@NotNull Instant endAt) {}
@@ -28,8 +29,12 @@ public final class ParkingResources {
  public record ZoneView(UUID zoneId,UUID tenantId,String name,Map<String,Object> location,String colorCode,ZoneStatus status,Instant createdAt,Instant updatedAt) {
   public static ZoneView of(ParkingZone z){return new ZoneView(z.getId(),z.getTenantId(),z.getName(),z.getLocation(),z.getColorCode(),z.getStatus(),z.getCreatedAt(),z.getUpdatedAt());}
  }
- public record SpotView(UUID spotId,UUID zoneId,String code,String spotType,Map<String,Object> features,OperationalStatus operationalStatus) {
-  public static SpotView of(ParkingSpot s){return new SpotView(s.getId(),s.getZoneId(),s.getCode(),s.getSpotType(),s.getFeatures(),s.getOperationalStatus());}
+ public record SpotBillingAdjustment(UUID paymentId,BigDecimal amount,String currency,String status) {
+  public static SpotBillingAdjustment of(ParkingPaymentGateway.SpotBillingResult r){return r==null?null:new SpotBillingAdjustment(r.paymentId(),r.amount(),r.currency(),r.status());}
+ }
+ public record SpotView(UUID spotId,UUID zoneId,String code,String spotType,Map<String,Object> features,OperationalStatus operationalStatus,SpotBillingAdjustment billingAdjustment) {
+  public static SpotView of(ParkingSpot s){return of(s,null);}
+  public static SpotView of(ParkingSpot s,ParkingPaymentGateway.SpotBillingResult adjustment){return new SpotView(s.getId(),s.getZoneId(),s.getCode(),s.getSpotType(),s.getFeatures(),s.getOperationalStatus(),SpotBillingAdjustment.of(adjustment));}
  }
  public record PlanView(UUID floorPlanId,UUID zoneId,int version,String fileReference,PublicationStatus status,Instant publishedAt) {
   public static PlanView of(FloorPlan p){return new PlanView(p.getId(),p.getZoneId(),p.getVersion(),p.getFileReference(),p.getStatus(),p.getPublishedAt());}

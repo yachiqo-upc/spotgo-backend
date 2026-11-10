@@ -22,7 +22,7 @@ public class OccupancyConflict {
  
  public OccupancyConflict(OccupancyReading reading,Reservation reservation,ConflictType type,Instant now){
   this.reading=Objects.requireNonNull(reading);spot=reading.getSpot();tenant=spot.getZone().getTenant();
-  if(reservation!=null&&!reservation.getSpotId().equals(spot.getId()))throw new IllegalArgumentException("Reserva de otro espacio");
+  if(reservation!=null&&!reservation.getSpotId().equals(spot.getId()))throw new IllegalArgumentException("Reservation belongs to another parking spot.");
   this.reservation=reservation;conflictType=Objects.requireNonNull(type);severity=Severity.HIGH;detectedAt=instant(now);status=ConflictStatus.OPEN;
  }
  public UUID getTenantId(){return tenant.getId();} public UUID getSpotId(){return spot.getId();} public UUID getReadingId(){return reading.getId();} public UUID getReservationId(){return reservation==null?null:reservation.getId();}

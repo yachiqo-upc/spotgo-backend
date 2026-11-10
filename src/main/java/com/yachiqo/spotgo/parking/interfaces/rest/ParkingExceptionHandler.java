@@ -13,7 +13,7 @@ public class ParkingExceptionHandler {
  @ExceptionHandler(ResponseStatusException.class)
  public ResponseEntity<?> status(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"Operacion rechazada":e.getReason()));}
  @ExceptionHandler({IllegalArgumentException.class,HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class})
- public ResponseEntity<?> invalid(Exception e){return ResponseEntity.badRequest().body(Map.of("message",e instanceof IllegalArgumentException?e.getMessage():"JSON, UUID o fecha invalidos"));}
+ public ResponseEntity<?> invalid(Exception e){return ResponseEntity.badRequest().body(Map.of("message",e instanceof IllegalArgumentException?e.getMessage():"Invalid JSON, UUID, or timestamp."));}
  @ExceptionHandler({DataIntegrityViolationException.class,PessimisticLockingFailureException.class})
- public ResponseEntity<?> integrity(Exception e){return ResponseEntity.status(409).body(Map.of("message","Conflicto de integridad o concurrencia; revisa referencias, codigos, versiones y disponibilidad"));}
+ public ResponseEntity<?> integrity(Exception e){return ResponseEntity.status(409).body(Map.of("message","Integrity or concurrency conflict. Check references, codes, versions, and availability."));}
 }

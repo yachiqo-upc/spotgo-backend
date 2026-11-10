@@ -30,5 +30,5 @@ public class SessionAuthenticationService {
         return new SpotgoUserPrincipal(account.getId(), account.getEmail(),
             role == null ? null : role.getRoleType(), role == null ? null : role.getTenantId(), sessionId);
     }
-    private static IamException unauthorized() { return new IamException(HttpStatus.UNAUTHORIZED, "Sesion invalida, revocada o vencida"); }
+    private static IamException unauthorized() { return new IamException(HttpStatus.UNAUTHORIZED, "Session is invalid, revoked, or expired."); }
 }

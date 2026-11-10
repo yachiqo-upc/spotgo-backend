@@ -8,4 +8,5 @@ public class MonitoringBillingAdapter implements MonitoringSubscriptionGateway {
  private final BillingService billing;
  public MonitoringBillingAdapter(BillingService billing){this.billing=billing;}
  public int sensorLimit(UUID tenant){return billing.sensorLimit(tenant);}
+ public boolean spotLicensed(UUID tenant,UUID spot){return billing.spotLicensed(tenant,spot);}
 }

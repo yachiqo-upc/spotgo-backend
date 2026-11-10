@@ -27,7 +27,7 @@ public class Account extends AbstractDomainAggregateRoot<Account> {
     protected Account() {}
     public Account(String email) {
         this.email = normalizeEmail(email);
-        if (this.email == null || this.email.isBlank()) throw new IllegalArgumentException("El correo es obligatorio");
+        if (this.email == null || this.email.isBlank()) throw new IllegalArgumentException("Email is required.");
         this.status = AccountStatus.ACTIVE;
     }
     public static String normalizeEmail(String email) { return email == null ? null : email.trim().toLowerCase(Locale.ROOT); }

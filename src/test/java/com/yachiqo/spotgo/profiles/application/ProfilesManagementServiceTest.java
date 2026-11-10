@@ -57,7 +57,7 @@ class ProfilesManagementServiceTest {
 
     @Test void refusesOtherOwnersVehicle() {
         var owner = new Profile(UUID.randomUUID(), "Otro", "Dueno", "999");
-        var vehicle = new Vehicle(owner, "ABC", "Kia", "Rio", "Azul");
+        var vehicle = new Vehicle(owner, "ABC", "Kia", "Rio", "Blue");
         assertThrows(AccessDeniedException.class, () -> service.requireOwner(actor(UserRole.DRIVER), vehicle));
     }
 

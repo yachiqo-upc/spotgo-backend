@@ -20,7 +20,7 @@ public class FloorPlan {
  @Column(name="published_at") private Instant publishedAt;
  protected FloorPlan() {}
  public FloorPlan(ParkingZone zone,int version,String reference) {
-  if(version < 1) throw new IllegalArgumentException("version debe ser positiva");
+  if(version < 1) throw new IllegalArgumentException("version must be positive.");
   this.zone=Objects.requireNonNull(zone);this.version=version;this.fileReference=text(reference);this.status=PublicationStatus.DRAFT;
  }
  public void publish(Instant now) { status=PublicationStatus.PUBLISHED;publishedAt=now; }

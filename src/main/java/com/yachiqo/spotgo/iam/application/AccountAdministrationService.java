@@ -34,7 +34,7 @@ public class AccountAdministrationService {
     public RoleAssignment role(SpotgoUserPrincipal actor, UUID id) {
         if (!actor.getAccountId().equals(id)) requireSuper(actor);
         account(id);
-        return roles.findByAccountId(id).orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Cuenta sin asignacion de rol"));
+        return roles.findByAccountId(id).orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Account has no role assignment."));
     }
     @Transactional
     public Account status(SpotgoUserPrincipal actor, UUID id, AccountStatus status, String source) {
@@ -51,7 +51,7 @@ public class AccountAdministrationService {
         requireSuper(actor);
         var account = accounts.findByIdForUpdate(id).orElseThrow(() -> notFound());
         if (role == UserRole.PARKING_ADMIN && (tenantId == null || !parkings.existsById(tenantId)))
-            throw new IamException(HttpStatus.BAD_REQUEST, "PARKING_ADMIN requiere un estacionamiento existente");
+            throw new IamException(HttpStatus.BAD_REQUEST, "PARKING_ADMIN requires an existing tenant.");
         Instant start = from == null ? clock.instant() : from;
         AssignmentStatus enabled = status == null ? AssignmentStatus.ACTIVE : status;
         var assignment = roles.findByAccountId(id).orElseGet(() -> new RoleAssignment(account, role, tenantId, start, to, enabled));
@@ -66,13 +66,13 @@ public class AccountAdministrationService {
     }
     public Instant now() { return clock.instant(); }
     private Account account(UUID id) { return accounts.findById(id).orElseThrow(() -> notFound()); }
-    private static IamException notFound() { return new IamException(HttpStatus.NOT_FOUND, "Cuenta inexistente"); }
+    private static IamException notFound() { return new IamException(HttpStatus.NOT_FOUND, "Account not found."); }
     private static void requireSuper(SpotgoUserPrincipal actor) {
         if (actor == null || actor.getRole() != UserRole.SUPER_ADMIN)
-            throw new IamException(HttpStatus.FORBIDDEN, "Solo SUPER_ADMIN administra cuentas, roles y auditoria");
+            throw new IamException(HttpStatus.FORBIDDEN, "Only SUPER_ADMIN can manage accounts, roles, and audit records.");
     }
     private static Pageable page(int page, int size) {
-        if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("page >= 0 y size entre 1 y 100");
+        if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("page must be at least 0 and size must be between 1 and 100.");
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
     }
 }

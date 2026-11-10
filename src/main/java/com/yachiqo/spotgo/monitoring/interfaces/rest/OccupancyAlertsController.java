@@ -15,39 +15,39 @@ import java.util.*;
 
 @RestController @RequestMapping(value="/api/v1/occupancy-alerts",produces="application/json")
 @PreAuthorize("hasAnyRole('PARKING_ADMIN','SUPER_ADMIN')")
-@Tag(name="Occupancy alerts",description="Exactamente un origen: healthEventId o conflictId. evidenceRef identifica una imagen de evidencia; las FK identifican el incidente.")
+@Tag(name="Occupancy alerts",description="Exactly one source is required: healthEventId or conflictId. evidenceRef identifies an evidence image; foreign keys identify the incident.")
 @ApiResponses({
- @ApiResponse(responseCode="400",description="UUID, fecha, calidad o JSON invalidos",content=@Content),
- @ApiResponse(responseCode="401",description="Sesion no valida",content=@Content),
- @ApiResponse(responseCode="403",description="Rol o Tenant fuera de tu alcance",content=@Content),
- @ApiResponse(responseCode="404",description="Recurso inexistente",content=@Content),
- @ApiResponse(responseCode="409",description="Referencia, duplicado o estado incompatible; no se inventa ocupacion",content=@Content)
+ @ApiResponse(responseCode="400",description="Invalid UUID, timestamp, quality, or JSON.",content=@Content),
+ @ApiResponse(responseCode="401",description="Invalid session.",content=@Content),
+ @ApiResponse(responseCode="403",description="The role or tenant is outside the caller's access scope.",content=@Content),
+ @ApiResponse(responseCode="404",description="The requested resource was not found.",content=@Content),
+ @ApiResponse(responseCode="409",description="Invalid reference, duplicate resource, or incompatible state; occupancy is not fabricated.",content=@Content)
 })
 public class OccupancyAlertsController {
  private final MonitoringService service;
  public OccupancyAlertsController(MonitoringService service){this.service=service;}
  
- @GetMapping @Operation(summary="Listar avisos de mi alcance")
+ @GetMapping @Operation(summary="List alerts in my scope", description = "Returns alerts associated with the tenant administered by the caller or otherwise visible to their role.")
  public List<AlertView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam(required=false) UUID tenantId){return service.alerts(actor,tenantId).stream().map(AlertView::of).toList();}
- @PostMapping("/{alertId}/acknowledge") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Reconocer alerta",description="Captura acknowledgedAt y cambia a ACKNOWLEDGED.")
+ @PostMapping("/{alertId}/acknowledge") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Acknowledge an alert",description="Sets acknowledgedAt and changes the alert status to ACKNOWLEDGED.")
  public AlertView acknowledge(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId){return AlertView.of(service.updateAlert(actor,alertId,false));}
- @PostMapping("/{alertId}/close") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Cerrar alerta de incidente resuelto",description="Requiere conflicto RESOLVED o evento de salud recuperado. Captura closedAt; no afirma que el sensor se recupero por cerrar una notificacion.")
+ @PostMapping("/{alertId}/close") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Close an alert for a resolved incident",description="Requires a RESOLVED conflict or a recovered health event. Sets closedAt; closing a notification does not imply that the sensor recovered.")
  public AlertView close(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId){return AlertView.of(service.updateAlert(actor,alertId,true));}
 
  @PutMapping(value="/{alertId}/evidence",consumes=org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
  @PreAuthorize("hasRole('PARKING_ADMIN')")
- @Operation(summary="Subir foto de evidencia",description="Selecciona un archivo en image. Recibe multipart/form-data, no JSON ni URLs. JPEG o PNG real, maximo 5 MB y 20 millones de pixeles. Solo el administrador del Tenant puede adjuntarla. Guarda la foto y conserva las FK del incidente.")
- @ApiResponse(responseCode="413",description="Archivo mayor a 5 MB",content=@Content)
- @ApiResponse(responseCode="415",description="El contenido no es JPEG o PNG",content=@Content)
- @ApiResponse(responseCode="503",description="Almacenamiento de evidencia no disponible",content=@Content)
+ @Operation(summary="Upload an evidence image",description="Upload a file using image as multipart/form-data; JSON and URLs are not accepted. Only real JPEG or PNG files up to 5 MB and 20 million pixels are accepted. Only the tenant administrator can attach evidence. The image is stored and the incident foreign keys are preserved.")
+ @ApiResponse(responseCode="413",description="The file exceeds 5 MB.",content=@Content)
+ @ApiResponse(responseCode="415",description="The content is not a JPEG or PNG image.",content=@Content)
+ @ApiResponse(responseCode="503",description="Evidence storage is unavailable.",content=@Content)
  public AlertView evidence(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId,
    @RequestPart("image") org.springframework.web.multipart.MultipartFile image){
-  if(image.getSize()>EvidenceImageStorage.MAX_BYTES)throw new MonitoringException(HttpStatus.PAYLOAD_TOO_LARGE,"La imagen no puede superar 5 MB");
+  if(image.getSize()>EvidenceImageStorage.MAX_BYTES)throw new MonitoringException(HttpStatus.PAYLOAD_TOO_LARGE,"The image cannot exceed 5 MB.");
   try{return AlertView.of(service.uploadEvidence(actor,alertId,image.getBytes()));}
-  catch(java.io.IOException e){throw new MonitoringException(HttpStatus.SERVICE_UNAVAILABLE,"No se pudo leer la foto enviada");}
+  catch(java.io.IOException e){throw new MonitoringException(HttpStatus.SERVICE_UNAVAILABLE,"The uploaded image could not be read.");}
  }
  @GetMapping(value="/{alertId}/evidence",produces={"image/jpeg","image/png"})
- @Operation(summary="Ver foto de evidencia",description="Devuelve los bytes de la foto, no el JSON del conflicto. Requiere JWT: administrador del Tenant o SUPER_ADMIN. Solo requiere el ID de la alerta; el servidor localiza el archivo guardado.")
+ @Operation(summary="View an evidence image",description="Returns the image bytes instead of conflict JSON. Requires a JWT from the tenant administrator or SUPER_ADMIN. Provide only the alert ID; the server locates the stored file.")
  public org.springframework.http.ResponseEntity<byte[]> photo(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId){
   var image=service.evidence(actor,alertId);
   return org.springframework.http.ResponseEntity.ok().contentType(org.springframework.http.MediaType.parseMediaType(image.contentType()))

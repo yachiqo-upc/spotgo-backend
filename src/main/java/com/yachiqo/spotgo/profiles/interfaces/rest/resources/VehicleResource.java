@@ -5,15 +5,15 @@ import java.time.Instant;
 import java.util.UUID;
 import io.swagger.v3.oas.annotations.media.Schema;
 public record VehicleResource(
-    @Schema(description = "UUID del vehiculo.", example = "00000000-0000-4000-8000-000000000051") UUID id,
-    @Schema(description = "UUID del perfil propietario, no de su cuenta.", example = "00000000-0000-4000-8000-000000000012") UUID profileId,
-    @Schema(description = "Placa unica o NULL cuando no esta registrada.", example = "DEM-101") String plate,
-    @Schema(description = "Marca.", example = "Toyota") String make,
-    @Schema(description = "Modelo.", example = "Yaris") String model,
-    @Schema(description = "Color.", example = "Azul") String color,
-    @Schema(description = "ACTIVE: habilitado. INACTIVE: desactivado; el registro se conserva.", example = "ACTIVE") VehicleStatus status,
-    @Schema(description = "Creacion de la fila en UTC.", example = "2026-11-09T07:00:00Z") Instant createdAt,
-    @Schema(description = "Ultima modificacion en UTC.", example = "2026-11-09T07:00:00Z") Instant updatedAt) {
+    @Schema(description = "Vehicle UUID.", example = "00000000-0000-4000-8000-000000000051") UUID id,
+    @Schema(description = "UUID of the owning profile, not its account.", example = "00000000-0000-4000-8000-000000000012") UUID profileId,
+    @Schema(description = "Unique plate, or NULL if no plate is registered.", example = "DEM-101") String plate,
+    @Schema(description = "Make.", example = "Toyota") String make,
+    @Schema(description = "Model.", example = "Yaris") String model,
+    @Schema(description = "Color.", example = "Blue") String color,
+    @Schema(description = "ACTIVE: enabled. INACTIVE: disabled; the record is retained.", example = "ACTIVE") VehicleStatus status,
+    @Schema(description = "Row creation time in UTC.", example = "2026-11-09T07:00:00Z") Instant createdAt,
+    @Schema(description = "Last updated at in UTC.", example = "2026-11-09T07:00:00Z") Instant updatedAt) {
     public static VehicleResource from(Vehicle v) {
         return new VehicleResource(v.getId(), v.getProfileId(), v.getPlate(), v.getMake(), v.getModel(),
             v.getColor(), v.getStatus(), v.getCreatedAt(), v.getUpdatedAt());

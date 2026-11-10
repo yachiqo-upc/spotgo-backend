@@ -22,7 +22,7 @@ public class OccupancyReport {
  protected OccupancyReport(){}
  
  public OccupancyReport(ParkingZone zone,Instant from,Instant to,Map<String,Object> totals,Instant now){
-  if(from==null||to==null||!from.isBefore(to)||to.isAfter(now))throw new IllegalArgumentException("Intervalo del reporte invalido");
+  if(from==null||to==null||!from.isBefore(to)||to.isAfter(now))throw new IllegalArgumentException("Invalid report interval.");
   this.zone=Objects.requireNonNull(zone);tenant=zone.getTenant();intervalStart=from;intervalEnd=to;this.totals=new LinkedHashMap<>(totals);generatedAt=instant(now);status=ReportStatus.GENERATED;
  }
  public UUID getTenantId(){return tenant.getId();} public UUID getZoneId(){return zone.getId();}

@@ -37,36 +37,36 @@ public class MonitoringService {
   this.sensors=sensors;this.readings=readings;this.health=health;this.conflicts=conflicts;this.alerts=alerts;this.snapshots=snapshots;this.reports=reports;
   this.tenants=tenants;this.zones=zones;this.spots=spots;this.reservations=reservations;this.sessions=sessions;this.guests=guests;this.occupancy=occupancy;this.subscriptions=subscriptions;this.policy=policy;this.clock=clock;this.evidenceStorage=evidenceStorage;
  }
- private static MonitoringException missing(String name){return new MonitoringException(HttpStatus.NOT_FOUND,name+" inexistente");}
+ private static MonitoringException missing(String name){return new MonitoringException(HttpStatus.NOT_FOUND,name+" not found");}
  private static MonitoringException conflict(String message){return new MonitoringException(HttpStatus.CONFLICT,message);}
  private void readAccess(SpotgoUserPrincipal actor,UUID tenant){
-  if(actor==null||actor.getRole()!=UserRole.SUPER_ADMIN&&(tenant==null||actor.getRole()!=UserRole.PARKING_ADMIN||!Objects.equals(tenant,actor.getTenantId())))throw new AccessDeniedException("Monitoring requiere administrar este Tenant");
+  if(actor==null||actor.getRole()!=UserRole.SUPER_ADMIN&&(tenant==null||actor.getRole()!=UserRole.PARKING_ADMIN||!Objects.equals(tenant,actor.getTenantId())))throw new AccessDeniedException("The caller must administer this tenant to access Monitoring.");
  }
  private void writeAccess(SpotgoUserPrincipal actor,UUID tenant){
-  if(actor==null||tenant==null||actor.getRole()!=UserRole.PARKING_ADMIN||!Objects.equals(tenant,actor.getTenantId()))throw new AccessDeniedException("Solo el administrador del Tenant modifica Monitoring");
+  if(actor==null||tenant==null||actor.getRole()!=UserRole.PARKING_ADMIN||!Objects.equals(tenant,actor.getTenantId()))throw new AccessDeniedException("Only the tenant administrator can modify Monitoring data.");
  }
  private UUID scope(SpotgoUserPrincipal actor,UUID tenant){
-  if(actor==null)throw new AccessDeniedException("Sesion requerida");
+  if(actor==null)throw new AccessDeniedException("An authenticated session is required.");
   if(actor.getRole()==UserRole.SUPER_ADMIN){if(tenant!=null)tenant(tenant);return tenant;}
   UUID id=tenant==null?actor.getTenantId():tenant;readAccess(actor,id);tenant(id);return id;
  }
  private Tenant tenant(UUID id){return tenants.findById(id).orElseThrow(()->missing("Tenant"));}
- private ParkingZone zone(UUID id){return zones.findById(id).orElseThrow(()->missing("Zona"));}
- private ParkingSpot spot(UUID id){return spots.findById(id).orElseThrow(()->missing("Espacio"));}
+ private ParkingZone zone(UUID id){return zones.findById(id).orElseThrow(()->missing("Zone"));}
+ private ParkingSpot spot(UUID id){return spots.findById(id).orElseThrow(()->missing("Parking spot"));}
  public OccupancySensor sensor(SpotgoUserPrincipal actor,UUID id){var s=sensors.findById(id).orElseThrow(()->missing("Sensor"));readAccess(actor,s.getTenantId());return s;}
  private OccupancySensor lockSensor(SpotgoUserPrincipal actor,UUID id){
   var s=sensor(actor,id);writeAccess(actor,s.getTenantId());return lockSensor(s);
  }
  private OccupancySensor lockSensor(OccupancySensor s){
-  tenants.lock(s.getTenantId()).orElseThrow(()->missing("Tenant"));spots.lock(s.getSpotId()).orElseThrow(()->missing("Espacio"));
+  tenants.lock(s.getTenantId()).orElseThrow(()->missing("Tenant"));spots.lock(s.getSpotId()).orElseThrow(()->missing("Parking spot"));
   var locked=sensors.lock(s.getId()).orElseThrow(()->missing("Sensor"));entityManager.refresh(locked,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);return locked;
  }
  public List<OccupancySensor> sensors(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?sensors.findAll():sensors.byTenant(id);}
  public List<OccupancyReading> readings(SpotgoUserPrincipal actor,UUID sensor){sensor(actor,sensor);return readings.bySensor(sensor);}
  public List<SensorHealthEvent> health(SpotgoUserPrincipal actor,UUID sensor){sensor(actor,sensor);return health.bySensor(sensor);}
- public SensorHealthEvent healthEvent(SpotgoUserPrincipal actor,UUID id){var e=health.findById(id).orElseThrow(()->missing("Evento de salud"));readAccess(actor,e.getSensor().getTenantId());return e;}
+ public SensorHealthEvent healthEvent(SpotgoUserPrincipal actor,UUID id){var e=health.findById(id).orElseThrow(()->missing("Health event"));readAccess(actor,e.getSensor().getTenantId());return e;}
  public List<OccupancyConflict> conflicts(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?conflicts.findAll():conflicts.byTenant(id);}
- public OccupancyConflict conflict(SpotgoUserPrincipal actor,UUID id){var c=conflicts.findById(id).orElseThrow(()->missing("Conflicto"));readAccess(actor,c.getTenantId());return c;}
+ public OccupancyConflict conflict(SpotgoUserPrincipal actor,UUID id){var c=conflicts.findById(id).orElseThrow(()->missing("Conflict"));readAccess(actor,c.getTenantId());return c;}
  public List<OccupancyAlert> alerts(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?alerts.findAll():alerts.byTenant(id);}
  public List<CapacitySnapshot> snapshots(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?snapshots.findAll():snapshots.byTenant(id);}
  public List<OccupancyReport> reports(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?reports.findAll():reports.byTenant(id);}
@@ -75,34 +75,35 @@ public class MonitoringService {
  @Transactional
  public OccupancySensor register(SpotgoUserPrincipal actor,UUID spotId,SensorProtocol protocol,Map<String,Object> configuration,Instant installed,OccupancyStatus initialStatus,Instant occurred,BigDecimal quality){
   var current=spot(spotId);writeAccess(actor,current.getTenantId());tenants.lock(current.getTenantId()).orElseThrow(()->missing("Tenant"));
-  var spot=spots.lock(spotId).orElseThrow(()->missing("Espacio"));var now=clock.instant();
-  if(spot.getOperationalStatus()!=OperationalStatus.ACTIVE||spot.getZone().getStatus()!=ZoneStatus.ACTIVE||spot.getZone().getTenant().getStatus()!=TenantStatus.ACTIVE)throw conflict("Espacio, zona y Tenant deben estar habilitados");
+  var spot=spots.lock(spotId).orElseThrow(()->missing("Parking spot"));var now=clock.instant();
+  if(spot.getOperationalStatus()!=OperationalStatus.ACTIVE||spot.getZone().getStatus()!=ZoneStatus.ACTIVE||spot.getZone().getTenant().getStatus()!=TenantStatus.ACTIVE)throw conflict("The parking spot, zone, and tenant must be enabled.");
   int limit=subscriptions.sensorLimit(spot.getTenantId());long count=sensors.byTenant(spot.getTenantId()).stream().filter(s->s.getStatus()==SensorStatus.ACTIVE).count();
-  if(limit<1||count>=limit)throw conflict("La suscripcion empresarial no permite otro sensor activo");
-  if(!sensors.activeSpot(spotId).isEmpty())throw conflict("El espacio ya tiene un sensor ACTIVE");
-  validateReadingTime(occurred,now);if(installed==null||installed.isAfter(occurred)||!policy.fresh(occurred,now))throw new IllegalArgumentException("La primera lectura debe ser real, reciente y posterior a la instalacion");
-  if(configuration==null)throw new IllegalArgumentException("configuration obligatorio");
+  if(!subscriptions.spotLicensed(spot.getTenantId(),spotId))throw conflict("This parking spot is not included in the paid subscription yet.");
+  if(limit<1||count>=limit)throw conflict("The tenant subscription does not allow another active sensor.");
+  if(!sensors.activeSpot(spotId).isEmpty())throw conflict("This parking spot already has an ACTIVE sensor.");
+  validateReadingTime(occurred,now);if(installed==null||installed.isAfter(occurred)||!policy.fresh(occurred,now))throw new IllegalArgumentException("The first reading must be real, recent, and later than the installation time.");
+  if(configuration==null)throw new IllegalArgumentException("configuration is required.");
   try{if(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(configuration).length()>8192)throw new IllegalArgumentException("configuration excede 8192 caracteres");}
-  catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalArgumentException("configuration invalido");}
+  catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalArgumentException("Invalid configuration.");}
   if(protocol==SensorProtocol.MQTT)text(Objects.toString(configuration.get("topic"),""));
   var sensor=sensors.saveAndFlush(new OccupancySensor(spot,protocol,configuration,installed,now));
   receive(sensor,initialStatus,occurred,quality,now);return sensor;
  }
  @Transactional
  public OccupancySensor deactivate(SpotgoUserPrincipal actor,UUID id){var s=lockSensor(actor,id);s.deactivate();return sensors.saveAndFlush(s);}
- private void validateReadingTime(Instant occurred,Instant received){if(occurred==null||occurred.isAfter(received))throw new IllegalArgumentException("occurred_at debe ser una fecha real no futura");}
+ private void validateReadingTime(Instant occurred,Instant received){if(occurred==null||occurred.isAfter(received))throw new IllegalArgumentException("occurred_at must be a valid timestamp that is not in the future.");}
  @Transactional
  public OccupancyReading receive(SpotgoUserPrincipal actor,UUID id,OccupancyStatus status,Instant occurred,BigDecimal quality){
   var s=lockSensor(actor,id);if(s.getStatus()!=SensorStatus.ACTIVE)throw conflict("Sensor inactivo");return receive(s,status,occurred,quality,clock.instant());
  }
  private OccupancyReading receive(OccupancySensor sensor,OccupancyStatus status,Instant occurred,BigDecimal quality,Instant received){
-  validateReadingTime(occurred,received);if(occurred.isBefore(sensor.getInstalledAt()))throw new IllegalArgumentException("Lectura anterior a la instalacion");
-  if(status==null||quality==null||quality.signum()<0||quality.compareTo(BigDecimal.valueOf(100))>0||quality.scale()>2)throw new IllegalArgumentException("Estado y calidad 0..100 con dos decimales requeridos");
+  validateReadingTime(occurred,received);if(occurred.isBefore(sensor.getInstalledAt()))throw new IllegalArgumentException("Reading occurred before installation.");
+  if(status==null||quality==null||quality.signum()<0||quality.compareTo(BigDecimal.valueOf(100))>0||quality.scale()>2)throw new IllegalArgumentException("A status and quality from 0 to 100 with at most two decimal places are required.");
   String hash;
   try{hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((sensor.getId()+"|"+status+"|"+occurred+"|"+quality.setScale(2)).getBytes(StandardCharsets.UTF_8)));}
   catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}
   var replay=readings.byHash(sensor.getId(),hash);if(replay.isPresent())return replay.get();
-  if(readings.bySensor(sensor.getId()).stream().anyMatch(r->r.getOccurredAt().equals(occurred)))throw conflict("Otra medicion distinta ya utiliza ese instante del sensor");
+  if(readings.bySensor(sensor.getId()).stream().anyMatch(r->r.getOccurredAt().equals(occurred)))throw conflict("A different reading already uses this timestamp for the sensor.");
   var reading=readings.saveAndFlush(new OccupancyReading(sensor,status,occurred,received,quality,hash));sensor.seen(received);sensors.saveAndFlush(sensor);
   var latest=readings.bySensor(sensor.getId()).get(0);
   if(latest.getId().equals(reading.getId())&&policy.fresh(occurred,received)){
@@ -110,7 +111,7 @@ public class MonitoringService {
     for(var event:health.bySensor(sensor.getId()))if(event.getRecoveredAt()==null&&(event.getReason().startsWith("COMMUNICATION_TIMEOUT")||event.getReason().startsWith("LOW_QUALITY")||event.getReason().startsWith("STALE_MEASUREMENT"))){event.recover(received);closeHealthAlerts(event);}
     evaluate(reading);
     captureIfReliable(sensor.getTenant(),sensor.getZone(),received);captureIfReliable(sensor.getTenant(),null,received);
-   }else problem(sensor,SensorHealth.DEGRADED,"LOW_QUALITY: lectura inferior al umbral configurado",received);
+   }else problem(sensor,SensorHealth.DEGRADED,"LOW_QUALITY: reading is below the configured threshold.",received);
   }
   return reading;
  }
@@ -123,7 +124,7 @@ public class MonitoringService {
  @Transactional
  public SensorHealthEvent recordHealth(SpotgoUserPrincipal actor,UUID sensorId,SensorHealth state,String reason){
   var s=lockSensor(actor,sensorId);if(s.getStatus()!=SensorStatus.ACTIVE)throw conflict("Sensor inactivo");var now=clock.instant();
-  if(state==null)throw new IllegalArgumentException("health obligatorio");reason=text(reason);
+  if(state==null)throw new IllegalArgumentException("health is required.");reason=text(reason);
   if(state==SensorHealth.HEALTHY){
    for(var event:health.bySensor(sensorId))if(event.getRecoveredAt()==null){event.recover(now);closeHealthAlerts(event);}
    return health.saveAndFlush(new SensorHealthEvent(s,state,reason,now));
@@ -158,8 +159,8 @@ public class MonitoringService {
  }
  @Transactional
  public OccupancyConflict updateConflict(SpotgoUserPrincipal actor,UUID id,boolean resolve){
-  var c=conflict(actor,id);writeAccess(actor,c.getTenantId());tenants.lock(c.getTenantId()).orElseThrow(()->missing("Tenant"));spots.lock(c.getSpotId()).orElseThrow(()->missing("Espacio"));
-  c=conflicts.lock(id).orElseThrow(()->missing("Conflicto"));entityManager.refresh(c,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+  var c=conflict(actor,id);writeAccess(actor,c.getTenantId());tenants.lock(c.getTenantId()).orElseThrow(()->missing("Tenant"));spots.lock(c.getSpotId()).orElseThrow(()->missing("Parking spot"));
+  c=conflicts.lock(id).orElseThrow(()->missing("Conflict"));entityManager.refresh(c,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
   if(resolve){c.resolve();for(var a:alerts.byConflict(id))a.close(clock.instant());}else c.acknowledge();
   return conflicts.saveAndFlush(c);
  }
@@ -168,7 +169,7 @@ public class MonitoringService {
   var a=alerts.findById(id).orElseThrow(()->missing("Alerta"));writeAccess(actor,a.getTenantId());tenants.lock(a.getTenantId()).orElseThrow(()->missing("Tenant"));
   a=alerts.lock(id).orElseThrow(()->missing("Alerta"));entityManager.refresh(a,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
   if(close){
-   if(a.getConflict()!=null&&a.getConflict().getStatus()!=ConflictStatus.RESOLVED||a.getHealthEvent()!=null&&a.getHealthEvent().getRecoveredAt()==null)throw conflict("Resuelve primero el incidente que origino la alerta");
+   if(a.getConflict()!=null&&a.getConflict().getStatus()!=ConflictStatus.RESOLVED||a.getHealthEvent()!=null&&a.getHealthEvent().getRecoveredAt()==null)throw conflict("Resolve the incident that created this alert first.");
    a.close(clock.instant());
   }else {a.acknowledge(clock.instant());if(a.getConflict()!=null)a.getConflict().acknowledge();}
   return alerts.saveAndFlush(a);
@@ -192,7 +193,7 @@ public class MonitoringService {
   var alert=alerts.findById(id).orElseThrow(()->missing("Alerta"));readAccess(actor,alert.getTenantId());
   alert=alerts.lock(id).orElseThrow(()->missing("Alerta"));entityManager.refresh(alert,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
   String fileName=alert.evidenceFileName();
-  if(fileName==null)throw missing("Imagen de evidencia");
+  if(fileName==null)throw missing("Evidence image");
   return evidenceStorage.read(fileName);
  }
  private List<ParkingSpot> operationalSpots(Tenant tenant,ParkingZone zone){
@@ -207,14 +208,14 @@ public class MonitoringService {
  @Transactional
  public CapacitySnapshot snapshot(SpotgoUserPrincipal actor,UUID tenantId,UUID zoneId){
   writeAccess(actor,tenantId);var t=tenants.lock(tenantId).orElseThrow(()->missing("Tenant"));var z=zoneId==null?null:zone(zoneId);
-  if(z!=null&&!z.getTenantId().equals(tenantId))throw new AccessDeniedException("Zona de otro Tenant");
-  var result=captureIfReliable(t,z,clock.instant());if(result==null)throw conflict("No se publica porcentaje: hay espacios sin una lectura confiable reciente");return result;
+  if(z!=null&&!z.getTenantId().equals(tenantId))throw new AccessDeniedException("Zone belongs to another tenant.");
+  var result=captureIfReliable(t,z,clock.instant());if(result==null)throw conflict("A percentage cannot be published because some parking spots have no recent trusted reading.");return result;
  }
  @Transactional
  public OccupancyReport report(SpotgoUserPrincipal actor,UUID zoneId,Instant from,Instant to){
   var z=zone(zoneId);writeAccess(actor,z.getTenantId());tenants.lock(z.getTenantId()).orElseThrow(()->missing("Tenant"));
-  if(from==null||to==null||!from.isBefore(to)||to.isAfter(clock.instant())||Duration.between(from,to).compareTo(Duration.ofDays(366))>0)throw new IllegalArgumentException("Intervalo [inicio,fin) invalido, futuro o mayor a 366 dias");
-  var selected=snapshots.interval(zoneId,from,to);if(selected.isEmpty())throw conflict("No existen snapshots confiables de esta zona en el intervalo");
+  if(from==null||to==null||!from.isBefore(to)||to.isAfter(clock.instant())||Duration.between(from,to).compareTo(Duration.ofDays(366))>0)throw new IllegalArgumentException("Invalid interval [start, end): it is in the future or exceeds 366 days.");
+  var selected=snapshots.interval(zoneId,from,to);if(selected.isEmpty())throw conflict("There are no trusted snapshots for this zone in the requested interval.");
   var peak=selected.stream().map(CapacitySnapshot::getPercentage).max(BigDecimal::compareTo).orElseThrow();
   var average=selected.stream().map(CapacitySnapshot::getPercentage).reduce(BigDecimal.ZERO,BigDecimal::add).divide(BigDecimal.valueOf(selected.size()),2,RoundingMode.HALF_UP);
   long count=alerts.byTenant(z.getTenantId()).stream().filter(a->a.getSpot().getZoneId().equals(zoneId)&&!a.getCreatedAt().isBefore(from)&&a.getCreatedAt().isBefore(to)).count();
@@ -227,11 +228,11 @@ public class MonitoringService {
   for(var current:sensors.findAll())if(current.getStatus()==SensorStatus.ACTIVE){
    var sensor=lockSensor(current);
    if(sensor.getStatus()!=SensorStatus.ACTIVE)continue;
-   if(!policy.fresh(sensor.getLastSeenAt(),now))problem(sensor,SensorHealth.FAILED,"COMMUNICATION_TIMEOUT: sin mensajes dentro del umbral",now);
+   if(!policy.fresh(sensor.getLastSeenAt(),now))problem(sensor,SensorHealth.FAILED,"COMMUNICATION_TIMEOUT: no messages were received within the threshold.",now);
    else {
     var all=readings.bySensor(sensor.getId());
-    if(all.isEmpty()||!policy.fresh(all.get(0).getOccurredAt(),now))problem(sensor,SensorHealth.DEGRADED,"STALE_MEASUREMENT: mensajes sin una medicion reciente",now);
-    else if(!policy.reliable(all.get(0).getQuality()))problem(sensor,SensorHealth.DEGRADED,"LOW_QUALITY: lectura inferior al umbral configurado",now);
+    if(all.isEmpty()||!policy.fresh(all.get(0).getOccurredAt(),now))problem(sensor,SensorHealth.DEGRADED,"STALE_MEASUREMENT: no recent reading was received.",now);
+    else if(!policy.reliable(all.get(0).getQuality()))problem(sensor,SensorHealth.DEGRADED,"LOW_QUALITY: reading is below the configured threshold.",now);
     else evaluate(all.get(0));
    }
   }

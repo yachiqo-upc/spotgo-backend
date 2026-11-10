@@ -24,7 +24,7 @@ public class OccupancyReading {
  
  public OccupancyReading(OccupancySensor sensor,OccupancyStatus status,Instant occurred,Instant received,BigDecimal quality,String hash){
   this.sensor=Objects.requireNonNull(sensor);spot=sensor.getSpot();occupancyStatus=Objects.requireNonNull(status);occurredAt=instant(occurred);receivedAt=instant(received);
-  if(quality==null||quality.signum()<0||quality.compareTo(BigDecimal.valueOf(100))>0||quality.scale()>2)throw new IllegalArgumentException("quality requiere 0..100 con hasta dos decimales");
+  if(quality==null||quality.signum()<0||quality.compareTo(BigDecimal.valueOf(100))>0||quality.scale()>2)throw new IllegalArgumentException("quality must be between 0 and 100 with at most two decimal places.");
   this.quality=quality.setScale(2);payloadHash=text(hash);
  }
  public UUID getSensorId(){return sensor.getId();} public UUID getSpotId(){return spot.getId();}

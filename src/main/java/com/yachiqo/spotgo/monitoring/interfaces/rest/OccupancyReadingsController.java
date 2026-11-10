@@ -15,21 +15,21 @@ import java.util.*;
 
 @RestController @RequestMapping(value="/api/v1/occupancy-readings",produces="application/json")
 @PreAuthorize("hasAnyRole('PARKING_ADMIN','SUPER_ADMIN')")
-@Tag(name="Occupancy readings",description="Mediciones del sensor. El servidor calcula SHA-256 y receivedAt; mensajes iguales no duplican incidentes.")
+@Tag(name="Occupancy readings",description="Sensor readings. The server calculates SHA-256 and receivedAt; duplicate messages do not create duplicate incidents.")
 @ApiResponses({
- @ApiResponse(responseCode="400",description="UUID, fecha, calidad o JSON invalidos",content=@Content),
- @ApiResponse(responseCode="401",description="Sesion no valida",content=@Content),
- @ApiResponse(responseCode="403",description="Rol o Tenant fuera de tu alcance",content=@Content),
- @ApiResponse(responseCode="404",description="Recurso inexistente",content=@Content),
- @ApiResponse(responseCode="409",description="Referencia, duplicado o estado incompatible; no se inventa ocupacion",content=@Content)
+ @ApiResponse(responseCode="400",description="Invalid UUID, timestamp, quality, or JSON.",content=@Content),
+ @ApiResponse(responseCode="401",description="Invalid session.",content=@Content),
+ @ApiResponse(responseCode="403",description="The role or tenant is outside the caller's access scope.",content=@Content),
+ @ApiResponse(responseCode="404",description="The requested resource was not found.",content=@Content),
+ @ApiResponse(responseCode="409",description="Invalid reference, duplicate resource, or incompatible state; occupancy is not fabricated.",content=@Content)
 })
 public class OccupancyReadingsController {
  private final MonitoringService service;
  public OccupancyReadingsController(MonitoringService service){this.service=service;}
  
- @GetMapping @Operation(summary="Consultar historial de lecturas de un sensor")
+ @GetMapping @Operation(summary="View a sensor's reading history", description = "Returns readings for the specified sensor in chronological order, subject to tenant access checks.")
  public List<ReadingView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam UUID sensorId){return service.readings(actor,sensorId).stream().map(ReadingView::of).toList();}
- @PostMapping @PreAuthorize("hasRole('PARKING_ADMIN')") @ResponseStatus(HttpStatus.CREATED) @Operation(summary="Recibir medicion del sensor",description="Endpoint autenticado para la integracion del Tenant. No es un webhook publico. Calidad 0..100; umbral y frescura configurables. Datos tardios no reemplazan una observacion nueva ni cierran incidentes.")
+ @PostMapping @PreAuthorize("hasRole('PARKING_ADMIN')") @ResponseStatus(HttpStatus.CREATED) @Operation(summary="Receive a sensor reading",description="Authenticated endpoint for tenant integrations; it is not a public webhook. Reading quality ranges from 0 to 100, with configurable minimum quality and freshness. Late readings do not replace newer observations or close incidents.")
  public ReadingView create(@AuthenticationPrincipal SpotgoUserPrincipal actor,@Valid @RequestBody ReadingBody b){return ReadingView.of(service.receive(actor,b.sensorId(),b.occupancyStatus(),b.occurredAt(),b.quality()));}
 
 }

@@ -14,27 +14,27 @@ import java.time.Clock;
 import java.util.*;
 @RestController
 @RequestMapping(value = "/api/v1/sessions", produces = "application/json")
-@Tag(name = "Sessions", description = "Sesiones de acceso, no de estacionamiento. Nunca devuelve hashes ni refresh tokens.")
+@Tag(name = "Sessions", description = "Account access sessions, not parking sessions. Session hashes and refresh tokens are never returned.")
 @ApiResponses({
-    @ApiResponse(responseCode = "401", description = "Sesion actual no autenticada, vencida o revocada.", content = @Content),
-    @ApiResponse(responseCode = "403", description = "La sesion pertenece a otra cuenta.", content = @Content),
-    @ApiResponse(responseCode = "404", description = "Sesion inexistente.", content = @Content),
-    @ApiResponse(responseCode = "400", description = "UUID invalido.", content = @Content)
+    @ApiResponse(responseCode = "401", description = "The current session is unauthenticated, expired, or revoked.", content = @Content),
+    @ApiResponse(responseCode = "403", description = "The session belongs to another account.", content = @Content),
+    @ApiResponse(responseCode = "404", description = "Session not found.", content = @Content),
+    @ApiResponse(responseCode = "400", description = "Invalid UUID.", content = @Content)
 })
 public class SessionsController {
     private final AuthenticationService service;
     private final Clock clock;
     public SessionsController(AuthenticationService service, Clock clock) { this.service = service; this.clock = clock; }
     @GetMapping("/me")
-    @Operation(summary = "Listar mis sesiones", description = "Incluye las revocadas y vencidas. usable combina el estado guardado y expiresAt; no expone refreshTokenHash.")
-    @ApiResponse(responseCode = "200", description = "Sesiones propias.")
+    @Operation(summary = "List my sessions", description = "Includes revoked and expired sessions. usable is derived from the stored status and expiresAt. Does not expose refreshTokenHash.")
+    @ApiResponse(responseCode = "200", description = "Sessions owned by the authenticated account.")
     public List<SessionResource> mine(@AuthenticationPrincipal SpotgoUserPrincipal actor) {
         return service.ownSessions(actor).stream().map(s -> SessionResource.from(s, clock.instant())).toList();
     }
     @DeleteMapping("/{sessionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Revocar una sesion propia", description = "Permite cerrar otra sesion de tu misma cuenta. Impide usar su access token y su refresh token.")
-    @ApiResponse(responseCode = "204", description = "Sesion revocada.", content = @Content)
+    @Operation(summary = "Revoke one of my sessions", description = "Allows the caller to revoke another session belonging to the same account. Its access and refresh tokens can no longer be used.")
+    @ApiResponse(responseCode = "204", description = "Session revoked.", content = @Content)
     public void revoke(@AuthenticationPrincipal SpotgoUserPrincipal actor, @PathVariable UUID sessionId, HttpServletRequest request) {
         service.revokeSession(actor, sessionId, request.getRemoteAddr());
     }

@@ -20,7 +20,7 @@ public class DigitalParkingMap {
  @Column(name="generated_at",nullable=false,updatable=false) private Instant generatedAt;
  protected DigitalParkingMap() {}
  public DigitalParkingMap(FloorPlan plan,int version,List<Map<String,Object>> elements,Instant now) {
-  if(version < 1) throw new IllegalArgumentException("version debe ser positiva");
+  if(version < 1) throw new IllegalArgumentException("version must be positive.");
   this.floorPlan=Objects.requireNonNull(plan);this.version=version;this.elements=new ArrayList<>(Objects.requireNonNull(elements));
   this.status=PublicationStatus.DRAFT;this.generatedAt=now;
  }

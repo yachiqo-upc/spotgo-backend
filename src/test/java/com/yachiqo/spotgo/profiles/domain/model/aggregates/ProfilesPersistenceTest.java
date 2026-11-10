@@ -16,6 +16,7 @@ class ProfilesPersistenceTest {
             .addAnnotatedClass(com.yachiqo.spotgo.iam.domain.model.aggregates.Account.class)
             .addAnnotatedClass(DriverClassification.class)
             .addAnnotatedClass(com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant.class)
+            .addAnnotatedClass(com.yachiqo.spotgo.billing.domain.model.aggregates.PaymentToken.class)
             .setProperty("hibernate.connection.driver_class", "org.h2.Driver")
             .setProperty("hibernate.connection.url", "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL")
             .setProperty("hibernate.hbm2ddl.auto", "create-drop")
@@ -76,19 +77,19 @@ class ProfilesPersistenceTest {
 
     @Test void multipleVehiclesBelongToOneProfileAndPlateIsUniqueWhenPresent() {
         var profile = profile(UUID.randomUUID(), "Juan", "Perez", "999");
-        var first = new Vehicle(profile, " abc-123 ", "Toyota", "Yaris", "Azul");
+        var first = new Vehicle(profile, " abc-123 ", "Toyota", "Yaris", "Blue");
         factory.inTransaction(s -> {
             s.persist(profile);
             s.persist(first);
-            s.persist(new Vehicle(profile, "DEF-456", "Kia", "Rio", "Rojo"));
-            s.persist(new Vehicle(profile, null, "Kia", "Rio", "Rojo"));
-            s.persist(new Vehicle(profile, null, "Kia", "Rio", "Rojo"));
+            s.persist(new Vehicle(profile, "DEF-456", "Kia", "Rio", "Red"));
+            s.persist(new Vehicle(profile, null, "Kia", "Rio", "Red"));
+            s.persist(new Vehicle(profile, null, "Kia", "Rio", "Red"));
         });
         assertEquals("ABC-123", first.getPlate());
         assertEquals(profile.getId(), first.getProfileId());
         assertNotNull(first.getCreatedAt());
         assertThrows(RuntimeException.class, () -> factory.inTransaction(s ->
-            s.persist(new Vehicle(s.find(Profile.class, profile.getId()), "abc-123", "Kia", "Rio", "Rojo"))));
+            s.persist(new Vehicle(s.find(Profile.class, profile.getId()), "abc-123", "Kia", "Rio", "Red"))));
     }
 
     @Test void classificationIsUniquePerPairAndDefaultsToPrivate() {
@@ -115,7 +116,7 @@ class ProfilesPersistenceTest {
         var profile = profile(UUID.randomUUID(), "Juan", "Perez", "999");
         factory.inTransaction(s -> {
             s.persist(profile);
-            s.persist(new Vehicle(profile, "ABC-123", "Kia", "Rio", "Rojo"));
+            s.persist(new Vehicle(profile, "ABC-123", "Kia", "Rio", "Red"));
         });
         assertThrows(RuntimeException.class, () -> factory.inTransaction(s ->
             s.remove(s.find(Profile.class, profile.getId()))));
@@ -124,6 +125,6 @@ class ProfilesPersistenceTest {
     @Test void rejectsBlankNamesAndVehicleDescriptions() {
         assertThrows(IllegalArgumentException.class, () -> profile(UUID.randomUUID(), "  ", "Perez", "999"));
         var profile = profile(UUID.randomUUID(), "Juan", "Perez", "999");
-        assertThrows(IllegalArgumentException.class, () -> new Vehicle(profile, "ABC", " ", "Rio", "Rojo"));
+        assertThrows(IllegalArgumentException.class, () -> new Vehicle(profile, "ABC", " ", "Rio", "Red"));
     }
 }
