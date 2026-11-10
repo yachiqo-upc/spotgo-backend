@@ -24,6 +24,6 @@ public class SensorHealthEvent {
   this.sensor=Objects.requireNonNull(sensor);this.health=Objects.requireNonNull(health);this.reason=text(reason);observedAt=instant(observed);if(health==SensorHealth.HEALTHY)recoveredAt=observed;
  }
  public UUID getSensorId(){return sensor.getId();}
- public void recover(Instant now){if(now.isBefore(observedAt))throw new IllegalArgumentException("Recuperacion anterior al evento");if(recoveredAt==null)recoveredAt=now;}
+ public void recover(Instant now){if(now.isBefore(observedAt))throw new IllegalArgumentException("Recovery time is earlier than the health event.");if(recoveredAt==null)recoveredAt=now;}
 
 }

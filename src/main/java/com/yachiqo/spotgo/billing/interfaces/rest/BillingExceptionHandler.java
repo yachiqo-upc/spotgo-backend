@@ -13,7 +13,7 @@ public class BillingExceptionHandler {
  @ExceptionHandler(ResponseStatusException.class)
  public ResponseEntity<?> status(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"Operacion rechazada":e.getReason()));}
  @ExceptionHandler({IllegalArgumentException.class,HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class})
- public ResponseEntity<?> invalid(Exception e){return ResponseEntity.badRequest().body(Map.of("message",e instanceof IllegalArgumentException&&e.getMessage()!=null?e.getMessage():"JSON, UUID o importe invalidos"));}
+ public ResponseEntity<?> invalid(Exception e){return ResponseEntity.badRequest().body(Map.of("message",e instanceof IllegalArgumentException&&e.getMessage()!=null?e.getMessage():"Invalid JSON, UUID, or amount."));}
  @ExceptionHandler({DataIntegrityViolationException.class,PessimisticLockingFailureException.class})
- public ResponseEntity<?> conflict(Exception e){return ResponseEntity.status(409).body(Map.of("message","Conflicto de integridad o concurrencia; revisa claves de idempotencia, titularidad y referencias"));}
+ public ResponseEntity<?> conflict(Exception e){return ResponseEntity.status(409).body(Map.of("message","Integrity or concurrency conflict. Check idempotency keys, ownership, and references."));}
 }

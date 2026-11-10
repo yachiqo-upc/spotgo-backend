@@ -18,10 +18,10 @@ public class IamExceptionHandler {
     }
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> conflict(DataIntegrityViolationException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("status", 409, "message", "Correo, identidad externa, asignacion o referencia duplicada/invalida"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("status", 409, "message", "Duplicate or invalid email, external identity, role assignment, or reference."));
     }
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<?> invalid(Exception ex) {
-        return ResponseEntity.badRequest().body(Map.of("status", 400, "message", "UUID, enum o JSON invalido"));
+        return ResponseEntity.badRequest().body(Map.of("status", 400, "message", "Invalid UUID, enum, or JSON."));
     }
 }

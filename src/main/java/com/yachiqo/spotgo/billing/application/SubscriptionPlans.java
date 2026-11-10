@@ -1,48 +1,114 @@
 package com.yachiqo.spotgo.billing.application;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
 import java.util.*;
-import java.math.*;
-import static com.yachiqo.spotgo.billing.domain.model.valueobjects.BillingValues.*;
-/** Server-side catalog supplied by configuration, never by the payer. No extra table. */
+
+import static com.yachiqo.spotgo.billing.domain.model.valueobjects.BillingValues.amount;
+import static com.yachiqo.spotgo.billing.domain.model.valueobjects.BillingValues.positive;
+
+/** Fixed server-side subscription catalog, never supplied by the payer. */
 @Component
 public class SubscriptionPlans {
- private final Map<String,Map<String,Object>> plans;
- public SubscriptionPlans(@Value("${app.billing.plans-json:[]}") String configuration,org.springframework.core.env.Environment environment){
-  try{
-   var mapper=new ObjectMapper();
-   var rows=mapper.readTree(configuration);if(!rows.isArray())throw new IllegalArgumentException();
-   if(rows.isEmpty()&&environment.acceptsProfiles(org.springframework.core.env.Profiles.of("dev","local"))){
-    try(var input=new org.springframework.core.io.ClassPathResource("db.json").getInputStream()){
-     var local=mapper.createArrayNode();for(var subscription:mapper.readTree(input).path("subscriptions"))local.add(subscription.path("plan"));rows=local;
+    public static final String APP_USAGE_PRICE = "app_usage_price";
+    public static final String PRICE_PER_IOT_DEVICE = "price_per_iot_device";
+    public static final BigDecimal TENANT_APP_USAGE_PRICE = new BigDecimal("30.00");
+    public static final BigDecimal TENANT_PRICE_PER_PARKING_SPOT = new BigDecimal("1.00");
+    private static final String LICENSED_SPOT_IDS = "licensed_spot_ids";
+
+    private final Map<String, Map<String, Object>> plans;
+
+    public SubscriptionPlans() {
+        var catalog = new LinkedHashMap<String, Map<String, Object>>();
+        addStandardDriverPlans(catalog);
+        catalog.put("TENANT_MONTHLY", fixedTenantPlan());
+        plans = Collections.unmodifiableMap(catalog);
     }
-   }
-   var catalog=new LinkedHashMap<String,Map<String,Object>>();
-   for(var row:rows){
-    Map<String,Object> plan=mapper.convertValue(row,new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
-    String code=text((String)plan.get("code")),audience=text((String)plan.get("audience"));
-    if(!Set.of("DRIVER","PARKING_ADMIN").contains(audience))throw new IllegalArgumentException("Audiencia de plan invalida");
-    positive(new BigDecimal(plan.get("price").toString()));
-    int months=new BigDecimal(plan.get("billing_period_months").toString()).intValueExact();
-    if(months<1||months>120)throw new IllegalArgumentException("Periodo de plan invalido");
-    if(audience.equals("DRIVER")){
-     BigDecimal discount=new BigDecimal(plan.getOrDefault("discount_percent",0).toString());
-     if(discount.signum()<0||discount.compareTo(BigDecimal.valueOf(100))>=0)throw new IllegalArgumentException("Descuento debe estar entre 0 y menos de 100");
-    }else if(new BigDecimal(plan.get("included_sensors").toString()).intValueExact()<1)throw new IllegalArgumentException("Cantidad de sensores invalida");
-    if(catalog.putIfAbsent(code,Collections.unmodifiableMap(plan))!=null)throw new IllegalArgumentException("Codigo de plan duplicado");
-   }
-   plans=Collections.unmodifiableMap(catalog);
-  }catch(Exception e){throw new IllegalArgumentException("app.billing.plans-json debe ser un catalogo JSON valido con code, audience, price y billing_period_months",e);}
- }
- public Collection<Map<String,Object>> all(){return plans.values();}
- public Map<String,Object> get(String code){
-  var plan=plans.get(code);if(plan==null)throw new BillingException(HttpStatus.BAD_REQUEST,"Plan no configurado en el catalogo del servidor");return plan;
- }
- public static java.time.Instant periodEnd(com.yachiqo.spotgo.billing.domain.model.aggregates.Subscription subscription){
-  Object months=subscription.getPlan().get("billing_period_months");
-  if(months==null)throw new IllegalArgumentException("El plan no define billing_period_months");
-  return subscription.getStartAt().atZone(java.time.ZoneOffset.UTC).plusMonths(new BigDecimal(months.toString()).longValueExact()).toInstant();
- }
+
+    private static void addStandardDriverPlans(Map<String, Map<String, Object>> catalog) {
+        catalog.put("DRIVER_MONTHLY", Map.of(
+                "code", "DRIVER_MONTHLY",
+                "audience", "DRIVER",
+                "billing_period_months", 1,
+                "price", new BigDecimal("15.00"),
+                "discount_percent", 10));
+        catalog.put("DRIVER_ANNUAL", Map.of(
+                "code", "DRIVER_ANNUAL",
+                "audience", "DRIVER",
+                "billing_period_months", 12,
+                "price", new BigDecimal("160.00"),
+                "discount_percent", 15));
+    }
+
+    private static Map<String, Object> fixedTenantPlan() {
+        return Map.of(
+                "code", "TENANT_MONTHLY",
+                "audience", "PARKING_ADMIN",
+                "billing_period_months", 1,
+                APP_USAGE_PRICE, TENANT_APP_USAGE_PRICE,
+                PRICE_PER_IOT_DEVICE, TENANT_PRICE_PER_PARKING_SPOT);
+    }
+
+    public Collection<Map<String, Object>> all() {
+        return plans.values();
+    }
+
+    public Map<String, Object> get(String code) {
+        var plan = plans.get(code);
+        if (plan == null) throw new BillingException(HttpStatus.BAD_REQUEST, "Plan is not configured in the server catalog.");
+        return plan;
+    }
+
+    public boolean isSpotPricedTenantPlan(Map<String, Object> plan) {
+        return "PARKING_ADMIN".equals(plan.get("audience"))
+                && plan.containsKey(APP_USAGE_PRICE)
+                && plan.containsKey(PRICE_PER_IOT_DEVICE);
+    }
+
+    public boolean hasSpotPricing(Map<String, Object> plan) {
+        return plan.containsKey(APP_USAGE_PRICE) || plan.containsKey(PRICE_PER_IOT_DEVICE);
+    }
+
+    public BigDecimal pricePerIotDevice(Map<String, Object> plan) {
+        return amount(new BigDecimal(plan.get(PRICE_PER_IOT_DEVICE).toString()));
+    }
+
+    public BigDecimal tenantMonthlyPrice(Map<String, Object> plan, long parkingSpotCount) {
+        if (!isSpotPricedTenantPlan(plan)) {
+            return positive(new BigDecimal(plan.get("price").toString()));
+        }
+        if (parkingSpotCount < 0) throw new IllegalArgumentException("Invalid number of parking spots.");
+        BigDecimal appUsagePrice = positive(new BigDecimal(plan.get(APP_USAGE_PRICE).toString()));
+        return positive(amount(appUsagePrice.add(
+                pricePerIotDevice(plan).multiply(BigDecimal.valueOf(parkingSpotCount)))));
+    }
+
+    public Map<String, Object> snapshotForTenant(Map<String, Object> plan, Collection<UUID> parkingSpotIds) {
+        if (!isSpotPricedTenantPlan(plan)) return plan;
+
+        var sortedSpotIds = parkingSpotIds.stream().map(UUID::toString).sorted().toList();
+        var snapshot = new LinkedHashMap<>(plan);
+        snapshot.put("price", tenantMonthlyPrice(plan, sortedSpotIds.size()));
+        snapshot.put("parking_spot_count", sortedSpotIds.size());
+        snapshot.put("included_sensors", sortedSpotIds.size());
+        snapshot.put(LICENSED_SPOT_IDS, sortedSpotIds);
+        return Collections.unmodifiableMap(snapshot);
+    }
+
+    public Set<String> licensedSpotIds(Map<String, Object> plan) {
+        Object ids = plan.get(LICENSED_SPOT_IDS);
+        if (!(ids instanceof Collection<?> values)) return Set.of();
+        var result = new LinkedHashSet<String>();
+        for (Object value : values) if (value != null) result.add(value.toString());
+        return Collections.unmodifiableSet(result);
+    }
+
+    public static java.time.Instant periodEnd(com.yachiqo.spotgo.billing.domain.model.aggregates.Subscription subscription) {
+        Object months = subscription.getPlan().get("billing_period_months");
+        if (months == null) throw new IllegalArgumentException("The plan does not define billing_period_months.");
+        return subscription.getStartAt().atZone(java.time.ZoneOffset.UTC)
+                .plusMonths(new BigDecimal(months.toString()).longValueExact()).toInstant();
+    }
 }

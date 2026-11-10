@@ -28,7 +28,7 @@ public class ParkingSession {
   entryAt=now;status=ParkingSessionStatus.ACTIVE;
  }
  public void close(Instant now) {
-  if(exitAt!=null) throw new IllegalArgumentException("La sesion ya termino");
+  if(exitAt!=null) throw new IllegalArgumentException("The session has already ended.");
   if(now.isBefore(entryAt)) throw new IllegalArgumentException("Salida anterior a entrada");
   exitAt=now;status=ParkingSessionStatus.COMPLETED;
  }

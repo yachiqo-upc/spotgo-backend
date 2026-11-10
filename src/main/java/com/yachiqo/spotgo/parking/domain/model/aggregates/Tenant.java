@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.*;
+import com.yachiqo.spotgo.billing.domain.model.aggregates.PaymentToken;
 import java.time.Instant;
 import java.util.*;
 import java.math.BigDecimal;
@@ -18,6 +19,11 @@ public class Tenant {
   @JdbcTypeCode(SqlTypes.JSON) @Column(name="coordinates",columnDefinition="jsonb",nullable=false) private Map<String,Object> coordinates;
 
  @Column(nullable=false) private String address;
+ @Column(name="token_id") private UUID defaultPaymentTokenId;
+ @ManyToOne(fetch=FetchType.LAZY)
+ @JoinColumn(name="token_id",insertable=false,updatable=false,
+  foreignKey=@ForeignKey(name="fk_tenants_default_payment_token"))
+ private PaymentToken defaultPaymentToken;
   @JdbcTypeCode(SqlTypes.JSON) @Column(name="contact_data",columnDefinition="jsonb",nullable=false) private Map<String,Object> contactData;
 
   @JdbcTypeCode(SqlTypes.JSON) @Column(name="rules",columnDefinition="jsonb",nullable=false) private Map<String,Object> rules;
@@ -35,5 +41,6 @@ public class Tenant {
   this.name=text(name);this.address=text(address);this.coordinates=object(coordinates);this.contactData=object(contactData);
   this.rules=object(rules);this.status=Objects.requireNonNull(status);
  }
+ public void setDefaultPaymentTokenId(UUID tokenId){defaultPaymentTokenId=tokenId;}
 
 }

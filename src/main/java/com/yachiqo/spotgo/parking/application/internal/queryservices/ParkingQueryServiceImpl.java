@@ -34,7 +34,7 @@ public class ParkingQueryServiceImpl {
   commands.admin(actor,actor.getTenantId());return reservations.byTenant(actor.getTenantId());
  }
  public Reservation reservation(SpotgoUserPrincipal actor,UUID id) {
-  var r=reservations.findById(id).orElseThrow(()->ParkingCommandServiceImpl.missing("Reserva"));commands.reservationAccess(actor,r);return r;
+  var r=reservations.findById(id).orElseThrow(()->ParkingCommandServiceImpl.missing("Reservation"));commands.reservationAccess(actor,r);return r;
  }
  public List<ParkingSession> sessions(SpotgoUserPrincipal actor) {
   if(actor.getRole()==UserRole.DRIVER)return sessions.byProfile(profiles.driver(actor).getId());

@@ -44,7 +44,7 @@ public class SecurityConfiguration {
                         .authenticationEntryPoint((request, response, error) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write("{\"code\":\"UNAUTHENTICATED\",\"message\":\"Inicia sesion y envia accessToken como Bearer; el token o la sesion pueden haber vencido\"}");
+                            response.getWriter().write("{\"code\":\"UNAUTHENTICATED\",\"message\":\"Sign in and provide accessToken as a Bearer token; the token or session may have expired\"}");
                         }))
                 .addFilterBefore(authenticationRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -17,15 +17,15 @@ public class BillingAccess {
  private final com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.SubscriptionRepository subscriptions;
  public BillingAccess(ProfilesManagementService profiles,ProfileRepository repository,ReservationRepository reservations,com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.AdditionalChargeRepository charges,com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.SubscriptionRepository subscriptions){this.profiles=profiles;this.repository=repository;this.reservations=reservations;this.charges=charges;this.subscriptions=subscriptions;}
  public Profile profile(SpotgoUserPrincipal actor){
-  if(actor==null || (actor.getRole()!=UserRole.DRIVER&&actor.getRole()!=UserRole.PARKING_ADMIN))throw new AccessDeniedException("El rol requiere un perfil de conductor o administrador");
+  if(actor==null || (actor.getRole()!=UserRole.DRIVER&&actor.getRole()!=UserRole.PARKING_ADMIN))throw new AccessDeniedException("This role requires a driver or administrator profile.");
   return profiles.current(actor);
  }
- public Profile lockProfile(UUID id){return repository.lock(id).orElseThrow(()->new BillingException(HttpStatus.NOT_FOUND,"Perfil inexistente"));}
+ public Profile lockProfile(UUID id){return repository.lock(id).orElseThrow(()->new BillingException(HttpStatus.NOT_FOUND,"Profile not found."));}
  public void owner(SpotgoUserPrincipal actor,Profile profile){
-  if(actor==null||!profile.getAccountId().equals(actor.getAccountId()))throw new AccessDeniedException("Recurso de otro perfil");
+  if(actor==null||!profile.getAccountId().equals(actor.getAccountId()))throw new AccessDeniedException("Resource belongs to another profile.");
  }
  public void tenant(SpotgoUserPrincipal actor,UUID tenant){
-  if(actor==null||actor.getRole()!=UserRole.PARKING_ADMIN||tenant==null||!tenant.equals(actor.getTenantId()))throw new AccessDeniedException("No administras este tenant");
+  if(actor==null||actor.getRole()!=UserRole.PARKING_ADMIN||tenant==null||!tenant.equals(actor.getTenantId()))throw new AccessDeniedException("You do not manage this tenant.");
  }
  public void charge(SpotgoUserPrincipal actor,AdditionalCharge charge){
   if(actor!=null&&actor.getRole()==UserRole.DRIVER){owner(actor,charge.getReservation().getProfile());return;}
@@ -41,6 +41,6 @@ public class BillingAccess {
   if(reservation.isPresent()){tenant(actor,reservation.get().getTenantId());return;}
   var charge=charges.byPayment(payment.getId());if(charge.isPresent()){tenant(actor,charge.get().getReservation().getTenantId());return;}
   var subscription=subscriptions.byPayment(payment.getId());if(subscription.isPresent()&&subscription.get().getTenantId()!=null){tenant(actor,subscription.get().getTenantId());return;}
-  throw new AccessDeniedException("Pago fuera de tu alcance");
+  throw new AccessDeniedException("Payment is outside your access scope.");
  }
 }

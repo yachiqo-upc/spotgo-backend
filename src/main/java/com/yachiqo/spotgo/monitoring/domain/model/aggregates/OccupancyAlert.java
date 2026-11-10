@@ -24,7 +24,7 @@ public class OccupancyAlert {
  protected OccupancyAlert(){}
  
  public OccupancyAlert(SensorHealthEvent event,OccupancyConflict conflict,Instant now){
-  if((event==null)==(conflict==null))throw new IllegalArgumentException("Exactamente un origen de alerta");
+  if((event==null)==(conflict==null))throw new IllegalArgumentException("Exactly one alert source is required.");
   healthEvent=event;this.conflict=conflict;spot=event!=null?event.getSensor().getSpot():conflict.getSpot();tenant=spot.getZone().getTenant();
   alertType=event!=null?AlertType.SENSOR_FAILURE:AlertType.OCCUPANCY_CONFLICT;severity=event!=null?Severity.HIGH:conflict.getSeverity();
   createdAt=instant(now);status=AlertStatus.OPEN;
@@ -32,7 +32,7 @@ public class OccupancyAlert {
  public UUID getTenantId(){return tenant.getId();} public UUID getSpotId(){return spot.getId();}
  public UUID getHealthEventId(){return healthEvent==null?null:healthEvent.getId();} public UUID getConflictId(){return conflict==null?null:conflict.getId();}
  public void attachEvidenceFile(String fileName){
-  if(id==null||fileName==null||!fileName.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png)"))throw new IllegalArgumentException("Referencia interna de imagen invalida");
+  if(id==null||fileName==null||!fileName.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png)"))throw new IllegalArgumentException("Invalid internal image reference.");
   evidenceRef="/api/v1/occupancy-alerts/"+id+"/evidence/"+fileName;
  }
  public String evidenceFileName(){

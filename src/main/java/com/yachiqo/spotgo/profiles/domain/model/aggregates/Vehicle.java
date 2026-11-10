@@ -37,7 +37,7 @@ public class Vehicle extends AbstractDomainAggregateRoot<Vehicle> {
 
     protected Vehicle() {}
     public Vehicle(Profile profile, String plate, String make, String model, String color) {
-        this.profile = Objects.requireNonNull(profile, "El perfil es obligatorio");
+        this.profile = Objects.requireNonNull(profile, "Profile is required.");
         this.plate = normalizePlate(plate);
         this.make = required(make, "Marca");
         this.model = required(model, "Modelo");

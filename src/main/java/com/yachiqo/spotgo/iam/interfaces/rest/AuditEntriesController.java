@@ -13,18 +13,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 @RestController
 @RequestMapping(value = "/api/v1/audit-entries", produces = "application/json")
-@Tag(name = "Audit entries", description = "Historial de eventos de identidad y seguridad, no de todas las acciones del negocio. No guarda contraseñas, codigos ni tokens.")
+@Tag(name = "Audit entries", description = "Identity and security events, not a log of every business action. Passwords, codes, and tokens are never stored.")
 public class AuditEntriesController {
     private final AccountAdministrationService service;
     public AuditEntriesController(AccountAdministrationService service) { this.service = service; }
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Consultar auditoria", description = "Solo SUPER_ADMIN. accountId opcional filtra por cuenta. accountId NULL en una fila significa que no se identifico una cuenta. page >= 0, size entre 1 y 100.")
+    @Operation(summary = "View audit events", description = "Available to SUPER_ADMIN only. accountId is an optional account filter. A NULL accountId means the event could not be associated with an account. page must be at least 0 and size must be between 1 and 100.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Pagina de eventos de seguridad."),
-        @ApiResponse(responseCode = "400", description = "UUID o paginacion invalidos.", content = @Content),
-        @ApiResponse(responseCode = "401", description = "Access token ausente o invalido.", content = @Content),
-        @ApiResponse(responseCode = "403", description = "Se requiere SUPER_ADMIN.", content = @Content)
+        @ApiResponse(responseCode = "200", description = "Paginated security events."),
+        @ApiResponse(responseCode = "400", description = "Invalid UUID or pagination parameters.", content = @Content),
+        @ApiResponse(responseCode = "401", description = "The access token is missing or invalid.", content = @Content),
+        @ApiResponse(responseCode = "403", description = "SUPER_ADMIN is required.", content = @Content)
     })
     public Page<AuditEntryResource> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,
             @RequestParam(required = false) UUID accountId, @RequestParam(defaultValue = "0") int page,

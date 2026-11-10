@@ -80,7 +80,8 @@
                                             "latitude":  -12.0464,
                                             "longitude":  -77.0428
                                         },
-                        "address":  "Av. Demo 123, Lima",
+                        "address":  "Demo Avenue 123, Lima",
+                        "token_id":  "00000000-0000-4000-8000-000000000072",
                         "rules":  {
                                       "tariff_rules":  {
                                                            "period_minutes":  60,
@@ -93,8 +94,8 @@
 
                                                            },
                                       "coexistence_rules":  [
-                                                                "Velocidad máxima de 10 km/h",
-                                                                "No bloquear las vías de circulación"
+                                                                "Maximum speed: 10 km/h",
+                                                                "Keep traffic lanes clear"
                                                             ]
                                   },
                         "created_at":  "2026-11-09T07:00:00Z",
@@ -175,7 +176,7 @@
                          "plate":  "DEM-101",
                          "make":  "Toyota",
                          "model":  "Yaris",
-                         "color":  "Azul",
+                         "color":  "Blue",
                          "status":  "ACTIVE",
                          "created_at":  "2026-11-09T07:00:00Z",
                          "updated_at":  "2026-11-09T07:00:00Z"
@@ -186,7 +187,7 @@
                          "plate":  "DEM-102",
                          "make":  "Kia",
                          "model":  "Rio",
-                         "color":  "Rojo",
+                         "color":  "Red",
                          "status":  "ACTIVE",
                          "created_at":  "2026-11-09T07:00:00Z",
                          "updated_at":  "2026-11-09T07:00:00Z"
@@ -259,9 +260,9 @@
                           {
                               "zone_id":  "00000000-0000-4000-8000-000000000031",
                               "tenant_id":  "00000000-0000-4000-8000-000000000021",
-                              "name":  "Piso1-A",
+                              "name":  "Floor1-A",
                               "location":  {
-                                               "reference":  "Primer piso, acceso principal"
+                                               "reference":  "First floor, main entrance"
                                            },
                               "color_code":  "#1976D2",
                               "status":  "ACTIVE",
@@ -271,9 +272,9 @@
                           {
                               "zone_id":  "00000000-0000-4000-8000-000000000032",
                               "tenant_id":  "00000000-0000-4000-8000-000000000021",
-                              "name":  "Piso2-A",
+                              "name":  "Floor2-A",
                               "location":  {
-                                               "reference":  "Segundo piso, rampa derecha"
+                                               "reference":  "Second floor, right ramp"
                                            },
                               "color_code":  "#43A047",
                               "status":  "ACTIVE",
@@ -332,7 +333,7 @@
                             "floor_plan_id":  "00000000-0000-4000-8000-000000000141",
                             "zone_id":  "00000000-0000-4000-8000-000000000031",
                             "version":  1,
-                            "file_reference":  "demo://croquis/piso1-a",
+                            "file_reference":  "demo://floor-plan/floor1-a",
                             "status":  "PUBLISHED",
                             "published_at":  "2026-11-09T07:00:00Z"
                         },
@@ -340,7 +341,7 @@
                             "floor_plan_id":  "00000000-0000-4000-8000-000000000142",
                             "zone_id":  "00000000-0000-4000-8000-000000000032",
                             "version":  1,
-                            "file_reference":  "demo://croquis/piso2-a",
+                            "file_reference":  "demo://floor-plan/floor2-a",
                             "status":  "PUBLISHED",
                             "published_at":  "2026-11-09T07:00:00Z"
                         }
@@ -641,11 +642,11 @@
                               "profile_id":  "00000000-0000-4000-8000-000000000012",
                               "tenant_id":  null,
                               "plan":  {
-                                           "code":  "DRIVER_DEMO",
+                                           "code":  "DRIVER_MONTHLY",
                                            "audience":  "DRIVER",
                                            "billing_period_months":  1,
                                            "discount_percent":  10,
-                                           "price":  10
+                                           "price":  15
                                        },
                               "start_at":  "2026-11-09T12:30:00Z",
                               "end_at":  null,
@@ -657,11 +658,20 @@
                               "profile_id":  null,
                               "tenant_id":  "00000000-0000-4000-8000-000000000021",
                               "plan":  {
-                                           "code":  "TENANT_DEMO",
+                                           "code":  "TENANT_MONTHLY",
                                            "audience":  "PARKING_ADMIN",
                                            "billing_period_months":  1,
-                                           "included_sensors":  20,
-                                           "price":  50
+                                           "app_usage_price":  30,
+                                           "price_per_iot_device":  1,
+                                           "price":  34,
+                                           "parking_spot_count":  4,
+                                           "included_sensors":  4,
+                                           "licensed_spot_ids": [
+                                               "00000000-0000-4000-8000-000000000041",
+                                               "00000000-0000-4000-8000-000000000042",
+                                               "00000000-0000-4000-8000-000000000043",
+                                               "00000000-0000-4000-8000-000000000044"
+                                           ]
                                        },
                               "start_at":  "2026-11-09T12:30:00Z",
                               "end_at":  null,
@@ -728,7 +738,7 @@
                         "refund_id":  "00000000-0000-4000-8000-000000000221",
                         "payment_id":  "00000000-0000-4000-8000-000000000082",
                         "amount":  1,
-                        "reason":  "Ajuste de cobro de demostracion",
+                        "reason":  "Demo billing adjustment",
                         "status":  "COMPLETED",
                         "provider_operation_ref":  "demo-refund-001",
                         "requested_at":  "2026-11-09T12:20:00Z",
@@ -880,7 +890,7 @@
                                      "health_event_id":  "00000000-0000-4000-8000-000000000261",
                                      "sensor_id":  "00000000-0000-4000-8000-000000000242",
                                      "health":  "FAILED",
-                                     "reason":  "COMMUNICATION_TIMEOUT: sin mensajes dentro del umbral",
+                                     "reason":  "COMMUNICATION_TIMEOUT: no messages received within the configured threshold",
                                      "observed_at":  "2026-11-09T14:05:00Z",
                                      "recovered_at":  null
                                  }

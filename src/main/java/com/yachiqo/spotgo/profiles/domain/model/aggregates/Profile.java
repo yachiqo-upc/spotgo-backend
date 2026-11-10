@@ -4,17 +4,17 @@ import com.yachiqo.spotgo.shared.domain.model.aggregates.AbstractDomainAggregate
 import jakarta.persistence.*;
 import lombok.Getter;
 
-//Me ayuda a capturar el Timestamp en el preciso instante
+// Captures the current timestamp when the entity is created or updated.
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import static com.yachiqo.spotgo.profiles.domain.model.valueobjects.ProfileText.required;
 
-@Getter //Lombok me crea metodos PK getId() y la FK getAccountId()
+@Getter // Lombok generates the PK accessor getId() and FK accessor getAccountId().
 @Entity //JPA reconoce esto como una entidad de guardado
 @Table(name = "profiles")
 
-//Estructura perfil
+// Profile entity structure.
 public class Profile extends AbstractDomainAggregateRoot<Profile>{
     
     //Atributos
@@ -56,7 +56,7 @@ public class Profile extends AbstractDomainAggregateRoot<Profile>{
 
     //Constructor
     protected Profile() {
-        // JPA lo utiliza al leer perfiles de la BD.
+        // JPA uses this constructor when loading profiles from the database.
     }
 
     
@@ -67,7 +67,7 @@ public class Profile extends AbstractDomainAggregateRoot<Profile>{
             String phone
     ) {
         this.accountId = Objects.requireNonNull(
-                accountId, "La cuenta es obligatoria"
+                accountId, "Account is required."
         );
         update(firstName, lastName, phone);
     }
@@ -79,19 +79,19 @@ public class Profile extends AbstractDomainAggregateRoot<Profile>{
         this.phone = required(phone, "Telefono");
     }
 
-    //Metodos
+    // Domain methods.
 
-    //Creacion de perfil, cuando se crea coloca las fechas en created y updated
+    // Set both timestamps when the profile is created.
     @PrePersist //Insert
     protected void onCreate(){
         Instant now= Instant.now();
 
-        //A los dos
+        // Use the same instant for both fields.
         this.createdAt = now;
         this.updatedAt=now;
     }
 
-    //Actualizacion de perfil, cuando se actualiza, solo se modifica el update at.
+    // Update the modification timestamp when the profile changes.
     @PreUpdate //Update
     protected void onUpdate(){
         this.updatedAt = Instant.now();

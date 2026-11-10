@@ -15,21 +15,21 @@ import java.util.*;
 
 @RestController @RequestMapping(value="/api/v1/occupancy-reports",produces="application/json")
 @PreAuthorize("hasAnyRole('PARKING_ADMIN','SUPER_ADMIN')")
-@Tag(name="Occupancy reports",description="Reporte por zona obligatoria, calculado con snapshots de [inicio,fin). No guarda snapshotId.")
+@Tag(name="Occupancy reports",description="Report for a required zone, calculated from snapshots in the [start, end) interval. snapshotId is not stored.")
 @ApiResponses({
- @ApiResponse(responseCode="400",description="UUID, fecha, calidad o JSON invalidos",content=@Content),
- @ApiResponse(responseCode="401",description="Sesion no valida",content=@Content),
- @ApiResponse(responseCode="403",description="Rol o Tenant fuera de tu alcance",content=@Content),
- @ApiResponse(responseCode="404",description="Recurso inexistente",content=@Content),
- @ApiResponse(responseCode="409",description="Referencia, duplicado o estado incompatible; no se inventa ocupacion",content=@Content)
+ @ApiResponse(responseCode="400",description="Invalid UUID, timestamp, quality, or JSON.",content=@Content),
+ @ApiResponse(responseCode="401",description="Invalid session.",content=@Content),
+ @ApiResponse(responseCode="403",description="The role or tenant is outside the caller's access scope.",content=@Content),
+ @ApiResponse(responseCode="404",description="The requested resource was not found.",content=@Content),
+ @ApiResponse(responseCode="409",description="Invalid reference, duplicate resource, or incompatible state; occupancy is not fabricated.",content=@Content)
 })
 public class OccupancyReportsController {
  private final MonitoringService service;
  public OccupancyReportsController(MonitoringService service){this.service=service;}
  
- @GetMapping @Operation(summary="Consultar reportes de mi alcance")
+ @GetMapping @Operation(summary="View reports in my scope", description = "Returns occupancy reports available to the authenticated caller within their tenant scope.")
  public List<ReportView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam(required=false) UUID tenantId){return service.reports(actor,tenantId).stream().map(ReportView::of).toList();}
- @PostMapping @PreAuthorize("hasRole('PARKING_ADMIN')") @ResponseStatus(HttpStatus.CREATED) @Operation(summary="Generar reporte de zona",description="Requiere muestras confiables. totals contiene maximo, media simple de muestras, cantidad de snapshots y alertas creadas en el intervalo; no es media ponderada por tiempo. Maximo 366 dias, sin fechas futuras.")
+ @PostMapping @PreAuthorize("hasRole('PARKING_ADMIN')") @ResponseStatus(HttpStatus.CREATED) @Operation(summary="Generate a zone report",description="Requires trusted samples. totals contains the maximum, the arithmetic mean of samples, the number of snapshots, and alerts created in the interval; the mean is not time-weighted. The interval cannot exceed 366 days or include future dates.")
  public ReportView create(@AuthenticationPrincipal SpotgoUserPrincipal actor,@Valid @RequestBody ReportBody b){return ReportView.of(service.report(actor,b.zoneId(),b.intervalStart(),b.intervalEnd()));}
 
 }

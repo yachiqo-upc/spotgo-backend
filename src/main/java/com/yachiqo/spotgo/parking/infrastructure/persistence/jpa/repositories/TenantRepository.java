@@ -5,4 +5,7 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import java.util.*;
 import java.time.Instant;
-public interface TenantRepository extends JpaRepository<Tenant,UUID> { @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select t from Tenant t where t.id=:id") Optional<Tenant> lock(@Param("id") UUID id); }
+public interface TenantRepository extends JpaRepository<Tenant,UUID> {
+ @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select t from Tenant t where t.id=:id") Optional<Tenant> lock(@Param("id") UUID id);
+ @Query("select t from Tenant t where t.defaultPaymentTokenId=:tokenId") List<Tenant> byDefaultPaymentTokenId(@Param("tokenId") UUID tokenId);
+}

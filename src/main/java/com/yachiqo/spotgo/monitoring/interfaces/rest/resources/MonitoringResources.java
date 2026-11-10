@@ -13,7 +13,7 @@ public final class MonitoringResources {
  public record SensorBody(@NotNull UUID spotId,@NotNull SensorProtocol protocol,@NotNull Map<String,Object> configuration,@NotNull Instant installedAt,@NotNull @Valid FirstReading firstReading){}
  public record ReadingBody(@NotNull UUID sensorId,@NotNull OccupancyStatus occupancyStatus,@NotNull Instant occurredAt,@NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=2) BigDecimal quality){}
  public record HealthBody(@NotNull UUID sensorId,@NotNull SensorHealth health,@NotBlank @Size(max=255) String reason){}
- public record SnapshotBody(@NotNull UUID tenantId,@Schema(description="NULL resume todo el Tenant") UUID zoneId){}
+ public record SnapshotBody(@NotNull UUID tenantId,@Schema(description="NULL summarizes the entire tenant.") UUID zoneId){}
  public record ReportBody(@NotNull UUID zoneId,@NotNull Instant intervalStart,@NotNull Instant intervalEnd){}
  public record SensorView(UUID sensorId,UUID tenantId,UUID zoneId,UUID spotId,SensorProtocol protocol,SensorStatus status,Instant lastSeenAt,Map<String,Object> configuration,Instant installedAt){
   public static SensorView of(OccupancySensor s){return new SensorView(s.getId(),s.getTenantId(),s.getZoneId(),s.getSpotId(),s.getProtocol(),s.getStatus(),s.getLastSeenAt(),s.getConfiguration(),s.getInstalledAt());}

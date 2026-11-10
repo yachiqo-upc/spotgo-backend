@@ -21,11 +21,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping(value = "/api/v1/accounts", produces = "application/json")
 @ApiResponses({
-    @ApiResponse(responseCode = "400", description = "UUID, JSON, estado, rol, fechas o alcance de tenant invalidos.", content = @Content),
-    @ApiResponse(responseCode = "401", description = "Requiere accessToken valido y sesion habilitada.", content = @Content),
-    @ApiResponse(responseCode = "403", description = "La accion requiere SUPER_ADMIN o acceso al recurso propio.", content = @Content),
-    @ApiResponse(responseCode = "404", description = "Cuenta o asignacion no encontrada.", content = @Content),
-    @ApiResponse(responseCode = "409", description = "Conflicto de integridad; una cuenta solo admite una asignacion.", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Invalid UUID, JSON, status, role, dates, or tenant scope.", content = @Content),
+    @ApiResponse(responseCode = "401", description = "A valid accessToken and an active session are required.", content = @Content),
+    @ApiResponse(responseCode = "403", description = "This action requires SUPER_ADMIN or access to the caller's own resource.", content = @Content),
+    @ApiResponse(responseCode = "404", description = "Account or role assignment not found.", content = @Content),
+    @ApiResponse(responseCode = "409", description = "Integrity conflict: an account can have only one role assignment.", content = @Content)
 })
 public class AccountsController {
     private final AccountAdministrationService administration;
@@ -35,56 +35,56 @@ public class AccountsController {
     }
     public record ChangeStatusResource(@NotNull AccountStatus status) {}
     public record AssignRoleResource(@NotNull UserRole roleType,
-        @Schema(description = "Obligatorio para PARKING_ADMIN; NULL para DRIVER o SUPER_ADMIN") UUID tenantId,
-        @Schema(description = "Omitir usa el instante actual") Instant validFrom,
-        @Schema(description = "NULL significa sin fecha de termino; no equivale a estado ACTIVE") Instant validTo,
+        @Schema(description = "Required for PARKING_ADMIN; NULL for DRIVER or SUPER_ADMIN.") UUID tenantId,
+        @Schema(description = "Omit the field to use the current timestamp.") Instant validFrom,
+        @Schema(description = "NULL means there is no end date; it does not mean the status is ACTIVE.") Instant validTo,
         AssignmentStatus status) {}
 
     @GetMapping("/me")
-    @Operation(tags = "Accounts", summary = "Consultar mi cuenta", description = "Cuenta de quien envio el token, con su correo y estado. El perfil personal se consulta en /profiles/me.")
-    @ApiResponse(responseCode = "200", description = "Cuenta propia encontrada.")
+    @Operation(tags = "Accounts", summary = "View my account", description = "Returns the account associated with the access token, including its email and status. Retrieve the personal profile from /profiles/me.")
+    @ApiResponse(responseCode = "200", description = "Authenticated account found.")
     public AccountResource mine(@AuthenticationPrincipal SpotgoUserPrincipal actor) { return AccountResource.from(administration.own(actor)); }
 
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(tags = "Accounts", summary = "Listar cuentas", description = "Solo SUPER_ADMIN. page empieza en 0; size entre 1 y 100.")
-    @ApiResponse(responseCode = "200", description = "Pagina de cuentas, sin contraseñas ni tokens.")
+    @Operation(tags = "Accounts", summary = "List accounts", description = "Available to SUPER_ADMIN only. page starts at 0 and size must be between 1 and 100.")
+    @ApiResponse(responseCode = "200", description = "Paginated accounts without passwords or tokens.")
     public Page<AccountResource> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return administration.list(actor, page, size).map(AccountResource::from);
     }
     @GetMapping("/{accountId}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(tags = "Accounts", summary = "Consultar una cuenta", description = "Solo SUPER_ADMIN; un PARKING_ADMIN no puede consultar libremente cuentas del sistema.")
-    @ApiResponse(responseCode = "200", description = "Cuenta encontrada.")
+    @Operation(tags = "Accounts", summary = "Get an account", description = "Available to SUPER_ADMIN only. PARKING_ADMIN cannot browse all system accounts.")
+    @ApiResponse(responseCode = "200", description = "Account found.")
     public AccountResource get(@AuthenticationPrincipal SpotgoUserPrincipal actor, @PathVariable UUID accountId) {
         return AccountResource.from(administration.get(actor, accountId));
     }
     @PatchMapping("/{accountId}/status")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(tags = "Accounts", summary = "Cambiar estado de cuenta", description = "Solo SUPER_ADMIN. Pasar a un estado distinto de ACTIVE revoca todas las sesiones. Reactivar la cuenta no reactiva sus sesiones antiguas.")
-    @ApiResponse(responseCode = "200", description = "Estado actualizado.")
+    @Operation(tags = "Accounts", summary = "Update account status", description = "Available to SUPER_ADMIN only. Changing the status from ACTIVE revokes all sessions. Reactivating the account does not restore its previous sessions.")
+    @ApiResponse(responseCode = "200", description = "Status updated.")
     public AccountResource status(@AuthenticationPrincipal SpotgoUserPrincipal actor, @PathVariable UUID accountId,
             @Valid @RequestBody ChangeStatusResource body, HttpServletRequest request) {
         return AccountResource.from(administration.status(actor, accountId, body.status(), request.getRemoteAddr()));
     }
     @GetMapping("/me/role")
-    @Operation(tags = "Role assignments", summary = "Consultar mi asignacion de rol", description = "effective comprueba status y las fechas; validTo NULL no basta para habilitar un rol.")
-    @ApiResponse(responseCode = "200", description = "Asignacion propia.")
+    @Operation(tags = "Role assignments", summary = "View my role assignment", description = "effective evaluates status and the assignment dates; a NULL validTo alone does not make a role effective.")
+    @ApiResponse(responseCode = "200", description = "Current account's role assignment.")
     public RoleAssignmentResource ownRole(@AuthenticationPrincipal SpotgoUserPrincipal actor) {
         return RoleAssignmentResource.from(administration.role(actor, actor.getAccountId()), administration.now());
     }
     @GetMapping("/{accountId}/role")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(tags = "Role assignments", summary = "Consultar rol de una cuenta", description = "Solo SUPER_ADMIN.")
-    @ApiResponse(responseCode = "200", description = "Asignacion encontrada.")
+    @Operation(tags = "Role assignments", summary = "View an account's role assignment", description = "Available to SUPER_ADMIN only.")
+    @ApiResponse(responseCode = "200", description = "Role assignment found.")
     public RoleAssignmentResource role(@AuthenticationPrincipal SpotgoUserPrincipal actor, @PathVariable UUID accountId) {
         return RoleAssignmentResource.from(administration.role(actor, accountId), administration.now());
     }
     @PutMapping("/{accountId}/role")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(tags = "Role assignments", summary = "Asignar o cambiar rol", description = "Solo SUPER_ADMIN. Crea o modifica la unica fila permitida por account_id UNIQUE. PARKING_ADMIN requiere un estacionamiento existente. Se comprueba la asignacion actual en cada peticion, incluso si el JWT conserva otro rol en sus claims.")
-    @ApiResponse(responseCode = "200", description = "Asignacion creada o actualizada.")
+    @Operation(tags = "Role assignments", summary = "Assign or update an account role", description = "Available to SUPER_ADMIN only. Creates or updates the single role-assignment row allowed by the unique account_id. PARKING_ADMIN requires an existing tenant. The current assignment is checked on every request, even if the JWT contains an older role claim.")
+    @ApiResponse(responseCode = "200", description = "Role assignment created or updated.")
     public RoleAssignmentResource assign(@AuthenticationPrincipal SpotgoUserPrincipal actor, @PathVariable UUID accountId,
             @Valid @RequestBody AssignRoleResource body, HttpServletRequest request) {
         return RoleAssignmentResource.from(administration.assign(actor, accountId, body.roleType(), body.tenantId(),
@@ -92,8 +92,8 @@ public class AccountsController {
     }
     @PatchMapping("/me/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(tags = "Accounts", summary = "Cambiar mi contraseña", description = "Valida la contraseña actual. La nueva debe ser diferente y cumplir la politica. Revoca todas las sesiones, incluida esta; vuelve a iniciar sesion.")
-    @ApiResponse(responseCode = "204", description = "Contraseña cambiada; sin cuerpo.", content = @Content)
+    @Operation(tags = "Accounts", summary = "Change my password", description = "Validates the current password. The new password must be different and meet the password policy. Revokes all sessions, including this one; sign in again.")
+    @ApiResponse(responseCode = "204", description = "Password changed; no response body.", content = @Content)
     public void password(@AuthenticationPrincipal SpotgoUserPrincipal actor,
             @Valid @RequestBody UpdatePasswordResource body, HttpServletRequest request) {
         authentication.updatePassword(actor, body.currentPassword(), body.newPassword(), request.getRemoteAddr());

@@ -126,16 +126,16 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<?> handleUploadTooLarge(Exception ex) {
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(java.util.Map.of("message", "La imagen no puede superar 5 MB"));
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(java.util.Map.of("message", "The image cannot exceed 5 MB."));
     }
     @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class,
             org.springframework.web.multipart.MultipartException.class})
     public ResponseEntity<?> handleInvalidMultipart(Exception ex) {
-        return ResponseEntity.badRequest().body(java.util.Map.of("message", "Selecciona la imagen en el campo image de multipart/form-data"));
+        return ResponseEntity.badRequest().body(java.util.Map.of("message", "Select the image in the image field of the multipart/form-data request."));
     }
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<?> handleUnsupportedMedia(Exception ex) {
-        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(java.util.Map.of("message", "El formato de la solicitud no es compatible con esta operacion"));
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(java.util.Map.of("message", "The request format is not supported for this operation."));
     }
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {

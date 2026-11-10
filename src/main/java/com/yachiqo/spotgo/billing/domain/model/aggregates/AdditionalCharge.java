@@ -35,7 +35,7 @@ public class AdditionalCharge {
  public UUID getReservationId(){return reservation.getId();}
  public UUID getPaymentId(){return payment==null?null:payment.getId();}
  public void attach(DigitalPayment payment){
-  if(this.payment!=null&&!this.payment.getId().equals(payment.getId()))throw new IllegalArgumentException("El cargo ya tiene una operacion de pago");
+  if(this.payment!=null&&!this.payment.getId().equals(payment.getId()))throw new IllegalArgumentException("The charge already has a payment operation.");
   this.payment=payment;
  }
  public void paid(){status=AdditionalChargeStatus.PAID;}

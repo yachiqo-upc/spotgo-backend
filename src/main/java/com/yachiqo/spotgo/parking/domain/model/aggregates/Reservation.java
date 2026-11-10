@@ -58,19 +58,19 @@ public class Reservation {
   }
  }
  public void attachPayment(UUID payment) {
-  if(status!=ReservationStatus.PENDING_PAYMENT || (paymentId!=null&&!paymentId.equals(payment))) throw new IllegalArgumentException("La reserva ya tiene una operacion de pago");
+  if(status!=ReservationStatus.PENDING_PAYMENT || (paymentId!=null&&!paymentId.equals(payment))) throw new IllegalArgumentException("The reservation already has a payment operation.");
   paymentId=Objects.requireNonNull(payment);
  }
  public void confirm(UUID payment,Instant now) {
-  if(status!=ReservationStatus.PENDING_PAYMENT || !blocks(now)) throw new IllegalArgumentException("El bloqueo de la reserva ya no esta vigente");
+  if(status!=ReservationStatus.PENDING_PAYMENT || !blocks(now)) throw new IllegalArgumentException("The reservation hold is no longer active.");
   paymentId=Objects.requireNonNull(payment);status=ReservationStatus.RESERVED;lockStatus=LockStatus.CONFIRMED;
  }
  public void cancel() {
-  if(status!=ReservationStatus.PENDING_PAYMENT && status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("Solo puedes cancelar una reserva pendiente o confirmada");
+  if(status!=ReservationStatus.PENDING_PAYMENT && status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("You can cancel only a pending or confirmed reservation.");
   status=ReservationStatus.CANCELLED;lockStatus=LockStatus.RELEASED;
  }
- public void start() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("La reserva debe estar confirmada");status=ReservationStatus.ACTIVE; }
+ public void start() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("The reservation must be confirmed.");status=ReservationStatus.ACTIVE; }
  public void complete(boolean overstay) { status=overstay?ReservationStatus.OVERSTAYED:ReservationStatus.COMPLETED; }
- public void noShow() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("Estado incompatible");status=ReservationStatus.NO_SHOW; }
+ public void noShow() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("Incompatible state.");status=ReservationStatus.NO_SHOW; }
 
 }

@@ -8,15 +8,17 @@ import java.time.Instant;
 import java.math.BigDecimal;
 public final class BillingResources {
  private BillingResources() {}
- public record TokenBody(@NotBlank @Schema(description="Referencia obtenida mediante tokenizacion del proveedor; no numero de tarjeta ni CVV") String providerTokenRef) {}
- public record PaymentBody(@NotNull UUID tokenId,@NotBlank @Size(max=255) @Schema(example="mi-operacion-unica-001") String idempotencyKey) {}
- public record SubscriptionBody(@NotBlank @Schema(description="Codigo del catalogo configurado en el servidor; no se aceptan precio ni descuento enviados por el cliente") String planCode,@NotNull UUID tokenId,@NotBlank @Size(max=255) String idempotencyKey) {}
+ public record TokenBody(@NotBlank @Schema(description="Reference returned by the payment provider's tokenization process; not a card number or CVV.") String providerTokenRef) {}
+ public record PaymentBody(@NotNull UUID tokenId,@NotBlank @Size(max=255) @Schema(example="my-unique-operation-001") String idempotencyKey) {}
+ public record RetryPaymentBody(UUID tokenId) {}
+ public record SubscriptionBody(@NotBlank @Schema(description="Plan code from the server-configured catalog. Clients cannot submit a price or discount.") String planCode,@NotNull UUID tokenId,@NotBlank @Size(max=255) String idempotencyKey) {}
  public record ChargeBody(@NotNull UUID reservationId,@NotNull @DecimalMin("0.01") @Digits(integer=10,fraction=2) BigDecimal amount,@NotBlank String reason,@NotBlank String evidenceRef) {}
  public record RefundBody(@NotNull UUID paymentId,@NotNull @DecimalMin("0.01") @Digits(integer=10,fraction=2) BigDecimal amount,@NotBlank String reason) {}
  public record DocumentBody(@NotNull UUID paymentId,@NotNull BillingDocumentType documentType,@NotBlank String documentNumber,
   @NotBlank String series,@NotBlank String legalName,@NotNull @Schema(example="{\"document_type\":\"DNI\",\"document_number\":\"00000000\"}") Map<String,Object> taxData) {}
- public record TokenView(UUID tokenId,UUID profileId,String brand,String lastFour,short expirationMonth,short expirationYear,PaymentTokenStatus status,Instant createdAt,Instant revokedAt) {
-  public static TokenView of(PaymentToken t){return new TokenView(t.getId(),t.getProfileId(),t.getBrand(),t.getLastFour(),t.getExpirationMonth(),t.getExpirationYear(),t.getStatus(),t.getCreatedAt(),t.getRevokedAt());}
+ public record TokenView(UUID tokenId,UUID profileId,String brand,String lastFour,short expirationMonth,short expirationYear,PaymentTokenStatus status,boolean isDefault,Instant createdAt,Instant revokedAt) {
+  public static TokenView of(PaymentToken t){return of(t,false);}
+  public static TokenView of(PaymentToken t,boolean isDefault){return new TokenView(t.getId(),t.getProfileId(),t.getBrand(),t.getLastFour(),t.getExpirationMonth(),t.getExpirationYear(),t.getStatus(),isDefault,t.getCreatedAt(),t.getRevokedAt());}
  }
  public record PaymentView(UUID paymentId,UUID tokenId,UUID profileId,PaymentOperationType operationType,BigDecimal amount,String currency,PaymentStatus status,
   String providerOperationRef,String idempotencyKey,String requestHash,Instant firstSeenAt,Instant lastSeenAt,String resultReference,Instant createdAt,Instant approvedAt) {

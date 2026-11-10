@@ -27,7 +27,7 @@ public class PaymentAttempt {
  @Column(name="next_attempt_at") private Instant nextAttemptAt;
  protected PaymentAttempt() {}
  public PaymentAttempt(DigitalPayment payment,int number,Instant now) {
-  this.payment=Objects.requireNonNull(payment);if(number<1)throw new IllegalArgumentException("Numero de intento invalido");
+  this.payment=Objects.requireNonNull(payment);if(number<1)throw new IllegalArgumentException("Invalid attempt number.");
   attemptNumber=number;startedAt=now;status=PaymentAttemptStatus.STARTED;
  }
  public UUID getPaymentId(){return payment.getId();}

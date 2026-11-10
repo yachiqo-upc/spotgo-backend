@@ -42,7 +42,7 @@ public class AuthenticationService {
             @Value("${app.password-reset.code-expiration-minutes:15}") int resetMinutes,
             @Value("${app.password-reset.max-attempts:5}") int maxResetAttempts,
             @Value("${authorization.jwt.refresh-expiration-days:7}") int refreshDays) {
-        if (resetMinutes <= 0 || maxResetAttempts <= 0 || refreshDays <= 0) throw new IllegalArgumentException("Duraciones de IAM invalidas");
+        if (resetMinutes <= 0 || maxResetAttempts <= 0 || refreshDays <= 0) throw new IllegalArgumentException("Invalid IAM token durations.");
         this.accounts = accounts; this.credentials = credentials; this.roles = roles; this.sessions = sessions;
         this.audits = audits; this.resets = resets; this.encoder = encoder; this.tokens = tokens;
         this.notifications = notifications; this.authentication = authentication; this.clock = clock;
@@ -54,7 +54,7 @@ public class AuthenticationService {
         PasswordPolicy.validate(password);
         if (accounts.existsByEmail(normalized)) {
             audit(null, "SIGN_UP", "FAILURE", source);
-            throw new IamException(HttpStatus.CONFLICT, "El correo ya esta registrado");
+            throw new IamException(HttpStatus.CONFLICT, "Email is already registered.");
         }
         var account = accounts.saveAndFlush(new Account(normalized));
         credentials.save(Credential.password(account, encoder.encode(password)));
@@ -84,7 +84,7 @@ public class AuthenticationService {
         var session = sessions.findByRefreshTokenHash(presentedHash).orElse(null);
         if (session == null || !session.getRefreshTokenHash().equals(presentedHash) || !session.isUsableAt(clock.instant()) || !session.getAccount().isActive()) {
             audit(session == null ? null : session.getAccount(), "TOKEN_REFRESH", "FAILURE", source);
-            throw new IamException(HttpStatus.UNAUTHORIZED, "Refresh token invalido, utilizado, revocado o vencido");
+            throw new IamException(HttpStatus.UNAUTHORIZED, "Refresh token is invalid, already used, revoked, or expired.");
         }
         String replacement = newRefreshToken();
         session.rotate(hashRefreshToken(replacement), clock.instant());
@@ -99,9 +99,9 @@ public class AuthenticationService {
 
     public void revokeSession(SpotgoUserPrincipal actor, UUID sessionId, String source) {
         var session = sessions.findById(sessionId)
-            .orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Sesion inexistente"));
+            .orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Session not found."));
         if (!session.getAccountId().equals(actor.getAccountId()))
-            throw new IamException(HttpStatus.FORBIDDEN, "Solo puedes revocar tus propias sesiones");
+            throw new IamException(HttpStatus.FORBIDDEN, "You can revoke only your own sessions.");
         session.revoke(clock.instant());
         sessions.save(session);
         audit(session.getAccount(), "SIGN_OUT", "SUCCESS", source);
@@ -117,7 +117,7 @@ public class AuthenticationService {
         var local = passwordCredentials(account.getId());
         if (local.stream().noneMatch(c -> encoder.matches(currentPassword, c.getSecretHash()))) {
             audit(account, "PASSWORD_CHANGE", "FAILURE", source);
-            throw new IamException(HttpStatus.BAD_REQUEST, "La contraseña actual no es correcta");
+            throw new IamException(HttpStatus.BAD_REQUEST, "Current password is incorrect.");
         }
         rotatePassword(account, local, newPassword);
         resets.findByEmail(account.getEmail()).ifPresent(reset -> {
@@ -140,7 +140,7 @@ public class AuthenticationService {
         resets.saveAndFlush(reset);
         try { notifications.sendPasswordResetCode(account.getEmail(), code); }
         catch (RuntimeException ex) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Servicio de correo no disponible; revisar configuracion de Resend", ex);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Email service is unavailable. Check the Resend configuration.", ex);
         }
         audit(account, "PASSWORD_RESET_REQUEST", "SUCCESS", source);
     }
@@ -165,9 +165,9 @@ public class AuthenticationService {
 
     private void rotatePassword(Account account, List<Credential> local, String password) {
         PasswordPolicy.validate(password);
-        if (local.isEmpty()) throw new IamException(HttpStatus.BAD_REQUEST, "La cuenta no tiene una contraseña local");
+        if (local.isEmpty()) throw new IamException(HttpStatus.BAD_REQUEST, "The account does not have a local password.");
         if (local.stream().anyMatch(c -> encoder.matches(password, c.getSecretHash())))
-            throw new IamException(HttpStatus.BAD_REQUEST, "La nueva contraseña debe ser diferente");
+            throw new IamException(HttpStatus.BAD_REQUEST, "The new password must be different.");
         local.get(0).rotate(encoder.encode(password));
         for (int i = 1; i < local.size(); i++) local.get(i).revoke();
         credentials.saveAll(local);
@@ -178,7 +178,7 @@ public class AuthenticationService {
         return credentials.findAllByAccountIdAndAuthenticationMethodAndStatus(accountId, AuthenticationMethod.PASSWORD, CredentialStatus.ACTIVE);
     }
     private Account lockedAccount(UUID id) {
-        return accounts.findByIdForUpdate(id).orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Cuenta inexistente"));
+        return accounts.findByIdForUpdate(id).orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Account not found."));
     }
     private AuthenticatedUserResource issueSession(Account account) {
         String refresh = newRefreshToken();
@@ -200,14 +200,14 @@ public class AuthenticationService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(random);
     }
     public static String hashRefreshToken(String raw) {
-        if (raw == null || raw.isBlank()) throw new IamException(HttpStatus.UNAUTHORIZED, "Refresh token requerido");
+        if (raw == null || raw.isBlank()) throw new IamException(HttpStatus.UNAUTHORIZED, "Refresh token is required.");
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8))); }
         catch (NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
     }
     private static IamException invalidCredentials() {
-        return new IamException(HttpStatus.UNAUTHORIZED, "Correo o contraseña invalidos, o cuenta no habilitada");
+        return new IamException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect, or the account is disabled.");
     }
     private static IamException invalidReset() {
-        return new IamException(HttpStatus.BAD_REQUEST, "Codigo de recuperacion invalido, utilizado, vencido o bloqueado");
+        return new IamException(HttpStatus.BAD_REQUEST, "Password recovery code is invalid, already used, expired, or locked.");
     }
 }

@@ -67,7 +67,7 @@ class ProfilesHttpTest {
     }
 
     @Test void absentProfileReturns404RatherThan500() throws Exception {
-        when(profiles.current(actor)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Crea tu perfil primero"));
+        when(profiles.current(actor)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Create your profile first."));
         mvc.perform(get("/api/v1/profiles/me")).andExpect(status().isNotFound());
     }
 
@@ -96,7 +96,7 @@ class ProfilesHttpTest {
         });
         for (String plate : List.of("ABC-123", "DEF-456")) {
             mvc.perform(post("/api/v1/vehicles").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"plate\":\"" + plate + "\",\"make\":\"Kia\",\"model\":\"Rio\",\"color\":\"Azul\"}"))
+                .content("{\"plate\":\"" + plate + "\",\"make\":\"Kia\",\"model\":\"Rio\",\"color\":\"Blue\"}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.profileId").value(id.toString()));
         }
         verify(commands, times(2)).handle(any(CreateVehicleCommand.class));

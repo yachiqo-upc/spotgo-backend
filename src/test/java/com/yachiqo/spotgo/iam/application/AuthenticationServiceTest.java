@@ -52,8 +52,8 @@ class AuthenticationServiceTest {
     private final ObjectMapper json = new ObjectMapper();
 
     @BeforeEach void clean() {
-        for (String table : List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "payment_tokens", "vehicles", "profiles", "audit_entries", "sessions",
-                "credentials", "role_assignments", "passwordResetCodes", "accounts", "tenants"))
+        for (String table : List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "audit_entries", "sessions",
+                "credentials", "role_assignments", "passwordResetCodes", "tenants", "payment_tokens", "vehicles", "profiles", "accounts"))
             jdbc.update("DELETE FROM " + table);
         reset(notifications);
     }
@@ -289,7 +289,7 @@ class AuthenticationServiceTest {
     }
 
     @Test void swaggerDocumentsIamRolesRefreshAndRevocationWithoutTheOldUsersController() throws Exception {
-        var response = request("GET", "/v3/api-docs/02-iam-actualizado", null, null);
+        var response = request("GET", "/v3/api-docs/02-identity-access", null, null);
         assertEquals(200, response.statusCode());
         var document = json.readTree(response.body());
         var paths = document.path("paths");

@@ -29,12 +29,12 @@ public class GuestParkingSession {
   physicalPaymentMethod=Objects.requireNonNull(method);entryAt=now;calculatedAmount=BigDecimal.ZERO;status=GuestSessionStatus.OPEN;
  }
  public void close(Instant now,BigDecimal amount,boolean paid) {
-  if(exitAt!=null) throw new IllegalArgumentException("La salida ya fue registrada");
+  if(exitAt!=null) throw new IllegalArgumentException("An exit has already been recorded.");
   if(now.isBefore(entryAt)) throw new IllegalArgumentException("Salida anterior a entrada");
   exitAt=now;calculatedAmount=amount;physicalPaymentConfirmed=paid;status=paid?GuestSessionStatus.CLOSED:GuestSessionStatus.PENDING_REVIEW;
  }
  public void confirmPayment() {
-  if(exitAt==null || physicalPaymentConfirmed) throw new IllegalArgumentException("No hay un pago fisico pendiente de confirmar");
+  if(exitAt==null || physicalPaymentConfirmed) throw new IllegalArgumentException("There is no pending in-person payment to confirm.");
   physicalPaymentConfirmed=true;status=GuestSessionStatus.CLOSED;
  }
  public UUID getTenantId() { return tenant.getId(); }

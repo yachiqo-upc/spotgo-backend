@@ -29,7 +29,7 @@ public class Session {
     protected Session() {}
     public Session(Account account, String hash, Instant now, Instant expiresAt) {
         this.account = Objects.requireNonNull(account);
-        if (expiresAt == null || !expiresAt.isAfter(now)) throw new IllegalArgumentException("Expiracion de sesion invalida");
+        if (expiresAt == null || !expiresAt.isAfter(now)) throw new IllegalArgumentException("Invalid session expiration.");
         this.refreshTokenHash = Objects.requireNonNull(hash);
         this.createdAt = this.lastActivityAt = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         this.expiresAt = expiresAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS); this.status = SessionStatus.ACTIVE;

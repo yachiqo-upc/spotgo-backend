@@ -28,7 +28,7 @@ public class ProfilesCommandServiceImpl implements ProfilesCommandService {
     @Override
     public Optional<Vehicle> handle(CreateVehicleCommand command) {
         var profile = profileRepository.findById(command.profileId())
-                .orElseThrow(() -> new IllegalArgumentException("Perfil inexistente"));
+                .orElseThrow(() -> new IllegalArgumentException("Profile not found."));
         return Optional.of(vehicleRepository.save(new Vehicle(profile,
                 command.plate(), command.make(), command.model(), command.color())));
     }
@@ -47,7 +47,7 @@ public class ProfilesCommandServiceImpl implements ProfilesCommandService {
     @Override
     public void handle(DeleteVehicleCommand command) {
         var vehicle = vehicleRepository.findById(command.vehicleId())
-                .orElseThrow(() -> new IllegalArgumentException("Vehiculo inexistente"));
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found."));
         vehicle.update(null, null, null, null, VehicleStatus.INACTIVE);
         vehicleRepository.save(vehicle);
     }

@@ -4,7 +4,7 @@ import java.util.*;
 public final class ParkingValues {
  private ParkingValues() {}
  public static String text(String value) {
-  if (value == null || value.isBlank()) throw new IllegalArgumentException("El texto es obligatorio");
+  if (value == null || value.isBlank()) throw new IllegalArgumentException("Text is required.");
   if (value.length() > 255) throw new IllegalArgumentException("Texto demasiado largo");
   return value.trim();
  }
@@ -12,6 +12,6 @@ public final class ParkingValues {
   return value == null ? new LinkedHashMap<>() : new LinkedHashMap<>(value);
  }
  public static void interval(Instant from, Instant to) {
-  if (from == null || to == null || !to.isAfter(from)) throw new IllegalArgumentException("El fin debe ser posterior al inicio");
+  if (from == null || to == null || !to.isAfter(from)) throw new IllegalArgumentException("The end time must be after the start time.");
  }
 }

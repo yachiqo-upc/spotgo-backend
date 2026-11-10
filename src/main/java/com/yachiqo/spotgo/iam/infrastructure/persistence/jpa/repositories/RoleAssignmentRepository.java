@@ -7,4 +7,6 @@ import java.util.*;
 public interface RoleAssignmentRepository extends JpaRepository<RoleAssignment, UUID> {
     @Query("select r from RoleAssignment r where r.account.id = :accountId")
     Optional<RoleAssignment> findByAccountId(@Param("accountId") UUID accountId);
+
+    boolean existsByRoleType(com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole roleType);
 }
