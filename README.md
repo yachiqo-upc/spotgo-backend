@@ -55,6 +55,7 @@ Required environment variables:
 | SPRING_DATASOURCE_USERNAME | PostgreSQL username. |
 | SPRING_DATASOURCE_PASSWORD | PostgreSQL password. |
 | JWT_SECRET | Secret used to sign JWTs; provide at least 32 bytes. |
+| DEMO_ACCOUNT_PASSWORD | Password assigned to the demo accounts loaded from db.json. Use a strong secret, separate from the superadmin password, and keep it configured while the demo data is enabled. |
 | SUPERADMIN_BOOTSTRAP_EMAIL | Initial SUPER_ADMIN email; needed only while the database has no SUPER_ADMIN. |
 | SUPERADMIN_BOOTSTRAP_PASSWORD | Initial SUPER_ADMIN password; needed only while the database has no SUPER_ADMIN. It must contain at least 8 characters, including uppercase, lowercase, a number, and a symbol. Store it as a secret and remove it after the first successful startup. |
 
@@ -72,7 +73,7 @@ Optional environment variables:
 | MONITORING_FRESHNESS_SECONDS | Maximum age of a sensor reading in seconds; defaults to 300. |
 | CORS_ALLOWED_ORIGIN | Additional frontend origin, including scheme and host. |
 
-Production disables demo seeding and uses Hibernate schema update. Database schema updates are not a substitute for versioned migrations when a production database already contains data.
+Production loads the sample records from `src/main/resources/db.json` and uses Hibernate schema update. The seeder inserts missing fixture IDs and leaves existing rows unchanged. `db.json` does not contain a `SUPER_ADMIN`; the first production superadmin is created from the bootstrap environment variables. All other seeded demo accounts use `DEMO_ACCOUNT_PASSWORD`. Database schema updates are not a substitute for versioned migrations when a production database already contains data.
 
 ## Container
 
