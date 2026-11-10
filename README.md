@@ -118,7 +118,7 @@ Allowed methods: `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`, `HEAD`, `PATCH`. Cre
 
 ### Parking
 
-Parking Infrastructure implementa las ocho tablas del README principal, con UUID nativos. Se retiraron las entidades y APIs antiguas `parkings`, `blueprints`, `detectedSpots` y `clientReports` del código de Parking. No se crea `parking_facilities` ni `parking_rules`.
+Parking Infrastructure implementa las ocho tablas del README DIAGRAM.md, con UUID nativos. Se retiraron las entidades y APIs antiguas `parkings`, `blueprints`, `detectedSpots` y `clientReports` del código de Parking. No se crea `parking_facilities` ni `parking_rules`.
 
 | Tabla | Qué guarda |
 |---|---|
@@ -184,31 +184,103 @@ Usa http://localhost:8080/swagger-ui/index.html. La vista predeterminada es **04
 2. Consulta las zonas y espacios demo. Puedes registrar/actualizar recursos únicamente dentro de ese tenant.
 3. Inicia sesión con `juan.driver@example.com`, reemplaza el token en Authorize y consulta `/vehicles`. Usa un vehicleId propio y un spotId para POST /reservations con fechas futuras ISO-8601, por ejemplo terminadas en Z.
 4. La respuesta incluye el importe, perfil, tenant, zona y vencimiento del bloqueo. Intentar reservar el mismo intervalo ocupado responde 409; usar un vehículo ajeno responde 403.
-5. Confirmar el pago depende del nuevo Billing. Mientras no esté implementado devuelve 503. Las pruebas automatizadas usan pagos de prueba en H2 para verificar también entrada y salida; no se añade esa simulación al backend de desarrollo o producción.
+5. Para pagar, registra un payment_token y crea la operación mediante POST /digital-payments/reservations/{reservationId}. Al procesarse y aprobarse se confirma automáticamente la reserva. Si el proveedor no está configurado, el procesamiento responde 503; no se aprueba un cobro ficticio.
 6. Con la cuenta de Ana puedes probar invitados directamente, sin pago digital: entrada, salida y confirmación de pago físico.
 
-El seeder ahora carga tenants, zonas, espacios, croquis, mapas e invitados en sus tablas reales. Los registros demo de reservas que referencian pagos digitales ausentes se omiten, al igual que las sesiones que dependen de esas reservas. No se inventan pagos para insertarlos.
+El seeder ahora carga tenants, zonas, espacios, croquis, mapas e invitados en sus tablas reales. Con Billing implementado también carga los pagos demo y las reservas, sesiones, cargos y deudas que los referencian. Son registros ficticios de desarrollo; el seeder no realiza cobros.
 
-**Integraciones pendientes de otros contextos:** descuentos de membresías Driver y bloqueo por deudas requieren adaptar Billing; lecturas físicas y conflictos requieren adaptar Monitoring. Los endpoints de esos contextos conservan sus modelos anteriores. Sus consultas compartidas se ajustaron al nuevo Parking sin crear tablas antiguas de Parking.
+**Integración actual:** Billing verifica pagos, aplica descuentos de membresías vigentes, bloquea nuevas reservas con deudas y registra sobretiempo al finalizar una estadía. Las lecturas físicas y conflictos todavía requieren adaptar Monitoring. Solo Monitoring conserva sus modelos anteriores; IAM, Profiles, Parking y Billing ya tienen sus modelos actualizados. Sus consultas compartidas se ajustaron al nuevo Parking sin crear tablas antiguas de Parking.
 
 **Base de datos existente:** Hibernate update no migra automáticamente IDs antiguos ni elimina tablas. En particular, la antigua tabla reservations tiene columnas y clave primaria incompatibles con este modelo. Antes de usar este cambio con esa BD hay que migrar esa tabla o recrear una BD local de pruebas. Este cambio no ejecuta DROP ni migra datos de tu PostgreSQL.
 
-### Billing
+### Payments & Billing
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/clientPlans` | Get all subscription plans |
-| `GET` | `/api/v1/clientPlans/{clientPlanId}` | Get plan by ID |
-| `POST` | `/api/v1/receipts` | Create a receipt |
-| `GET` | `/api/v1/receipts` | Get all receipts (optional `?bookingCode=`) |
-| `GET` | `/api/v1/receipts/{receiptId}` | Get receipt by ID |
-| `DELETE` | `/api/v1/receipts/{receiptId}` | Delete a receipt |
-| `POST` | `/api/v1/subscriptions` | Create a subscription |
-| `GET` | `/api/v1/subscriptions` | Get all subscriptions |
-| `GET` | `/api/v1/subscriptions/{subscriptionId}` | Get subscription by ID |
-| `PUT` | `/api/v1/subscriptions/{subscriptionId}` | Update a subscription |
-| `PATCH` | `/api/v1/subscriptions/{subscriptionId}` | Patch a subscription |
-| `PATCH` | `/api/v1/subscriptions/{subscriptionId}/savings` | Patch subscription savings |
+Este contexto implementa `payment_tokens`, `digital_payments`, `payment_attempts`, `subscriptions`, `additional_charges`, `outstanding_balances`, `refunds` y `billing_documents`. Las entidades Java utilizan esos mismos nombres en singular y las PK/FK son UUID nativos. Se retiraron ClientPlan, Receipt y sus controladores antiguos.
+
+| Tabla | Qué hace |
+|---|---|
+| payment_tokens | Guarda la referencia tokenizada y datos resumidos verificados por el proveedor. No almacena PAN completo ni CVV. |
+| digital_payments | Conserva la operación, importe, resultado, perfil pagador, referencia del proveedor y clave idempotente. |
+| payment_attempts | Historial numerado de intentos y resultados; no se crea manualmente desde el cliente. |
+| subscriptions | Un periodo por fila y un pago en payment_id; titular Driver o Tenant, nunca ambos. |
+| additional_charges | Varios cargos posibles por reserva; cada cargo conserva su operación de pago independiente. |
+| outstanding_balances | Una deuda como máximo por cargo impago; un perfil puede acumular varias. |
+| refunds | Solicitudes y resultados de devolución sobre el pago original, sin superar el saldo elegible. |
+| billing_documents | Comprobante principal de un pago aprobado, único por pago y por serie/número. |
+
+#### Endpoints actuales
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET / POST | `/api/v1/payment-tokens` | Consultar mis medios o registrar una referencia que verifica el proveedor. |
+| DELETE | `/api/v1/payment-tokens/{tokenId}` | Revocar un medio propio, conservando historial. |
+| GET | `/api/v1/digital-payments` y `/{paymentId}` | Consultar pagos dentro del alcance autorizado. |
+| POST | `/api/v1/digital-payments/reservations/{reservationId}` | Crear la operación de la reserva con tokenId e idempotencyKey. El importe procede de la reserva. |
+| POST | `/api/v1/digital-payments/subscriptions` | Crear una operación para planCode con tokenId e idempotencyKey; aún no crea la suscripción. El precio procede del catálogo del servidor. |
+| POST | `/api/v1/digital-payments/additional-charges/{chargeId}` | Crear el pago separado de un cargo propio. |
+| POST | `/api/v1/digital-payments/{paymentId}/process` | Procesar la operación; el cliente no elige status ni approvedAt. |
+| POST | `/api/v1/digital-payments/{paymentId}/retry` | Nuevo intento de la misma operación tras fallo conocido y tiempo de espera. |
+| POST | `/api/v1/digital-payments/{paymentId}/reconcile` | Consultar una operación pendiente/desconocida sin generar otro débito. |
+| GET | `/api/v1/payment-attempts?paymentId=UUID` | Ver intentos de un pago autorizado. |
+| GET | `/api/v1/subscriptions` | Consultar periodos ya pagados; se crean automáticamente al aprobar su pago. |
+| GET | `/api/v1/subscriptions/plans` | Ver el catálogo configurado por el servidor. |
+| GET | `/api/v1/subscriptions/{subscriptionId}` | Consultar una contratación autorizada. |
+| POST | `/api/v1/subscriptions/{subscriptionId}/cancel` | Cerrar la fila y capturar endAt. |
+| GET / POST | `/api/v1/additional-charges` | Consultar cargos; PARKING_ADMIN registra un cargo justificado en su tenant. |
+| POST | `/api/v1/additional-charges/{chargeId}/mark-unpaid` | Registrar una deuda si el cargo está impago. No trata un resultado desconocido como rechazo. |
+| GET | `/api/v1/outstanding-balances` y `/total` | Consultar deudas y suma pendiente sin duplicar los importes de cargos. |
+| GET / POST | `/api/v1/refunds` | Consultar por paymentId o solicitar un reembolso autorizado. |
+| POST | `/api/v1/refunds/{refundId}/process` | Solicitar la devolución al proveedor con refundId idempotente. |
+| GET / POST | `/api/v1/billing-documents` | Consultar por paymentId o registrar un comprobante del emisor autorizado. |
+| POST | `/api/v1/billing-documents/{documentId}/void` | Registrar su anulación local. |
+
+#### Flujos integrados
+
+1. DRIVER crea su reserva en Parking. Se calcula tarifa en PEN y descuento de su membresía vigente; una deuda OPEN impide nuevas reservas.
+2. Crea el pago de esa reserva usando su token y una clave idempotente. El backend asocia reservations.payment_id y crea el primer intento. Todavía no está pagado.
+3. Procesa el pago. APPROVED confirma la reserva si el bloqueo sigue vigente. Una aprobación tardía conserva el pago y solicita refund, sin apropiarse de un espacio cuyo bloqueo venció.
+4. El administrador registra entrada y salida. Si hay sobretiempo más allá de la tolerancia, se crea un cargo OVERSTAY con referencia a la sesión y su deuda impaga. No se modifica el pago inicial ni se cobra automáticamente una tarjeta sin intervención del pagador.
+5. DRIVER crea/procesa el pago del cargo. Al confirmarse se actualizan coherentemente charge PAID y balance REGULARIZED, amount 0 y regularizedAt. La fila de deuda se conserva.
+6. Cancelar una reserva pagada solicita devolver el saldo elegible; no devuelve dos veces el importe. Procesar el reembolso requiere el proveedor. Las solicitudes repetidas conservan la misma operación.
+
+Una deuda no deshabilita la cuenta ni impide iniciar sesión, consultar deudas o pagarlas. El bloqueo se limita a crear nuevas reservas. Reservas que ya existían pueden originar más cargos y deudas.
+
+#### Suscripciones y catálogo
+
+Se respeta la última decisión: subscriptions.payment_id, un pago por fila. No existe digital_payments.subscription_id. Antes de aprobarse solo existe digital_payments. Al confirmarse APPROVED se crea subscriptions ACTIVE con payment_id NOT NULL y UNIQUE, startAt de aprobación y endAt NULL. La duración se calcula con plan.billing_period_months. billing_period_months=1 significa un mes calendario (no un valor implícito). Al cancelar se captura el cierre y al vencer se completa endAt con el límite calculado; otro periodo utiliza otra fila. Los reintentos no crean otra contratación ni otro pago.
+
+El cliente solo envía planCode: no puede establecer su descuento o precio. `BILLING_PLANS_JSON` configura el catálogo del servidor. En dev/local, si no se configura uno, se toman los dos planes ficticios de db.json: DRIVER_DEMO y TENANT_DEMO. Sus precios de S/ 10 y S/ 50 son datos demo, no seis tarifas comerciales acordadas. En producción no se toma el catálogo demo automáticamente: hay que configurar el catálogo definitivo.
+
+Ejemplo de configuración de catálogo, con importes ficticios:
+
+```json
+[
+  {"code":"DRIVER_DEMO","audience":"DRIVER","price":10,"billing_period_months":1,"discount_percent":10},
+  {"code":"TENANT_DEMO","audience":"PARKING_ADMIN","price":50,"billing_period_months":1,"included_sensors":20}
+]
+```
+
+Las contrataciones empresariales pertenecen al Tenant; el pago identifica además el perfil administrador pagador. Cambiar de administrador no cambia al titular de la empresa. La cantidad física y asignación de sensores corresponde al próximo contexto Monitoring.
+
+#### Idempotencia, fallos y configuración
+
+- Misma clave y mismos datos: misma operación. Misma clave con otro contenido: 409. La clave es UNIQUE y el contenido se verifica con SHA-256.
+- Cada cobro está vinculado a su reserva, suscripción o cargo antes de procesarse. No permite usar un pago ajeno o de otra finalidad aunque coincidan importes.
+- Un pago APPROVED no se vuelve a cobrar. PENDING o RECONCILIATION_REQUIRED se concilian; no se reintentan a ciegas.
+- Rechazo conocido: puede reintentarse sobre el mismo paymentId. Se agrega payment_attempt y se respeta app.billing.retry-delay-seconds, inicialmente 60.
+- La suma de reembolsos completados y comprometidos no puede exceder el pago original. El proveedor debe garantizar idempotencia por paymentId/attemptNumber y por refundId.
+- La fecha límite de una deuda usa app.billing.debt-due-hours, inicialmente 24 horas. No se añade una penalidad por falta de fondos.
+- El sobretiempo utiliza app.billing.overstay-charge-basis: AFTER_TOLERANCE (valor inicial: cobra el tiempo posterior a la tolerancia) o TOTAL_EXCESS (cobra todo el exceso cuando supera la tolerancia). El descuento de membresía se aplica al precio base de la reserva; no se añade a cargos extraordinarios.
+
+#### Proveedor y comprobantes
+
+No hay proveedor financiero real configurado en este repositorio. La implementación predeterminada responde 503 al tokenizar, cobrar, conciliar o devolver dinero. Nunca acepta que el cliente marque un pago como aprobado. Las pruebas H2 sustituyen el puerto PaymentProvider por un proveedor controlado únicamente dentro de las pruebas.
+
+Registrar datos de una boleta/factura no equivale a enviarla a SUNAT ni a recibir autorización tributaria. El emisor autorizado debe proporcionar serie, número y datos. Esta integración externa no se simula como si fuese real.
+
+Swagger en http://localhost:8080/swagger-ui/index.html muestra los cuatro contextos actualizados en **04-backend-completo**, y Billing también está en **payments-billing-actualizado**. No incluye Receipts, ClientPlans ni el Monitoring antiguo. Monitoring conserva su código pendiente de adaptar, pero no se mezcla en esta documentación actualizada.
+
+**BD existente:** subscriptions y reservations del backend anterior pueden ser incompatibles con este esquema. Hibernate update no convierte IDs ni borra tablas antiguas. No se ejecutó ninguna migración ni borrado en tu PostgreSQL.
 
 ### Monitoring
 
@@ -257,3 +329,6 @@ The API starts on `http://localhost:8080`. Swagger UI is available at `/swagger-
 Los JWT de la implementación anterior ya no sirven: vuelve a iniciar sesión. Hibernate `update` no elimina tablas antiguas como `users` ni migra automáticamente sus cuentas a `accounts`. El seeder carga datos demo compatibles; no es una migración de usuarios reales.
 
 En producción se usan las variables indicadas en `application-production.properties`, incluida `SPRING_DATASOURCE_PASSWORD`. Las cuentas demo son para desarrollo; el seeder actual está limitado a los perfiles locales habilitados.
+El pago de un plan se solicita con POST /api/v1/digital-payments/subscriptions (planCode, tokenId, idempotencyKey) y se procesa por su paymentId. No existe POST /api/v1/subscriptions para crear filas sin pago. result_reference conserva temporalmente el plan seleccionado y el titular (máximo 8192 caracteres), y después identifica la suscripción creada. No se añade subscription_id a digital_payments.
+
+Estado verificado del seeder: 31 tablas definidas en db.json, 24 implementadas y 7 de Monitoring pendientes. El seeder inserta filas compatibles que no existan; no actualiza filas ya guardadas ni elimina tablas antiguas. Para ver una corrección del JSON sobre una fila demo ya insertada hace falta una actualización explícita de esa fila. No se ejecutó una limpieza ni actualización de tu PostgreSQL.

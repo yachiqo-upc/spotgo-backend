@@ -1,900 +1,975 @@
 {
-  "accounts": [
-    {
-      "account_id": "00000000-0000-4000-8000-000000000004",
-      "email": "super.admin@example.com",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "account_id": "00000000-0000-4000-8000-000000000001",
-      "email": "ana.admin@example.com",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "account_id": "00000000-0000-4000-8000-000000000002",
-      "email": "juan.driver@example.com",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "account_id": "00000000-0000-4000-8000-000000000003",
-      "email": "sofia.driver@example.com",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "credentials": [
-    {
-      "credential_id": "00000000-0000-4000-8000-000000000104",
-      "account_id": "00000000-0000-4000-8000-000000000004",
-      "authentication_method": "PASSWORD",
-      "secret_hash": "${DEMO_PASSWORD_HASH}",
-      "external_subject": null,
-      "last_used_at": null,
-      "status": "ACTIVE"
-    },
-    {
-      "credential_id": "00000000-0000-4000-8000-000000000101",
-      "account_id": "00000000-0000-4000-8000-000000000001",
-      "authentication_method": "PASSWORD",
-      "secret_hash": "${DEMO_PASSWORD_HASH}",
-      "external_subject": null,
-      "last_used_at": null,
-      "status": "ACTIVE"
-    },
-    {
-      "credential_id": "00000000-0000-4000-8000-000000000102",
-      "account_id": "00000000-0000-4000-8000-000000000002",
-      "authentication_method": "PASSWORD",
-      "secret_hash": "${DEMO_PASSWORD_HASH}",
-      "external_subject": null,
-      "last_used_at": null,
-      "status": "ACTIVE"
-    },
-    {
-      "credential_id": "00000000-0000-4000-8000-000000000103",
-      "account_id": "00000000-0000-4000-8000-000000000003",
-      "authentication_method": "PASSWORD",
-      "secret_hash": "${DEMO_PASSWORD_HASH}",
-      "external_subject": null,
-      "last_used_at": null,
-      "status": "ACTIVE"
-    }
-  ],
-  "tenants": [
-    {
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "name": "Parking Sol - Demo",
-      "status": "ACTIVE",
-      "contact_data": {
-        "email": "ana.admin@example.com",
-        "phone": "900000001"
-      },
-      "coordinates": {
-        "latitude": -12.0464,
-        "longitude": -77.0428
-      },
-      "address": "Av. Demo 123, Lima",
-      "rules": {
-        "tariff_rules": {
-          "period_minutes": 60,
-          "price_per_period": 5,
-          "rounding": "CEILING"
-        },
-        "overstay_tolerance_minutes": 5,
-        "lock_duration_minutes": 10,
-        "allocation_rules": {},
-        "coexistence_rules": [
-          "Velocidad máxima de 10 km/h",
-          "No bloquear las vías de circulación"
-        ]
-      },
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "role_assignments": [
-    {
-      "assignment_id": "00000000-0000-4000-8000-000000000114",
-      "account_id": "00000000-0000-4000-8000-000000000004",
-      "role_type": "SUPER_ADMIN",
-      "tenant_id": null,
-      "valid_from": "2026-11-09T07:00:00Z",
-      "valid_to": null,
-      "status": "ACTIVE"
-    },
-    {
-      "assignment_id": "00000000-0000-4000-8000-000000000111",
-      "account_id": "00000000-0000-4000-8000-000000000001",
-      "role_type": "PARKING_ADMIN",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "valid_from": "2026-11-09T07:00:00Z",
-      "valid_to": null,
-      "status": "ACTIVE"
-    },
-    {
-      "assignment_id": "00000000-0000-4000-8000-000000000112",
-      "account_id": "00000000-0000-4000-8000-000000000002",
-      "role_type": "DRIVER",
-      "tenant_id": null,
-      "valid_from": "2026-11-09T07:00:00Z",
-      "valid_to": null,
-      "status": "ACTIVE"
-    },
-    {
-      "assignment_id": "00000000-0000-4000-8000-000000000113",
-      "account_id": "00000000-0000-4000-8000-000000000003",
-      "role_type": "DRIVER",
-      "tenant_id": null,
-      "valid_from": "2026-11-09T07:00:00Z",
-      "valid_to": null,
-      "status": "ACTIVE"
-    }
-  ],
-  "profiles": [
-    {
-      "profile_id": "00000000-0000-4000-8000-000000000011",
-      "account_id": "00000000-0000-4000-8000-000000000001",
-      "first_name": "Ana",
-      "last_name": "Demo",
-      "phone": "900000001",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "account_id": "00000000-0000-4000-8000-000000000002",
-      "first_name": "Juan",
-      "last_name": "Demo",
-      "phone": "900000002",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "profile_id": "00000000-0000-4000-8000-000000000013",
-      "account_id": "00000000-0000-4000-8000-000000000003",
-      "first_name": "Sofia",
-      "last_name": "Demo",
-      "phone": "900000003",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "vehicles": [
-    {
-      "vehicle_id": "00000000-0000-4000-8000-000000000051",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "plate": "DEM-101",
-      "make": "Toyota",
-      "model": "Yaris",
-      "color": "Azul",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "vehicle_id": "00000000-0000-4000-8000-000000000052",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "plate": "DEM-102",
-      "make": "Kia",
-      "model": "Rio",
-      "color": "Rojo",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "vehicle_id": "00000000-0000-4000-8000-000000000053",
-      "profile_id": "00000000-0000-4000-8000-000000000013",
-      "plate": "DEM-103",
-      "make": "Hyundai",
-      "model": "Accent",
-      "color": "Gris",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "driver_classifications": [
-    {
-      "classification_id": "00000000-0000-4000-8000-000000000061",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "profile_type": "EMPLOYEE",
-      "assigned_by": "00000000-0000-4000-8000-000000000011",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "classification_id": "00000000-0000-4000-8000-000000000062",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "profile_id": "00000000-0000-4000-8000-000000000013",
-      "profile_type": "PRIVATE",
-      "assigned_by": "00000000-0000-4000-8000-000000000011",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "sessions": [
-    {
-      "session_id": "00000000-0000-4000-8000-000000000121",
-      "account_id": "00000000-0000-4000-8000-000000000002",
-      "refresh_token_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "created_at": "2026-11-08T07:00:00Z",
-      "expires_at": "2026-11-09T07:00:00Z",
-      "last_activity_at": "2026-11-08T08:00:00Z",
-      "status": "REVOKED",
-      "revoked_at": "2026-11-08T08:00:00Z"
-    }
-  ],
-  "audit_entries": [
-    {
-      "audit_id": "00000000-0000-4000-8000-000000000131",
-      "account_id": "00000000-0000-4000-8000-000000000002",
-      "action": "SIGN_IN",
-      "result": "SUCCESS",
-      "source": "DEMO_SEED",
-      "occurred_at": "2026-11-09T07:00:00Z",
-      "correlation_id": "demo-sign-in-001"
-    },
-    {
-      "audit_id": "00000000-0000-4000-8000-000000000132",
-      "account_id": null,
-      "action": "SIGN_IN",
-      "result": "FAILURE",
-      "source": "DEMO_SEED",
-      "occurred_at": "2026-11-09T07:00:00Z",
-      "correlation_id": "demo-sign-in-002"
-    }
-  ],
-  "parking_zones": [
-    {
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "name": "Piso1-A",
-      "location": {
-        "reference": "Primer piso, acceso principal"
-      },
-      "color_code": "#1976D2",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "name": "Piso2-A",
-      "location": {
-        "reference": "Segundo piso, rampa derecha"
-      },
-      "color_code": "#43A047",
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "parking_spots": [
-    {
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "code": "A-01",
-      "spot_type": "STANDARD",
-      "features": {
-        "covered": true,
-        "ev_charger": false
-      },
-      "operational_status": "ACTIVE"
-    },
-    {
-      "spot_id": "00000000-0000-4000-8000-000000000042",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "code": "A-02",
-      "spot_type": "STANDARD",
-      "features": {
-        "covered": true,
-        "ev_charger": false
-      },
-      "operational_status": "ACTIVE"
-    },
-    {
-      "spot_id": "00000000-0000-4000-8000-000000000043",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "code": "A-01",
-      "spot_type": "STANDARD",
-      "features": {
-        "covered": true,
-        "ev_charger": false
-      },
-      "operational_status": "ACTIVE"
-    },
-    {
-      "spot_id": "00000000-0000-4000-8000-000000000044",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "code": "A-02",
-      "spot_type": "STANDARD",
-      "features": {
-        "covered": true,
-        "ev_charger": false
-      },
-      "operational_status": "ACTIVE"
-    }
-  ],
-  "floor_plans": [
-    {
-      "floor_plan_id": "00000000-0000-4000-8000-000000000141",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "version": 1,
-      "file_reference": "demo://croquis/piso1-a",
-      "status": "PUBLISHED",
-      "published_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "floor_plan_id": "00000000-0000-4000-8000-000000000142",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "version": 1,
-      "file_reference": "demo://croquis/piso2-a",
-      "status": "PUBLISHED",
-      "published_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "digital_parking_maps": [
-    {
-      "map_id": "00000000-0000-4000-8000-000000000151",
-      "floor_plan_id": "00000000-0000-4000-8000-000000000141",
-      "version": 1,
-      "elements": [
-        {
-          "spot_id": "00000000-0000-4000-8000-000000000041",
-          "x": 10,
-          "y": 10
-        },
-        {
-          "spot_id": "00000000-0000-4000-8000-000000000042",
-          "x": 30,
-          "y": 10
-        }
-      ],
-      "status": "PUBLISHED",
-      "generated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "map_id": "00000000-0000-4000-8000-000000000152",
-      "floor_plan_id": "00000000-0000-4000-8000-000000000142",
-      "version": 1,
-      "elements": [
-        {
-          "spot_id": "00000000-0000-4000-8000-000000000043",
-          "x": 10,
-          "y": 10
-        },
-        {
-          "spot_id": "00000000-0000-4000-8000-000000000044",
-          "x": 30,
-          "y": 10
-        }
-      ],
-      "status": "PUBLISHED",
-      "generated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "payment_tokens": [
-    {
-      "token_id": "00000000-0000-4000-8000-000000000071",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "provider_token_ref": "demo-card-not-chargeable-001",
-      "brand": "VISA",
-      "last_four": "4242",
-      "expiration_month": 12,
-      "expiration_year": 2030,
-      "status": "ACTIVE",
-      "created_at": "2026-11-09T07:00:00Z",
-      "revoked_at": null
-    }
-  ],
-  "digital_payments": [
-    {
-      "payment_id": "00000000-0000-4000-8000-000000000081",
-      "token_id": "00000000-0000-4000-8000-000000000071",
-      "operation_type": "RESERVATION",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "amount": 10,
-      "currency": "PEN",
-      "status": "APPROVED",
-      "provider_operation_ref": "demo-payment-1",
-      "idempotency_key": "demo-payment-key-1",
-      "request_hash": "1111111111111111111111111111111111111111111111111111111111111111",
-      "first_seen_at": "2026-11-09T07:30:00Z",
-      "last_seen_at": "2026-11-09T07:30:00Z",
-      "result_reference": "demo-result-1",
-      "created_at": "2026-11-09T07:30:00Z",
-      "approved_at": "2026-11-09T07:30:00Z"
-    },
-    {
-      "payment_id": "00000000-0000-4000-8000-000000000082",
-      "token_id": "00000000-0000-4000-8000-000000000071",
-      "operation_type": "RESERVATION",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "amount": 5,
-      "currency": "PEN",
-      "status": "APPROVED",
-      "provider_operation_ref": "demo-payment-2",
-      "idempotency_key": "demo-payment-key-2",
-      "request_hash": "2222222222222222222222222222222222222222222222222222222222222222",
-      "first_seen_at": "2026-11-09T07:40:00Z",
-      "last_seen_at": "2026-11-09T07:40:00Z",
-      "result_reference": "demo-result-2",
-      "created_at": "2026-11-09T07:40:00Z",
-      "approved_at": "2026-11-09T07:40:00Z"
-    },
-    {
-      "payment_id": "00000000-0000-4000-8000-000000000083",
-      "token_id": "00000000-0000-4000-8000-000000000071",
-      "operation_type": "ADDITIONAL_CHARGE",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "amount": 2,
-      "currency": "PEN",
-      "status": "APPROVED",
-      "provider_operation_ref": "demo-payment-3",
-      "idempotency_key": "demo-payment-key-3",
-      "request_hash": "3333333333333333333333333333333333333333333333333333333333333333",
-      "first_seen_at": "2026-11-09T10:20:00Z",
-      "last_seen_at": "2026-11-09T10:20:00Z",
-      "result_reference": "demo-result-3",
-      "created_at": "2026-11-09T10:20:00Z",
-      "approved_at": "2026-11-09T10:20:00Z"
-    }
-  ],
-  "reservations": [
-    {
-      "reservation_id": "00000000-0000-4000-8000-000000000091",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "vehicle_id": "00000000-0000-4000-8000-000000000051",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "start_at": "2026-11-09T08:00:00Z",
-      "end_at": "2026-11-09T10:00:00Z",
-      "amount": 10,
-      "status": "COMPLETED",
-      "payment_id": "00000000-0000-4000-8000-000000000081",
-      "lock_status": "RELEASED",
-      "locked_at": null,
-      "lock_expires_at": null,
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "reservation_id": "00000000-0000-4000-8000-000000000092",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "vehicle_id": "00000000-0000-4000-8000-000000000051",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "spot_id": "00000000-0000-4000-8000-000000000042",
-      "start_at": "2026-11-09T11:00:00Z",
-      "end_at": "2026-11-09T12:00:00Z",
-      "amount": 5,
-      "status": "COMPLETED",
-      "payment_id": "00000000-0000-4000-8000-000000000082",
-      "lock_status": "RELEASED",
-      "locked_at": null,
-      "lock_expires_at": null,
-      "created_at": "2026-11-09T07:00:00Z",
-      "updated_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "parking_sessions": [
-    {
-      "session_id": "00000000-0000-4000-8000-000000000161",
-      "reservation_id": "00000000-0000-4000-8000-000000000091",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "vehicle_id": "00000000-0000-4000-8000-000000000051",
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "entry_at": "2026-11-09T08:00:00Z",
-      "exit_at": "2026-11-09T10:15:00Z",
-      "status": "COMPLETED"
-    },
-    {
-      "session_id": "00000000-0000-4000-8000-000000000162",
-      "reservation_id": "00000000-0000-4000-8000-000000000092",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "vehicle_id": "00000000-0000-4000-8000-000000000051",
-      "spot_id": "00000000-0000-4000-8000-000000000042",
-      "entry_at": "2026-11-09T11:00:00Z",
-      "exit_at": "2026-11-09T12:00:00Z",
-      "status": "COMPLETED"
-    }
-  ],
-  "guest_parking_sessions": [
-    {
-      "guest_session_id": "00000000-0000-4000-8000-000000000171",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "spot_id": "00000000-0000-4000-8000-000000000043",
-      "manual_plate": "DEM-999",
-      "entry_at": "2026-11-09T07:45:00Z",
-      "exit_at": "2026-11-09T08:45:00Z",
-      "calculated_amount": 5,
-      "physical_payment_method": "CASH",
-      "physical_payment_confirmed": true,
-      "status": "CLOSED"
-    }
-  ],
-  "payment_attempts": [
-    {
-      "attempt_id": "00000000-0000-4000-8000-000000000181",
-      "payment_id": "00000000-0000-4000-8000-000000000081",
-      "attempt_number": 1,
-      "started_at": "2026-11-09T07:29:00Z",
-      "finished_at": "2026-11-09T07:29:00Z",
-      "status": "FAILED",
-      "error_code": "DEMO_TIMEOUT",
-      "next_attempt_at": "2026-11-09T07:30:00Z"
-    },
-    {
-      "attempt_id": "00000000-0000-4000-8000-000000000182",
-      "payment_id": "00000000-0000-4000-8000-000000000081",
-      "attempt_number": 2,
-      "started_at": "2026-11-09T07:30:00Z",
-      "finished_at": "2026-11-09T07:30:00Z",
-      "status": "APPROVED",
-      "error_code": null,
-      "next_attempt_at": null
-    },
-    {
-      "attempt_id": "00000000-0000-4000-8000-000000000183",
-      "payment_id": "00000000-0000-4000-8000-000000000082",
-      "attempt_number": 1,
-      "started_at": "2026-11-09T07:40:00Z",
-      "finished_at": "2026-11-09T07:40:00Z",
-      "status": "APPROVED",
-      "error_code": null,
-      "next_attempt_at": null
-    },
-    {
-      "attempt_id": "00000000-0000-4000-8000-000000000184",
-      "payment_id": "00000000-0000-4000-8000-000000000083",
-      "attempt_number": 1,
-      "started_at": "2026-11-09T10:20:00Z",
-      "finished_at": "2026-11-09T10:20:00Z",
-      "status": "APPROVED",
-      "error_code": null,
-      "next_attempt_at": null
-    }
-  ],
-  "subscriptions": [
-    {
-      "subscription_id": "00000000-0000-4000-8000-000000000191",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "tenant_id": null,
-      "plan": {
-        "code": "DRIVER_DEMO",
-        "audience": "DRIVER",
-        "billing_period_months": 1,
-        "discount_percent": 10
-      },
-      "start_at": "2026-11-09T07:00:00Z",
-      "end_at": null,
-      "status": "ACTIVE"
-    },
-    {
-      "subscription_id": "00000000-0000-4000-8000-000000000192",
-      "profile_id": null,
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "plan": {
-        "code": "TENANT_DEMO",
-        "audience": "PARKING_ADMIN",
-        "billing_period_months": 1,
-        "included_sensors": 20
-      },
-      "start_at": "2026-11-09T07:00:00Z",
-      "end_at": null,
-      "status": "ACTIVE"
-    }
-  ],
-  "additional_charges": [
-    {
-      "charge_id": "00000000-0000-4000-8000-000000000201",
-      "reservation_id": "00000000-0000-4000-8000-000000000091",
-      "payment_id": null,
-      "amount": 5,
-      "reason": "OVERSTAY",
-      "evidence_ref": "demo://evidence/overstay-001",
-      "status": "PENDING",
-      "created_at": "2026-11-09T10:15:00Z"
-    },
-    {
-      "charge_id": "00000000-0000-4000-8000-000000000202",
-      "reservation_id": "00000000-0000-4000-8000-000000000092",
-      "payment_id": null,
-      "amount": 3,
-      "reason": "DAMAGE",
-      "evidence_ref": "demo://evidence/damage-002",
-      "status": "PENDING",
-      "created_at": "2026-11-09T12:10:00Z"
-    },
-    {
-      "charge_id": "00000000-0000-4000-8000-000000000203",
-      "reservation_id": "00000000-0000-4000-8000-000000000091",
-      "payment_id": "00000000-0000-4000-8000-000000000083",
-      "amount": 2,
-      "reason": "DAMAGE",
-      "evidence_ref": "demo://evidence/damage-001",
-      "status": "PAID",
-      "created_at": "2026-11-09T10:16:00Z"
-    }
-  ],
-  "outstanding_balances": [
-    {
-      "balance_id": "00000000-0000-4000-8000-000000000211",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "charge_id": "00000000-0000-4000-8000-000000000201",
-      "amount": 5,
-      "due_at": "2026-11-09T10:15:00Z",
-      "status": "OPEN",
-      "created_at": "2026-11-09T10:15:00Z",
-      "regularized_at": null
-    },
-    {
-      "balance_id": "00000000-0000-4000-8000-000000000212",
-      "profile_id": "00000000-0000-4000-8000-000000000012",
-      "charge_id": "00000000-0000-4000-8000-000000000202",
-      "amount": 3,
-      "due_at": "2026-11-09T12:10:00Z",
-      "status": "OPEN",
-      "created_at": "2026-11-09T12:10:00Z",
-      "regularized_at": null
-    }
-  ],
-  "refunds": [
-    {
-      "refund_id": "00000000-0000-4000-8000-000000000221",
-      "payment_id": "00000000-0000-4000-8000-000000000082",
-      "amount": 1,
-      "reason": "Ajuste de cobro de demostracion",
-      "status": "COMPLETED",
-      "provider_operation_ref": "demo-refund-001",
-      "requested_at": "2026-11-09T12:20:00Z",
-      "completed_at": "2026-11-09T12:25:00Z"
-    }
-  ],
-  "billing_documents": [
-    {
-      "document_id": "00000000-0000-4000-8000-000000000231",
-      "payment_id": "00000000-0000-4000-8000-000000000081",
-      "document_type": "RECEIPT",
-      "document_number": "00000001",
-      "series": "DEMO",
-      "legal_name": "Juan Demo",
-      "tax_data": {
-        "demo": true
-      },
-      "issued_at": "2026-11-09T07:30:00Z",
-      "status": "ISSUED"
-    },
-    {
-      "document_id": "00000000-0000-4000-8000-000000000232",
-      "payment_id": "00000000-0000-4000-8000-000000000082",
-      "document_type": "RECEIPT",
-      "document_number": "00000002",
-      "series": "DEMO",
-      "legal_name": "Juan Demo",
-      "tax_data": {
-        "demo": true
-      },
-      "issued_at": "2026-11-09T07:40:00Z",
-      "status": "ISSUED"
-    },
-    {
-      "document_id": "00000000-0000-4000-8000-000000000233",
-      "payment_id": "00000000-0000-4000-8000-000000000083",
-      "document_type": "RECEIPT",
-      "document_number": "00000003",
-      "series": "DEMO",
-      "legal_name": "Juan Demo",
-      "tax_data": {
-        "demo": true
-      },
-      "issued_at": "2026-11-09T10:20:00Z",
-      "status": "ISSUED"
-    }
-  ],
-  "occupancy_sensors": [
-    {
-      "sensor_id": "00000000-0000-4000-8000-000000000241",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "protocol": "MQTT",
-      "status": "ACTIVE",
-      "last_seen_at": "2026-11-09T07:55:00Z",
-      "configuration": {
-        "topic": "demo/spotgo/sensors/1/occupancy"
-      },
-      "installed_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "sensor_id": "00000000-0000-4000-8000-000000000242",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "spot_id": "00000000-0000-4000-8000-000000000042",
-      "protocol": "MQTT",
-      "status": "ACTIVE",
-      "last_seen_at": "2026-11-09T07:55:00Z",
-      "configuration": {
-        "topic": "demo/spotgo/sensors/2/occupancy"
-      },
-      "installed_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "sensor_id": "00000000-0000-4000-8000-000000000243",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "spot_id": "00000000-0000-4000-8000-000000000043",
-      "protocol": "MQTT",
-      "status": "ACTIVE",
-      "last_seen_at": "2026-11-09T07:55:00Z",
-      "configuration": {
-        "topic": "demo/spotgo/sensors/3/occupancy"
-      },
-      "installed_at": "2026-11-09T07:00:00Z"
-    },
-    {
-      "sensor_id": "00000000-0000-4000-8000-000000000244",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "spot_id": "00000000-0000-4000-8000-000000000044",
-      "protocol": "MQTT",
-      "status": "ACTIVE",
-      "last_seen_at": "2026-11-09T07:55:00Z",
-      "configuration": {
-        "topic": "demo/spotgo/sensors/4/occupancy"
-      },
-      "installed_at": "2026-11-09T07:00:00Z"
-    }
-  ],
-  "occupancy_readings": [
-    {
-      "reading_id": "00000000-0000-4000-8000-000000000251",
-      "sensor_id": "00000000-0000-4000-8000-000000000241",
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "occupancy_status": "OCCUPIED",
-      "occurred_at": "2026-11-09T07:55:00Z",
-      "received_at": "2026-11-09T07:55:01Z",
-      "quality": 99,
-      "payload_hash": "4444444444444444444444444444444444444444444444444444444444444444"
-    },
-    {
-      "reading_id": "00000000-0000-4000-8000-000000000252",
-      "sensor_id": "00000000-0000-4000-8000-000000000242",
-      "spot_id": "00000000-0000-4000-8000-000000000042",
-      "occupancy_status": "AVAILABLE",
-      "occurred_at": "2026-11-09T07:55:00Z",
-      "received_at": "2026-11-09T07:55:01Z",
-      "quality": 99,
-      "payload_hash": "5555555555555555555555555555555555555555555555555555555555555555"
-    },
-    {
-      "reading_id": "00000000-0000-4000-8000-000000000253",
-      "sensor_id": "00000000-0000-4000-8000-000000000243",
-      "spot_id": "00000000-0000-4000-8000-000000000043",
-      "occupancy_status": "OCCUPIED",
-      "occurred_at": "2026-11-09T07:55:00Z",
-      "received_at": "2026-11-09T07:55:01Z",
-      "quality": 99,
-      "payload_hash": "6666666666666666666666666666666666666666666666666666666666666666"
-    },
-    {
-      "reading_id": "00000000-0000-4000-8000-000000000254",
-      "sensor_id": "00000000-0000-4000-8000-000000000244",
-      "spot_id": "00000000-0000-4000-8000-000000000044",
-      "occupancy_status": "AVAILABLE",
-      "occurred_at": "2026-11-09T07:55:00Z",
-      "received_at": "2026-11-09T07:55:01Z",
-      "quality": 99,
-      "payload_hash": "7777777777777777777777777777777777777777777777777777777777777777"
-    }
-  ],
-  "sensor_health_events": [
-    {
-      "health_event_id": "00000000-0000-4000-8000-000000000261",
-      "sensor_id": "00000000-0000-4000-8000-000000000242",
-      "health": "FAILED",
-      "reason": "Sin comunicacion desde las 07:55; causa fisica no determinada",
-      "observed_at": "2026-11-09T08:05:00Z",
-      "recovered_at": null
-    }
-  ],
-  "occupancy_conflicts": [
-    {
-      "conflict_id": "00000000-0000-4000-8000-000000000271",
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "reservation_id": "00000000-0000-4000-8000-000000000091",
-      "reading_id": "00000000-0000-4000-8000-000000000251",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "conflict_type": "UNEXPECTED_OCCUPANCY",
-      "severity": "HIGH",
-      "detected_at": "2026-11-09T07:55:00Z",
-      "status": "OPEN"
-    }
-  ],
-  "occupancy_alerts": [
-    {
-      "alert_id": "00000000-0000-4000-8000-000000000281",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "health_event_id": null,
-      "conflict_id": "00000000-0000-4000-8000-000000000271",
-      "spot_id": "00000000-0000-4000-8000-000000000041",
-      "alert_type": "OCCUPANCY_CONFLICT",
-      "severity": "HIGH",
-      "evidence_ref": "demo://readings/251",
-      "created_at": "2026-11-09T07:56:00Z",
-      "acknowledged_at": null,
-      "closed_at": null,
-      "status": "OPEN"
-    },
-    {
-      "alert_id": "00000000-0000-4000-8000-000000000282",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "health_event_id": "00000000-0000-4000-8000-000000000261",
-      "conflict_id": null,
-      "spot_id": "00000000-0000-4000-8000-000000000042",
-      "alert_type": "SENSOR_FAILURE",
-      "severity": "HIGH",
-      "evidence_ref": "demo://health-events/261",
-      "created_at": "2026-11-09T08:05:00Z",
-      "acknowledged_at": null,
-      "closed_at": null,
-      "status": "OPEN"
-    }
-  ],
-  "capacity_snapshots": [
-    {
-      "snapshot_id": "00000000-0000-4000-8000-000000000291",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "occupied_count": 1,
-      "total_count": 2,
-      "percentage": 50,
-      "observed_at": "2026-11-09T07:55:00Z"
-    },
-    {
-      "snapshot_id": "00000000-0000-4000-8000-000000000292",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000032",
-      "occupied_count": 1,
-      "total_count": 2,
-      "percentage": 50,
-      "observed_at": "2026-11-09T07:55:00Z"
-    },
-    {
-      "snapshot_id": "00000000-0000-4000-8000-000000000293",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": null,
-      "occupied_count": 2,
-      "total_count": 4,
-      "percentage": 50,
-      "observed_at": "2026-11-09T07:55:00Z"
-    }
-  ],
-  "occupancy_reports": [
-    {
-      "report_id": "00000000-0000-4000-8000-000000000301",
-      "tenant_id": "00000000-0000-4000-8000-000000000021",
-      "zone_id": "00000000-0000-4000-8000-000000000031",
-      "interval_start": "2026-11-09T07:00:00Z",
-      "interval_end": "2026-11-09T13:00:00Z",
-      "totals": {
-        "peak_occupancy_percentage": 50,
-        "alerts_count": 2
-      },
-      "generated_at": "2026-11-09T13:05:00Z",
-      "status": "GENERATED"
-    }
-  ]
+    "accounts":  [
+                     {
+                         "account_id":  "00000000-0000-4000-8000-000000000004",
+                         "email":  "super.admin@example.com",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "account_id":  "00000000-0000-4000-8000-000000000001",
+                         "email":  "ana.admin@example.com",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "account_id":  "00000000-0000-4000-8000-000000000002",
+                         "email":  "juan.driver@example.com",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "account_id":  "00000000-0000-4000-8000-000000000003",
+                         "email":  "sofia.driver@example.com",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     }
+                 ],
+    "credentials":  [
+                        {
+                            "credential_id":  "00000000-0000-4000-8000-000000000104",
+                            "account_id":  "00000000-0000-4000-8000-000000000004",
+                            "authentication_method":  "PASSWORD",
+                            "secret_hash":  "${DEMO_PASSWORD_HASH}",
+                            "external_subject":  null,
+                            "last_used_at":  null,
+                            "status":  "ACTIVE"
+                        },
+                        {
+                            "credential_id":  "00000000-0000-4000-8000-000000000101",
+                            "account_id":  "00000000-0000-4000-8000-000000000001",
+                            "authentication_method":  "PASSWORD",
+                            "secret_hash":  "${DEMO_PASSWORD_HASH}",
+                            "external_subject":  null,
+                            "last_used_at":  null,
+                            "status":  "ACTIVE"
+                        },
+                        {
+                            "credential_id":  "00000000-0000-4000-8000-000000000102",
+                            "account_id":  "00000000-0000-4000-8000-000000000002",
+                            "authentication_method":  "PASSWORD",
+                            "secret_hash":  "${DEMO_PASSWORD_HASH}",
+                            "external_subject":  null,
+                            "last_used_at":  null,
+                            "status":  "ACTIVE"
+                        },
+                        {
+                            "credential_id":  "00000000-0000-4000-8000-000000000103",
+                            "account_id":  "00000000-0000-4000-8000-000000000003",
+                            "authentication_method":  "PASSWORD",
+                            "secret_hash":  "${DEMO_PASSWORD_HASH}",
+                            "external_subject":  null,
+                            "last_used_at":  null,
+                            "status":  "ACTIVE"
+                        }
+                    ],
+    "tenants":  [
+                    {
+                        "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                        "name":  "Parking Sol - Demo",
+                        "status":  "ACTIVE",
+                        "contact_data":  {
+                                             "email":  "ana.admin@example.com",
+                                             "phone":  "900000001"
+                                         },
+                        "coordinates":  {
+                                            "latitude":  -12.0464,
+                                            "longitude":  -77.0428
+                                        },
+                        "address":  "Av. Demo 123, Lima",
+                        "rules":  {
+                                      "tariff_rules":  {
+                                                           "period_minutes":  60,
+                                                           "price_per_period":  5,
+                                                           "rounding":  "CEILING"
+                                                       },
+                                      "overstay_tolerance_minutes":  5,
+                                      "lock_duration_minutes":  10,
+                                      "allocation_rules":  {
+
+                                                           },
+                                      "coexistence_rules":  [
+                                                                "Velocidad máxima de 10 km/h",
+                                                                "No bloquear las vías de circulación"
+                                                            ]
+                                  },
+                        "created_at":  "2026-11-09T07:00:00Z",
+                        "updated_at":  "2026-11-09T07:00:00Z"
+                    }
+                ],
+    "role_assignments":  [
+                             {
+                                 "assignment_id":  "00000000-0000-4000-8000-000000000114",
+                                 "account_id":  "00000000-0000-4000-8000-000000000004",
+                                 "role_type":  "SUPER_ADMIN",
+                                 "tenant_id":  null,
+                                 "valid_from":  "2026-11-09T07:00:00Z",
+                                 "valid_to":  null,
+                                 "status":  "ACTIVE"
+                             },
+                             {
+                                 "assignment_id":  "00000000-0000-4000-8000-000000000111",
+                                 "account_id":  "00000000-0000-4000-8000-000000000001",
+                                 "role_type":  "PARKING_ADMIN",
+                                 "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                 "valid_from":  "2026-11-09T07:00:00Z",
+                                 "valid_to":  null,
+                                 "status":  "ACTIVE"
+                             },
+                             {
+                                 "assignment_id":  "00000000-0000-4000-8000-000000000112",
+                                 "account_id":  "00000000-0000-4000-8000-000000000002",
+                                 "role_type":  "DRIVER",
+                                 "tenant_id":  null,
+                                 "valid_from":  "2026-11-09T07:00:00Z",
+                                 "valid_to":  null,
+                                 "status":  "ACTIVE"
+                             },
+                             {
+                                 "assignment_id":  "00000000-0000-4000-8000-000000000113",
+                                 "account_id":  "00000000-0000-4000-8000-000000000003",
+                                 "role_type":  "DRIVER",
+                                 "tenant_id":  null,
+                                 "valid_from":  "2026-11-09T07:00:00Z",
+                                 "valid_to":  null,
+                                 "status":  "ACTIVE"
+                             }
+                         ],
+    "profiles":  [
+                     {
+                         "profile_id":  "00000000-0000-4000-8000-000000000011",
+                         "account_id":  "00000000-0000-4000-8000-000000000001",
+                         "first_name":  "Ana",
+                         "last_name":  "Demo",
+                         "phone":  "900000001",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "profile_id":  "00000000-0000-4000-8000-000000000012",
+                         "account_id":  "00000000-0000-4000-8000-000000000002",
+                         "first_name":  "Juan",
+                         "last_name":  "Demo",
+                         "phone":  "900000002",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "profile_id":  "00000000-0000-4000-8000-000000000013",
+                         "account_id":  "00000000-0000-4000-8000-000000000003",
+                         "first_name":  "Sofia",
+                         "last_name":  "Demo",
+                         "phone":  "900000003",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     }
+                 ],
+    "vehicles":  [
+                     {
+                         "vehicle_id":  "00000000-0000-4000-8000-000000000051",
+                         "profile_id":  "00000000-0000-4000-8000-000000000012",
+                         "plate":  "DEM-101",
+                         "make":  "Toyota",
+                         "model":  "Yaris",
+                         "color":  "Azul",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "vehicle_id":  "00000000-0000-4000-8000-000000000052",
+                         "profile_id":  "00000000-0000-4000-8000-000000000012",
+                         "plate":  "DEM-102",
+                         "make":  "Kia",
+                         "model":  "Rio",
+                         "color":  "Rojo",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     },
+                     {
+                         "vehicle_id":  "00000000-0000-4000-8000-000000000053",
+                         "profile_id":  "00000000-0000-4000-8000-000000000013",
+                         "plate":  "DEM-103",
+                         "make":  "Hyundai",
+                         "model":  "Accent",
+                         "color":  "Gris",
+                         "status":  "ACTIVE",
+                         "created_at":  "2026-11-09T07:00:00Z",
+                         "updated_at":  "2026-11-09T07:00:00Z"
+                     }
+                 ],
+    "driver_classifications":  [
+                                   {
+                                       "classification_id":  "00000000-0000-4000-8000-000000000061",
+                                       "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                       "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                       "profile_type":  "EMPLOYEE",
+                                       "assigned_by":  "00000000-0000-4000-8000-000000000011",
+                                       "created_at":  "2026-11-09T07:00:00Z",
+                                       "updated_at":  "2026-11-09T07:00:00Z"
+                                   },
+                                   {
+                                       "classification_id":  "00000000-0000-4000-8000-000000000062",
+                                       "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                       "profile_id":  "00000000-0000-4000-8000-000000000013",
+                                       "profile_type":  "PRIVATE",
+                                       "assigned_by":  "00000000-0000-4000-8000-000000000011",
+                                       "created_at":  "2026-11-09T07:00:00Z",
+                                       "updated_at":  "2026-11-09T07:00:00Z"
+                                   }
+                               ],
+    "sessions":  [
+                     {
+                         "session_id":  "00000000-0000-4000-8000-000000000121",
+                         "account_id":  "00000000-0000-4000-8000-000000000002",
+                         "refresh_token_hash":  "0000000000000000000000000000000000000000000000000000000000000000",
+                         "created_at":  "2026-11-08T07:00:00Z",
+                         "expires_at":  "2026-11-09T07:00:00Z",
+                         "last_activity_at":  "2026-11-08T08:00:00Z",
+                         "status":  "REVOKED",
+                         "revoked_at":  "2026-11-08T08:00:00Z"
+                     }
+                 ],
+    "audit_entries":  [
+                          {
+                              "audit_id":  "00000000-0000-4000-8000-000000000131",
+                              "account_id":  "00000000-0000-4000-8000-000000000002",
+                              "action":  "SIGN_IN",
+                              "result":  "SUCCESS",
+                              "source":  "DEMO_SEED",
+                              "occurred_at":  "2026-11-09T07:00:00Z",
+                              "correlation_id":  "demo-sign-in-001"
+                          },
+                          {
+                              "audit_id":  "00000000-0000-4000-8000-000000000132",
+                              "account_id":  null,
+                              "action":  "SIGN_IN",
+                              "result":  "FAILURE",
+                              "source":  "DEMO_SEED",
+                              "occurred_at":  "2026-11-09T07:00:00Z",
+                              "correlation_id":  "demo-sign-in-002"
+                          }
+                      ],
+    "parking_zones":  [
+                          {
+                              "zone_id":  "00000000-0000-4000-8000-000000000031",
+                              "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                              "name":  "Piso1-A",
+                              "location":  {
+                                               "reference":  "Primer piso, acceso principal"
+                                           },
+                              "color_code":  "#1976D2",
+                              "status":  "ACTIVE",
+                              "created_at":  "2026-11-09T07:00:00Z",
+                              "updated_at":  "2026-11-09T07:00:00Z"
+                          },
+                          {
+                              "zone_id":  "00000000-0000-4000-8000-000000000032",
+                              "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                              "name":  "Piso2-A",
+                              "location":  {
+                                               "reference":  "Segundo piso, rampa derecha"
+                                           },
+                              "color_code":  "#43A047",
+                              "status":  "ACTIVE",
+                              "created_at":  "2026-11-09T07:00:00Z",
+                              "updated_at":  "2026-11-09T07:00:00Z"
+                          }
+                      ],
+    "parking_spots":  [
+                          {
+                              "spot_id":  "00000000-0000-4000-8000-000000000041",
+                              "zone_id":  "00000000-0000-4000-8000-000000000031",
+                              "code":  "A-01",
+                              "spot_type":  "STANDARD",
+                              "features":  {
+                                               "covered":  true,
+                                               "ev_charger":  false
+                                           },
+                              "operational_status":  "ACTIVE"
+                          },
+                          {
+                              "spot_id":  "00000000-0000-4000-8000-000000000042",
+                              "zone_id":  "00000000-0000-4000-8000-000000000031",
+                              "code":  "A-02",
+                              "spot_type":  "STANDARD",
+                              "features":  {
+                                               "covered":  true,
+                                               "ev_charger":  false
+                                           },
+                              "operational_status":  "ACTIVE"
+                          },
+                          {
+                              "spot_id":  "00000000-0000-4000-8000-000000000043",
+                              "zone_id":  "00000000-0000-4000-8000-000000000032",
+                              "code":  "A-01",
+                              "spot_type":  "STANDARD",
+                              "features":  {
+                                               "covered":  true,
+                                               "ev_charger":  false
+                                           },
+                              "operational_status":  "ACTIVE"
+                          },
+                          {
+                              "spot_id":  "00000000-0000-4000-8000-000000000044",
+                              "zone_id":  "00000000-0000-4000-8000-000000000032",
+                              "code":  "A-02",
+                              "spot_type":  "STANDARD",
+                              "features":  {
+                                               "covered":  true,
+                                               "ev_charger":  false
+                                           },
+                              "operational_status":  "ACTIVE"
+                          }
+                      ],
+    "floor_plans":  [
+                        {
+                            "floor_plan_id":  "00000000-0000-4000-8000-000000000141",
+                            "zone_id":  "00000000-0000-4000-8000-000000000031",
+                            "version":  1,
+                            "file_reference":  "demo://croquis/piso1-a",
+                            "status":  "PUBLISHED",
+                            "published_at":  "2026-11-09T07:00:00Z"
+                        },
+                        {
+                            "floor_plan_id":  "00000000-0000-4000-8000-000000000142",
+                            "zone_id":  "00000000-0000-4000-8000-000000000032",
+                            "version":  1,
+                            "file_reference":  "demo://croquis/piso2-a",
+                            "status":  "PUBLISHED",
+                            "published_at":  "2026-11-09T07:00:00Z"
+                        }
+                    ],
+    "digital_parking_maps":  [
+                                 {
+                                     "map_id":  "00000000-0000-4000-8000-000000000151",
+                                     "floor_plan_id":  "00000000-0000-4000-8000-000000000141",
+                                     "version":  1,
+                                     "elements":  [
+                                                      {
+                                                          "spot_id":  "00000000-0000-4000-8000-000000000041",
+                                                          "x":  10,
+                                                          "y":  10
+                                                      },
+                                                      {
+                                                          "spot_id":  "00000000-0000-4000-8000-000000000042",
+                                                          "x":  30,
+                                                          "y":  10
+                                                      }
+                                                  ],
+                                     "status":  "PUBLISHED",
+                                     "generated_at":  "2026-11-09T07:00:00Z"
+                                 },
+                                 {
+                                     "map_id":  "00000000-0000-4000-8000-000000000152",
+                                     "floor_plan_id":  "00000000-0000-4000-8000-000000000142",
+                                     "version":  1,
+                                     "elements":  [
+                                                      {
+                                                          "spot_id":  "00000000-0000-4000-8000-000000000043",
+                                                          "x":  10,
+                                                          "y":  10
+                                                      },
+                                                      {
+                                                          "spot_id":  "00000000-0000-4000-8000-000000000044",
+                                                          "x":  30,
+                                                          "y":  10
+                                                      }
+                                                  ],
+                                     "status":  "PUBLISHED",
+                                     "generated_at":  "2026-11-09T07:00:00Z"
+                                 }
+                             ],
+    "payment_tokens":  [
+                           {
+                               "token_id":  "00000000-0000-4000-8000-000000000071",
+                               "profile_id":  "00000000-0000-4000-8000-000000000012",
+                               "provider_token_ref":  "demo-card-not-chargeable-001",
+                               "brand":  "VISA",
+                               "last_four":  "4242",
+                               "expiration_month":  12,
+                               "expiration_year":  2030,
+                               "status":  "ACTIVE",
+                               "created_at":  "2026-11-09T07:00:00Z",
+                               "revoked_at":  null
+                           },
+                           {
+                               "token_id":  "00000000-0000-4000-8000-000000000072",
+                               "profile_id":  "00000000-0000-4000-8000-000000000011",
+                               "provider_token_ref":  "demo-provider-token-admin",
+                               "brand":  "VISA",
+                               "last_four":  "4242",
+                               "expiration_month":  12,
+                               "expiration_year":  2030,
+                               "status":  "ACTIVE",
+                               "created_at":  "2026-11-09T07:00:00Z",
+                               "revoked_at":  null
+                           }
+                       ],
+    "digital_payments":  [
+                             {
+                                 "payment_id":  "00000000-0000-4000-8000-000000000081",
+                                 "token_id":  "00000000-0000-4000-8000-000000000071",
+                                 "operation_type":  "RESERVATION",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                 "amount":  10,
+                                 "currency":  "PEN",
+                                 "status":  "APPROVED",
+                                 "provider_operation_ref":  "demo-payment-1",
+                                 "idempotency_key":  "demo-payment-key-1",
+                                 "request_hash":  "1111111111111111111111111111111111111111111111111111111111111111",
+                                 "first_seen_at":  "2026-11-09T07:29:00Z",
+                                 "last_seen_at":  "2026-11-09T07:30:00Z",
+                                 "result_reference":  "demo-result-1",
+                                 "created_at":  "2026-11-09T07:29:00Z",
+                                 "approved_at":  "2026-11-09T07:30:00Z"
+                             },
+                             {
+                                 "payment_id":  "00000000-0000-4000-8000-000000000082",
+                                 "token_id":  "00000000-0000-4000-8000-000000000071",
+                                 "operation_type":  "RESERVATION",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                 "amount":  5,
+                                 "currency":  "PEN",
+                                 "status":  "APPROVED",
+                                 "provider_operation_ref":  "demo-payment-2",
+                                 "idempotency_key":  "demo-payment-key-2",
+                                 "request_hash":  "2222222222222222222222222222222222222222222222222222222222222222",
+                                 "first_seen_at":  "2026-11-09T07:40:00Z",
+                                 "last_seen_at":  "2026-11-09T07:40:00Z",
+                                 "result_reference":  "demo-result-2",
+                                 "created_at":  "2026-11-09T07:40:00Z",
+                                 "approved_at":  "2026-11-09T07:40:00Z"
+                             },
+                             {
+                                 "payment_id":  "00000000-0000-4000-8000-000000000083",
+                                 "token_id":  "00000000-0000-4000-8000-000000000071",
+                                 "operation_type":  "ADDITIONAL_CHARGE",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                 "amount":  2,
+                                 "currency":  "PEN",
+                                 "status":  "APPROVED",
+                                 "provider_operation_ref":  "demo-payment-3",
+                                 "idempotency_key":  "demo-payment-key-3",
+                                 "request_hash":  "3333333333333333333333333333333333333333333333333333333333333333",
+                                 "first_seen_at":  "2026-11-09T10:20:00Z",
+                                 "last_seen_at":  "2026-11-09T10:20:00Z",
+                                 "result_reference":  "demo-result-3",
+                                 "created_at":  "2026-11-09T10:20:00Z",
+                                 "approved_at":  "2026-11-09T10:20:00Z"
+                             },
+                             {
+                                 "payment_id":  "00000000-0000-4000-8000-000000000084",
+                                 "token_id":  "00000000-0000-4000-8000-000000000071",
+                                 "operation_type":  "SUBSCRIPTION",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                 "amount":  10,
+                                 "currency":  "PEN",
+                                 "status":  "APPROVED",
+                                 "provider_operation_ref":  "demo-subscription-driver",
+                                 "idempotency_key":  "demo-subscription-driver",
+                                 "request_hash":  "1111111111111111111111111111111111111111111111111111111111111111",
+                                 "first_seen_at":  "2026-11-09T12:30:00Z",
+                                 "last_seen_at":  "2026-11-09T12:30:00Z",
+                                 "result_reference":  "/api/v1/subscriptions/00000000-0000-4000-8000-000000000191",
+                                 "created_at":  "2026-11-09T12:30:00Z",
+                                 "approved_at":  "2026-11-09T12:30:00Z"
+                             },
+                             {
+                                 "payment_id":  "00000000-0000-4000-8000-000000000085",
+                                 "token_id":  "00000000-0000-4000-8000-000000000072",
+                                 "operation_type":  "SUBSCRIPTION",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000011",
+                                 "amount":  50,
+                                 "currency":  "PEN",
+                                 "status":  "APPROVED",
+                                 "provider_operation_ref":  "demo-subscription-tenant",
+                                 "idempotency_key":  "demo-subscription-tenant",
+                                 "request_hash":  "1111111111111111111111111111111111111111111111111111111111111111",
+                                 "first_seen_at":  "2026-11-09T12:30:00Z",
+                                 "last_seen_at":  "2026-11-09T12:30:00Z",
+                                 "result_reference":  "/api/v1/subscriptions/00000000-0000-4000-8000-000000000192",
+                                 "created_at":  "2026-11-09T12:30:00Z",
+                                 "approved_at":  "2026-11-09T12:30:00Z"
+                             }
+                         ],
+    "reservations":  [
+                         {
+                             "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                             "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                             "profile_id":  "00000000-0000-4000-8000-000000000012",
+                             "vehicle_id":  "00000000-0000-4000-8000-000000000051",
+                             "zone_id":  "00000000-0000-4000-8000-000000000031",
+                             "spot_id":  "00000000-0000-4000-8000-000000000041",
+                             "start_at":  "2026-11-09T08:00:00Z",
+                             "end_at":  "2026-11-09T10:00:00Z",
+                             "amount":  10,
+                             "status":  "OVERSTAYED",
+                             "payment_id":  "00000000-0000-4000-8000-000000000081",
+                             "lock_status":  "RELEASED",
+                             "locked_at":  null,
+                             "lock_expires_at":  null,
+                             "created_at":  "2026-11-09T07:25:00Z",
+                             "updated_at":  "2026-11-09T10:15:00Z"
+                         },
+                         {
+                             "reservation_id":  "00000000-0000-4000-8000-000000000092",
+                             "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                             "profile_id":  "00000000-0000-4000-8000-000000000012",
+                             "vehicle_id":  "00000000-0000-4000-8000-000000000051",
+                             "zone_id":  "00000000-0000-4000-8000-000000000031",
+                             "spot_id":  "00000000-0000-4000-8000-000000000042",
+                             "start_at":  "2026-11-09T11:00:00Z",
+                             "end_at":  "2026-11-09T12:00:00Z",
+                             "amount":  5,
+                             "status":  "COMPLETED",
+                             "payment_id":  "00000000-0000-4000-8000-000000000082",
+                             "lock_status":  "RELEASED",
+                             "locked_at":  null,
+                             "lock_expires_at":  null,
+                             "created_at":  "2026-11-09T07:35:00Z",
+                             "updated_at":  "2026-11-09T12:00:00Z"
+                         }
+                     ],
+    "parking_sessions":  [
+                             {
+                                 "session_id":  "00000000-0000-4000-8000-000000000161",
+                                 "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                 "vehicle_id":  "00000000-0000-4000-8000-000000000051",
+                                 "spot_id":  "00000000-0000-4000-8000-000000000041",
+                                 "entry_at":  "2026-11-09T08:00:00Z",
+                                 "exit_at":  "2026-11-09T10:15:00Z",
+                                 "status":  "COMPLETED"
+                             },
+                             {
+                                 "session_id":  "00000000-0000-4000-8000-000000000162",
+                                 "reservation_id":  "00000000-0000-4000-8000-000000000092",
+                                 "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                 "vehicle_id":  "00000000-0000-4000-8000-000000000051",
+                                 "spot_id":  "00000000-0000-4000-8000-000000000042",
+                                 "entry_at":  "2026-11-09T11:00:00Z",
+                                 "exit_at":  "2026-11-09T12:00:00Z",
+                                 "status":  "COMPLETED"
+                             }
+                         ],
+    "guest_parking_sessions":  [
+                                   {
+                                       "guest_session_id":  "00000000-0000-4000-8000-000000000171",
+                                       "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                       "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                       "spot_id":  "00000000-0000-4000-8000-000000000043",
+                                       "manual_plate":  "DEM-999",
+                                       "entry_at":  "2026-11-09T07:45:00Z",
+                                       "exit_at":  "2026-11-09T08:45:00Z",
+                                       "calculated_amount":  5,
+                                       "physical_payment_method":  "CASH",
+                                       "physical_payment_confirmed":  true,
+                                       "status":  "CLOSED"
+                                   }
+                               ],
+    "payment_attempts":  [
+                             {
+                                 "attempt_id":  "00000000-0000-4000-8000-000000000181",
+                                 "payment_id":  "00000000-0000-4000-8000-000000000081",
+                                 "attempt_number":  1,
+                                 "started_at":  "2026-11-09T07:29:00Z",
+                                 "finished_at":  "2026-11-09T07:29:00Z",
+                                 "status":  "TRANSIENT_FAILURE",
+                                 "error_code":  "DEMO_TIMEOUT",
+                                 "next_attempt_at":  "2026-11-09T07:30:00Z"
+                             },
+                             {
+                                 "attempt_id":  "00000000-0000-4000-8000-000000000182",
+                                 "payment_id":  "00000000-0000-4000-8000-000000000081",
+                                 "attempt_number":  2,
+                                 "started_at":  "2026-11-09T07:30:00Z",
+                                 "finished_at":  "2026-11-09T07:30:00Z",
+                                 "status":  "SUCCESS",
+                                 "error_code":  null,
+                                 "next_attempt_at":  null
+                             },
+                             {
+                                 "attempt_id":  "00000000-0000-4000-8000-000000000183",
+                                 "payment_id":  "00000000-0000-4000-8000-000000000082",
+                                 "attempt_number":  1,
+                                 "started_at":  "2026-11-09T07:40:00Z",
+                                 "finished_at":  "2026-11-09T07:40:00Z",
+                                 "status":  "SUCCESS",
+                                 "error_code":  null,
+                                 "next_attempt_at":  null
+                             },
+                             {
+                                 "attempt_id":  "00000000-0000-4000-8000-000000000184",
+                                 "payment_id":  "00000000-0000-4000-8000-000000000083",
+                                 "attempt_number":  1,
+                                 "started_at":  "2026-11-09T10:20:00Z",
+                                 "finished_at":  "2026-11-09T10:20:00Z",
+                                 "status":  "SUCCESS",
+                                 "error_code":  null,
+                                 "next_attempt_at":  null
+                             },
+                             {
+                                 "attempt_id":  "00000000-0000-4000-8000-000000000186",
+                                 "payment_id":  "00000000-0000-4000-8000-000000000084",
+                                 "attempt_number":  1,
+                                 "started_at":  "2026-11-09T12:30:00Z",
+                                 "finished_at":  "2026-11-09T12:30:00Z",
+                                 "status":  "SUCCESS",
+                                 "error_code":  null,
+                                 "next_attempt_at":  null
+                             },
+                             {
+                                 "attempt_id":  "00000000-0000-4000-8000-000000000187",
+                                 "payment_id":  "00000000-0000-4000-8000-000000000085",
+                                 "attempt_number":  1,
+                                 "started_at":  "2026-11-09T12:30:00Z",
+                                 "finished_at":  "2026-11-09T12:30:00Z",
+                                 "status":  "SUCCESS",
+                                 "error_code":  null,
+                                 "next_attempt_at":  null
+                             }
+                         ],
+    "subscriptions":  [
+                          {
+                              "subscription_id":  "00000000-0000-4000-8000-000000000191",
+                              "profile_id":  "00000000-0000-4000-8000-000000000012",
+                              "tenant_id":  null,
+                              "plan":  {
+                                           "code":  "DRIVER_DEMO",
+                                           "audience":  "DRIVER",
+                                           "billing_period_months":  1,
+                                           "discount_percent":  10,
+                                           "price":  10
+                                       },
+                              "start_at":  "2026-11-09T12:30:00Z",
+                              "end_at":  null,
+                              "status":  "ACTIVE",
+                              "payment_id":  "00000000-0000-4000-8000-000000000084"
+                          },
+                          {
+                              "subscription_id":  "00000000-0000-4000-8000-000000000192",
+                              "profile_id":  null,
+                              "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                              "plan":  {
+                                           "code":  "TENANT_DEMO",
+                                           "audience":  "PARKING_ADMIN",
+                                           "billing_period_months":  1,
+                                           "included_sensors":  20,
+                                           "price":  50
+                                       },
+                              "start_at":  "2026-11-09T12:30:00Z",
+                              "end_at":  null,
+                              "status":  "ACTIVE",
+                              "payment_id":  "00000000-0000-4000-8000-000000000085"
+                          }
+                      ],
+    "additional_charges":  [
+                               {
+                                   "charge_id":  "00000000-0000-4000-8000-000000000201",
+                                   "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                                   "payment_id":  null,
+                                   "amount":  5,
+                                   "reason":  "OVERSTAY",
+                                   "evidence_ref":  "demo://evidence/overstay-001",
+                                   "status":  "PENDING",
+                                   "created_at":  "2026-11-09T10:15:00Z"
+                               },
+                               {
+                                   "charge_id":  "00000000-0000-4000-8000-000000000202",
+                                   "reservation_id":  "00000000-0000-4000-8000-000000000092",
+                                   "payment_id":  null,
+                                   "amount":  3,
+                                   "reason":  "DAMAGE",
+                                   "evidence_ref":  "demo://evidence/damage-002",
+                                   "status":  "PENDING",
+                                   "created_at":  "2026-11-09T12:10:00Z"
+                               },
+                               {
+                                   "charge_id":  "00000000-0000-4000-8000-000000000203",
+                                   "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                                   "payment_id":  "00000000-0000-4000-8000-000000000083",
+                                   "amount":  2,
+                                   "reason":  "DAMAGE",
+                                   "evidence_ref":  "demo://evidence/damage-001",
+                                   "status":  "PAID",
+                                   "created_at":  "2026-11-09T10:16:00Z"
+                               }
+                           ],
+    "outstanding_balances":  [
+                                 {
+                                     "balance_id":  "00000000-0000-4000-8000-000000000211",
+                                     "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                     "charge_id":  "00000000-0000-4000-8000-000000000201",
+                                     "amount":  5,
+                                     "due_at":  "2026-11-09T10:15:00Z",
+                                     "status":  "OPEN",
+                                     "created_at":  "2026-11-09T10:15:00Z",
+                                     "regularized_at":  null
+                                 },
+                                 {
+                                     "balance_id":  "00000000-0000-4000-8000-000000000212",
+                                     "profile_id":  "00000000-0000-4000-8000-000000000012",
+                                     "charge_id":  "00000000-0000-4000-8000-000000000202",
+                                     "amount":  3,
+                                     "due_at":  "2026-11-09T12:10:00Z",
+                                     "status":  "OPEN",
+                                     "created_at":  "2026-11-09T12:10:00Z",
+                                     "regularized_at":  null
+                                 }
+                             ],
+    "refunds":  [
+                    {
+                        "refund_id":  "00000000-0000-4000-8000-000000000221",
+                        "payment_id":  "00000000-0000-4000-8000-000000000082",
+                        "amount":  1,
+                        "reason":  "Ajuste de cobro de demostracion",
+                        "status":  "COMPLETED",
+                        "provider_operation_ref":  "demo-refund-001",
+                        "requested_at":  "2026-11-09T12:20:00Z",
+                        "completed_at":  "2026-11-09T12:25:00Z"
+                    }
+                ],
+    "billing_documents":  [
+                              {
+                                  "document_id":  "00000000-0000-4000-8000-000000000231",
+                                  "payment_id":  "00000000-0000-4000-8000-000000000081",
+                                  "document_type":  "ELECTRONIC_RECEIPT",
+                                  "document_number":  "00000001",
+                                  "series":  "DEMO",
+                                  "legal_name":  "Juan Demo",
+                                  "tax_data":  {
+                                                   "document_type":  "DNI",
+                                                   "document_number":  "00000000"
+                                               },
+                                  "issued_at":  "2026-11-09T07:30:00Z",
+                                  "status":  "ISSUED"
+                              },
+                              {
+                                  "document_id":  "00000000-0000-4000-8000-000000000232",
+                                  "payment_id":  "00000000-0000-4000-8000-000000000082",
+                                  "document_type":  "ELECTRONIC_RECEIPT",
+                                  "document_number":  "00000002",
+                                  "series":  "DEMO",
+                                  "legal_name":  "Juan Demo",
+                                  "tax_data":  {
+                                                   "document_type":  "DNI",
+                                                   "document_number":  "00000000"
+                                               },
+                                  "issued_at":  "2026-11-09T07:40:00Z",
+                                  "status":  "ISSUED"
+                              },
+                              {
+                                  "document_id":  "00000000-0000-4000-8000-000000000233",
+                                  "payment_id":  "00000000-0000-4000-8000-000000000083",
+                                  "document_type":  "ELECTRONIC_RECEIPT",
+                                  "document_number":  "00000003",
+                                  "series":  "DEMO",
+                                  "legal_name":  "Juan Demo",
+                                  "tax_data":  {
+                                                   "document_type":  "DNI",
+                                                   "document_number":  "00000000"
+                                               },
+                                  "issued_at":  "2026-11-09T10:20:00Z",
+                                  "status":  "ISSUED"
+                              }
+                          ],
+    "occupancy_sensors":  [
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000241",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000041",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "configuration":  {
+                                                        "topic":  "demo/spotgo/sensors/1/occupancy"
+                                                    },
+                                  "installed_at":  "2026-11-09T07:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000242",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000042",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "configuration":  {
+                                                        "topic":  "demo/spotgo/sensors/2/occupancy"
+                                                    },
+                                  "installed_at":  "2026-11-09T07:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000243",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000043",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "configuration":  {
+                                                        "topic":  "demo/spotgo/sensors/3/occupancy"
+                                                    },
+                                  "installed_at":  "2026-11-09T07:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000244",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000044",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "configuration":  {
+                                                        "topic":  "demo/spotgo/sensors/4/occupancy"
+                                                    },
+                                  "installed_at":  "2026-11-09T07:00:00Z"
+                              }
+                          ],
+    "occupancy_readings":  [
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000251",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000241",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000041",
+                                   "occupancy_status":  "OCCUPIED",
+                                   "occurred_at":  "2026-11-09T07:55:00Z",
+                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "4444444444444444444444444444444444444444444444444444444444444444"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000252",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000242",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000042",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T07:55:00Z",
+                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "5555555555555555555555555555555555555555555555555555555555555555"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000253",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000243",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000043",
+                                   "occupancy_status":  "OCCUPIED",
+                                   "occurred_at":  "2026-11-09T07:55:00Z",
+                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "6666666666666666666666666666666666666666666666666666666666666666"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000254",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000244",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000044",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T07:55:00Z",
+                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "7777777777777777777777777777777777777777777777777777777777777777"
+                               }
+                           ],
+    "sensor_health_events":  [
+                                 {
+                                     "health_event_id":  "00000000-0000-4000-8000-000000000261",
+                                     "sensor_id":  "00000000-0000-4000-8000-000000000242",
+                                     "health":  "FAILED",
+                                     "reason":  "Sin comunicacion desde las 07:55; causa fisica no determinada",
+                                     "observed_at":  "2026-11-09T08:05:00Z",
+                                     "recovered_at":  null
+                                 }
+                             ],
+    "occupancy_conflicts":  [
+                                {
+                                    "conflict_id":  "00000000-0000-4000-8000-000000000271",
+                                    "spot_id":  "00000000-0000-4000-8000-000000000041",
+                                    "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                                    "reading_id":  "00000000-0000-4000-8000-000000000251",
+                                    "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                    "conflict_type":  "UNEXPECTED_OCCUPANCY",
+                                    "severity":  "HIGH",
+                                    "detected_at":  "2026-11-09T07:55:00Z",
+                                    "status":  "OPEN"
+                                }
+                            ],
+    "occupancy_alerts":  [
+                             {
+                                 "alert_id":  "00000000-0000-4000-8000-000000000281",
+                                 "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                 "health_event_id":  null,
+                                 "conflict_id":  "00000000-0000-4000-8000-000000000271",
+                                 "spot_id":  "00000000-0000-4000-8000-000000000041",
+                                 "alert_type":  "OCCUPANCY_CONFLICT",
+                                 "severity":  "HIGH",
+                                 "evidence_ref":  "demo://readings/251",
+                                 "created_at":  "2026-11-09T07:56:00Z",
+                                 "acknowledged_at":  null,
+                                 "closed_at":  null,
+                                 "status":  "OPEN"
+                             },
+                             {
+                                 "alert_id":  "00000000-0000-4000-8000-000000000282",
+                                 "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                 "health_event_id":  "00000000-0000-4000-8000-000000000261",
+                                 "conflict_id":  null,
+                                 "spot_id":  "00000000-0000-4000-8000-000000000042",
+                                 "alert_type":  "SENSOR_FAILURE",
+                                 "severity":  "HIGH",
+                                 "evidence_ref":  "demo://health-events/261",
+                                 "created_at":  "2026-11-09T08:05:00Z",
+                                 "acknowledged_at":  null,
+                                 "closed_at":  null,
+                                 "status":  "OPEN"
+                             }
+                         ],
+    "capacity_snapshots":  [
+                               {
+                                   "snapshot_id":  "00000000-0000-4000-8000-000000000291",
+                                   "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                   "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                   "occupied_count":  1,
+                                   "total_count":  2,
+                                   "percentage":  50,
+                                   "observed_at":  "2026-11-09T07:55:00Z"
+                               },
+                               {
+                                   "snapshot_id":  "00000000-0000-4000-8000-000000000292",
+                                   "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                   "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                   "occupied_count":  1,
+                                   "total_count":  2,
+                                   "percentage":  50,
+                                   "observed_at":  "2026-11-09T07:55:00Z"
+                               },
+                               {
+                                   "snapshot_id":  "00000000-0000-4000-8000-000000000293",
+                                   "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                   "zone_id":  null,
+                                   "occupied_count":  2,
+                                   "total_count":  4,
+                                   "percentage":  50,
+                                   "observed_at":  "2026-11-09T07:55:00Z"
+                               }
+                           ],
+    "occupancy_reports":  [
+                              {
+                                  "report_id":  "00000000-0000-4000-8000-000000000301",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "interval_start":  "2026-11-09T07:00:00Z",
+                                  "interval_end":  "2026-11-09T13:00:00Z",
+                                  "totals":  {
+                                                 "peak_occupancy_percentage":  50,
+                                                 "alerts_count":  2
+                                             },
+                                  "generated_at":  "2026-11-09T13:05:00Z",
+                                  "status":  "GENERATED"
+                              }
+                          ]
 }

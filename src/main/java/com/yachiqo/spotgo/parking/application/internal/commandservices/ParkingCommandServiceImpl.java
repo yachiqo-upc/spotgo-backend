@@ -125,7 +125,7 @@ public class ParkingCommandServiceImpl {
  }
  @Transactional
  public Reservation reserve(SpotgoUserPrincipal actor,UUID spotId,UUID vehicleId,Instant start,Instant end) {
-  var profile=profiles.driver(actor);usableInterval(start,end);
+  var profile=profiles.driver(actor);payments.lockProfile(profile.getId());payments.requireNoDebt(profile.getId());usableInterval(start,end);
   if(start.isBefore(clock.instant())) throw new IllegalArgumentException("No se puede reservar en el pasado");
   var vehicle=vehicles.lock(vehicleId).orElseThrow(()->missing("Vehiculo"));
   profiles.requireOwner(actor,vehicle);
@@ -135,7 +135,7 @@ public class ParkingCommandServiceImpl {
   if(reservations.overlappingVehicle(vehicleId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("El vehiculo ya tiene una reserva superpuesta");
   if(!sessions.openSpot(spotId).isEmpty() || !guests.openSpot(spotId).isEmpty()) throw conflict("El espacio tiene una estadia abierta");
   var rules=spot.getZone().getTenant().getRules();
-  return reservations.saveAndFlush(new Reservation(spot,profile,vehicle,start,end,ParkingTariffs.price(rules,start,end),now,ParkingTariffs.lockMinutes(rules)));
+  return reservations.saveAndFlush(new Reservation(spot,profile,vehicle,start,end,payments.reservationPrice(profile.getId(),ParkingTariffs.price(rules,start,end),now),now,ParkingTariffs.lockMinutes(rules)));
  }
  public void reservationAccess(SpotgoUserPrincipal actor,Reservation r) {
   if(actor!=null && actor.getRole()==UserRole.DRIVER && actor.getAccountId().equals(r.getProfile().getAccountId())) return;
@@ -143,14 +143,17 @@ public class ParkingCommandServiceImpl {
  }
  @Transactional
  public Reservation cancel(SpotgoUserPrincipal actor,UUID id) {
+  var current=reservations.findById(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,current);payments.lockProfile(current.getProfileId());
   var r=reservations.lock(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,r);
-  r.expire(clock.instant());r.cancel();return reservations.saveAndFlush(r);
+  r.expire(clock.instant());if(r.getStatus()!=ReservationStatus.CANCELLED)r.cancel();payments.cancelled(r);return reservations.saveAndFlush(r);
  }
  @Transactional
  public Reservation confirm(SpotgoUserPrincipal actor,UUID id,UUID payment) {
+  var current=reservations.findById(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,current);payments.lockProfile(current.getProfileId());
   var r=reservations.lock(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,r);
+  if(r.getStatus()==ReservationStatus.RESERVED && payment.equals(r.getPaymentId()))return r;
   if(!r.blocks(clock.instant()) || r.getStatus()!=ReservationStatus.PENDING_PAYMENT) throw conflict("Bloqueo vencido o reserva no pendiente");
-  if(reservations.existsByPaymentId(payment)) throw conflict("El pago ya fue utilizado");
+  if(!payment.equals(r.getPaymentId())) throw conflict("El pago no es la operacion asociada a esta reserva");
   payments.requireApproved(payment,r.getProfileId(),r.getAmount());r.confirm(payment,clock.instant());return reservations.saveAndFlush(r);
  }
  @Transactional
@@ -163,6 +166,7 @@ public class ParkingCommandServiceImpl {
  public ParkingSession enter(SpotgoUserPrincipal actor,UUID reservation) {
   // Same lock order as reservation creation: vehicle -> spot -> reservation.
   var current=reservations.findById(reservation).orElseThrow(()->missing("Reserva"));admin(actor,current.getTenantId());
+  payments.lockProfile(current.getProfileId());
   vehicles.lock(current.getVehicleId()).orElseThrow(()->missing("Vehiculo"));
   var spot=lockSpot(current.getSpotId());var r=reservations.lock(reservation).orElseThrow(()->missing("Reserva"));operational(spot);
   var now=clock.instant();
@@ -173,11 +177,12 @@ public class ParkingCommandServiceImpl {
  }
  @Transactional
  public ParkingSession exit(SpotgoUserPrincipal actor,UUID id) {
+  var current=sessions.findById(id).orElseThrow(()->missing("Sesion"));admin(actor,current.getReservation().getTenantId());payments.lockProfile(current.getProfileId());
   var s=sessions.lock(id).orElseThrow(()->missing("Sesion"));admin(actor,s.getReservation().getTenantId());
   var r=reservations.lock(s.getReservationId()).orElseThrow(()->missing("Reserva"));
   var now=clock.instant();s.close(now);
   boolean exceeded=now.isAfter(r.getEndAt().plusSeconds(ParkingTariffs.toleranceMinutes(r.getTenant().getRules())*60));
-  r.complete(exceeded);return sessions.saveAndFlush(s);
+  r.complete(exceeded);sessions.saveAndFlush(s);payments.completed(r,s);return s;
  }
  @Transactional
  public GuestParkingSession guestEnter(SpotgoUserPrincipal actor,UUID spotId,String plate,PhysicalPaymentMethod method) {

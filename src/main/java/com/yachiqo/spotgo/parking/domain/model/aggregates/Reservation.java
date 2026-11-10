@@ -20,8 +20,10 @@ public class Reservation {
  private com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile profile;
  @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="vehicle_id",nullable=false,updatable=false)
  private com.yachiqo.spotgo.profiles.domain.model.aggregates.Vehicle vehicle;
- // Billing pendiente: UUID de referencia, validado contra digital_payments antes de confirmar.
+ // UUID exposed by the API; the read-only association enforces the payment FK.
  @Column(name="payment_id",unique=true) private UUID paymentId;
+ @OneToOne(fetch=FetchType.LAZY) @JoinColumn(name="payment_id",insertable=false,updatable=false,unique=true)
+ private com.yachiqo.spotgo.billing.domain.model.aggregates.DigitalPayment payment;
  @Column(name="start_at",nullable=false) private Instant startAt;
  @Column(name="end_at",nullable=false) private Instant endAt;
  @Column(nullable=false,precision=12,scale=2) private BigDecimal amount;
@@ -54,6 +56,10 @@ public class Reservation {
   if(status==ReservationStatus.PENDING_PAYMENT && !now.isBefore(lockExpiresAt)) {
    status=ReservationStatus.CANCELLED;lockStatus=LockStatus.EXPIRED;
   }
+ }
+ public void attachPayment(UUID payment) {
+  if(status!=ReservationStatus.PENDING_PAYMENT || (paymentId!=null&&!paymentId.equals(payment))) throw new IllegalArgumentException("La reserva ya tiene una operacion de pago");
+  paymentId=Objects.requireNonNull(payment);
  }
  public void confirm(UUID payment,Instant now) {
   if(status!=ReservationStatus.PENDING_PAYMENT || !blocks(now)) throw new IllegalArgumentException("El bloqueo de la reserva ya no esta vigente");

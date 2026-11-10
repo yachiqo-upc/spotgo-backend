@@ -99,7 +99,7 @@ class DbSeederTest {
     }
 
     @Test void fixtureColumnsMatchAll31TablesInRootReadme() throws Exception {
-        String readme = Files.readString(Path.of("..", "README.md"));
+        String readme = Files.readString(Path.of("..", "README DIAGRAM.md"));
         var sections = Pattern.compile("(?ms)^### ([a-z_]+)\\r?\\n(.*?)(?=^### |^## |\\z)").matcher(readme);
         int checked = 0;
         while (sections.find()) {
@@ -152,5 +152,28 @@ class DbSeederTest {
             assertNotEquals(alert.get("health_event_id").isNull(), alert.get("conflict_id").isNull());
         for (JsonNode subscription : fixtures.get("subscriptions"))
             assertNotEquals(subscription.get("profile_id").isNull(), subscription.get("tenant_id").isNull());
+    }
+    @Test void subscriptionAndBillingFixturesFollowTheApprovedPaymentFlow() throws Exception {
+        JsonNode fixtures;
+        try (var input=new ClassPathResource("db.json").getInputStream()) { fixtures=new ObjectMapper().readTree(input); }
+        var payments=new java.util.HashMap<String,JsonNode>();
+        for(var payment:fixtures.get("digital_payments"))payments.put(payment.path("payment_id").asText(),payment);
+        for(var subscription:fixtures.get("subscriptions")){
+            assertFalse(subscription.path("payment_id").isNull());
+            var payment=payments.get(subscription.path("payment_id").asText());assertNotNull(payment);
+            assertEquals("APPROVED",payment.path("status").asText());assertEquals("SUBSCRIPTION",payment.path("operation_type").asText());
+            assertEquals(payment.path("approved_at").asText(),subscription.path("start_at").asText());
+            assertTrue(subscription.path("plan").path("billing_period_months").asInt()>0);
+            assertFalse(subscription.has("billing_period_months"),"La duracion pertenece al JSON plan, no a otra columna");
+            assertEquals(0,subscription.path("plan").path("price").decimalValue().compareTo(payment.path("amount").decimalValue()));
+        }
+        for(var attempt:fixtures.get("payment_attempts")){
+            var payment=payments.get(attempt.path("payment_id").asText());
+            assertFalse(java.time.Instant.parse(attempt.path("started_at").asText()).isBefore(java.time.Instant.parse(payment.path("created_at").asText())));
+        }
+        for(var document:fixtures.get("billing_documents")){
+            assertEquals("DNI",document.path("tax_data").path("document_type").asText());
+            assertTrue(document.path("tax_data").path("document_number").asText().matches("[0-9]{8}"));
+        }
     }
 }

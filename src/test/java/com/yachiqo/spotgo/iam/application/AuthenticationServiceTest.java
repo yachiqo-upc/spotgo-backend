@@ -52,7 +52,7 @@ class AuthenticationServiceTest {
     private final ObjectMapper json = new ObjectMapper();
 
     @BeforeEach void clean() {
-        for (String table : List.of("parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "vehicles", "profiles", "audit_entries", "sessions",
+        for (String table : List.of("billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "payment_tokens", "vehicles", "profiles", "audit_entries", "sessions",
                 "credentials", "role_assignments", "passwordResetCodes", "accounts", "tenants"))
             jdbc.update("DELETE FROM " + table);
         reset(notifications);

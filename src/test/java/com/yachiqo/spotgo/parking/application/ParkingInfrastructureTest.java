@@ -66,9 +66,9 @@ class ParkingInfrastructureTest {
  AuthenticatedUserResource register(String name){return iam.signUp(name+"@example.com","Password123!","TEST");}
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-  jdbc.execute("DROP TABLE IF EXISTS digital_payments CASCADE");
-  for(String table:List.of("parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
-   "driver_classifications","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants")) jdbc.update("DELETE FROM "+table);
+
+  for(String table:List.of("billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
+   "driver_classifications","digital_payments","payment_tokens","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants")) jdbc.update("DELETE FROM "+table);
   superAuth=register("super");
   var sr=roles.findByAccountId(superAuth.accountId()).orElseThrow();sr.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(sr);
   superAdmin=principal(superAuth);
@@ -88,8 +88,9 @@ class ParkingInfrastructureTest {
  }
  Reservation reserve(){return commands.reserve(driver,spot.getId(),vehicle.getId(),now.get().plusSeconds(60),now.get().plusSeconds(5460));}
  void payment(UUID id,UUID profile,BigDecimal amount,String status){
-  jdbc.execute("CREATE TABLE IF NOT EXISTS digital_payments(payment_id UUID PRIMARY KEY,profile_id UUID NOT NULL,amount DECIMAL(12,2) NOT NULL,status VARCHAR NOT NULL,operation_type VARCHAR NOT NULL)");
-  jdbc.update("INSERT INTO digital_payments VALUES (?,?,?,?,?)",id,profile,amount,status,"RESERVATION");
+
+    jdbc.update("INSERT INTO digital_payments(payment_id,profile_id,amount,status,operation_type,currency,idempotency_key,request_hash,first_seen_at,last_seen_at,result_reference,created_at) VALUES (?,?,?,?,?,'PEN',?,'fixture',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'fixture',CURRENT_TIMESTAMP)",id,profile,amount,status,"RESERVATION",id.toString());
+  jdbc.update("UPDATE reservations SET payment_id=? WHERE payment_id is null AND profile_id=? AND status='PENDING_PAYMENT'",id,vehicle.getProfileId());
  }
  HttpResponse<String> request(String method,String path,Object body,String token) throws Exception {
   var builder=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");
@@ -144,16 +145,16 @@ class ParkingInfrastructureTest {
  }
  @Test void cannotConfirmMissingBillingOrUnapprovedPayment(){
   var r=reserve();var id=UUID.randomUUID();
-  assertEquals(503,assertThrows(ParkingException.class,()->commands.confirm(driver,r.getId(),id)).getStatusCode().value());
-  payment(id,r.getProfileId(),r.getAmount(),"REJECTED");
   assertEquals(409,assertThrows(ParkingException.class,()->commands.confirm(driver,r.getId(),id)).getStatusCode().value());
+  payment(id,r.getProfileId(),r.getAmount(),"REJECTED");
+  assertEquals(409,assertThrows(com.yachiqo.spotgo.billing.application.BillingException.class,()->commands.confirm(driver,r.getId(),id)).getStatusCode().value());
   assertEquals(ReservationStatus.PENDING_PAYMENT,reservations.findById(r.getId()).orElseThrow().getStatus());
  }
  @Test void confirmationRequiresMatchingOwnerAndAmount(){
   var r=reserve();UUID id=UUID.randomUUID();payment(id,otherVehicle.getProfileId(),r.getAmount(),"APPROVED");
-  assertThrows(ParkingException.class,()->commands.confirm(driver,r.getId(),id));
+  assertThrows(com.yachiqo.spotgo.billing.application.BillingException.class,()->commands.confirm(driver,r.getId(),id));
   jdbc.update("UPDATE digital_payments SET profile_id=?,amount=1 WHERE payment_id=?",r.getProfileId(),id);
-  assertThrows(ParkingException.class,()->commands.confirm(driver,r.getId(),id));
+  assertThrows(com.yachiqo.spotgo.billing.application.BillingException.class,()->commands.confirm(driver,r.getId(),id));
  }
  @Test void reservationPaymentAndParkingEntryExitFlow(){
   var r=reserve();UUID id=UUID.randomUUID();payment(id,r.getProfileId(),r.getAmount(),"APPROVED");
@@ -163,10 +164,11 @@ class ParkingInfrastructureTest {
   now.set(r.getEndAt());var done=commands.exit(admin,s.getId());assertEquals(ParkingSessionStatus.COMPLETED,done.getStatus());
   assertEquals(ReservationStatus.COMPLETED,reservations.findById(r.getId()).orElseThrow().getStatus());
  }
- @Test void overstayMarksReservationWithoutInventingBillingCharge(){
+ @Test void overstayMarksReservationAndCreatesBillingCharge(){
   var r=reserve();UUID id=UUID.randomUUID();payment(id,r.getProfileId(),r.getAmount(),"APPROVED");commands.confirm(driver,r.getId(),id);
   now.set(r.getStartAt());var s=commands.enter(admin,r.getId());now.set(r.getEndAt().plusSeconds(301));commands.exit(admin,s.getId());
   assertEquals(ReservationStatus.OVERSTAYED,reservations.findById(r.getId()).orElseThrow().getStatus());
+  assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM additional_charges WHERE reservation_id=?",Integer.class,r.getId()));
  }
  @Test void cancellationReleasesSpotAndOnlyOwnerOrTenantAdminCanCancel(){
   var r=reserve();assertThrows(org.springframework.security.access.AccessDeniedException.class,()->commands.cancel(other,r.getId()));
