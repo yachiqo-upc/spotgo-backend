@@ -1,361 +1,205 @@
 package com.yachiqo.spotgo.parking.application.internal.commandservices;
-
-import com.yachiqo.spotgo.billing.domain.model.aggregates.Receipt;
-import com.yachiqo.spotgo.billing.domain.model.valueobjects.ReceiptStatus;
-import com.yachiqo.spotgo.billing.domain.repositories.ClientPlanRepository;
-import com.yachiqo.spotgo.billing.domain.repositories.ReceiptRepository;
-import com.yachiqo.spotgo.billing.domain.repositories.SubscriptionRepository;
-import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.UserAccountRepository;
-import com.yachiqo.spotgo.monitoring.application.EmployeeSpotAssignmentService;
-import com.yachiqo.spotgo.parking.application.ParkingOccupancyService;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.Blueprint;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.ClientReport;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.DetectedSpot;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.Parking;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.Reservation;
-import com.yachiqo.spotgo.parking.domain.model.commands.CreateBlueprintCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.CreateClientReportCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.CreateDetectedSpotCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.CreateParkingCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.DeleteBlueprintCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.ReserveSpotCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateParkingRatingCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateParkingCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateBlueprintCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateClientReportStatusCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateReservationCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateSpotStatusCommand;
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.SpotStatus;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.DetectedSpotRepository;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.BlueprintRepository;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ClientReportRepository;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-import java.util.UUID;
+import com.yachiqo.spotgo.parking.application.*;
+import com.yachiqo.spotgo.parking.domain.model.aggregates.*;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.*;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.*;
+import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
+import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
+import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
+import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.VehicleRepository;
+import com.yachiqo.spotgo.profiles.domain.model.valueobjects.VehicleStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import java.time.*;
+import java.util.*;
+import java.math.BigDecimal;
 
-@Service
-@Transactional
-public class ParkingCommandServiceImpl implements ParkingCommandService {
-
-    private final ParkingRepository parkingRepository;
-    private final BlueprintRepository blueprintRepository;
-    private final DetectedSpotRepository detectedSpotRepository;
-    private final ReservationRepository reservationRepository;
-    private final ClientReportRepository clientReportRepository;
-    private final UserAccountRepository userAccountRepository;
-    private final ParkingOccupancyService parkingOccupancyService;
-    private final EmployeeSpotAssignmentService employeeSpotAssignmentService;
-    private final ReceiptRepository receiptRepository;
-    private final SubscriptionRepository subscriptionRepository;
-    private final ClientPlanRepository clientPlanRepository;
-    private final Clock clock;
-
-    public ParkingCommandServiceImpl(ParkingRepository parkingRepository, BlueprintRepository blueprintRepository, DetectedSpotRepository detectedSpotRepository, ReservationRepository reservationRepository, ClientReportRepository clientReportRepository, UserAccountRepository userAccountRepository, ParkingOccupancyService parkingOccupancyService, EmployeeSpotAssignmentService employeeSpotAssignmentService, ReceiptRepository receiptRepository, SubscriptionRepository subscriptionRepository, ClientPlanRepository clientPlanRepository, Clock clock) {
-        this.parkingRepository = parkingRepository;
-        this.blueprintRepository = blueprintRepository;
-        this.detectedSpotRepository = detectedSpotRepository;
-        this.reservationRepository = reservationRepository;
-        this.clientReportRepository = clientReportRepository;
-        this.userAccountRepository = userAccountRepository;
-        this.parkingOccupancyService = parkingOccupancyService;
-        this.employeeSpotAssignmentService = employeeSpotAssignmentService;
-        this.receiptRepository = receiptRepository;
-        this.subscriptionRepository = subscriptionRepository;
-        this.clientPlanRepository = clientPlanRepository;
-        this.clock = clock;
-    }
-
-    @Override
-    public Optional<Parking> handle(CreateParkingCommand command) {
-        var parking = new Parking(
-                command.adminId(), command.name(), command.address(), command.city(),
-                command.totalSpaces(), command.availableSpaces(), command.totalFloors(),
-                command.averageOccupancy(), command.occupancyTrendPercent(), command.peakHour(),
-                command.totalRevenue(), command.systemStatus(), command.rating(), command.pricePerHour(),
-                command.revenueTrendPercent(), command.totalCapacity(), command.efficiencyIndex());
-        return Optional.of(parkingRepository.save(parking));
-    }
-
-    @Override
-    public Optional<Blueprint> handle(CreateBlueprintCommand command) {
-        if (!parkingRepository.existsById(command.parkingId())) {
-            throw new IllegalArgumentException("Parking does not exist");
-        }
-        var blueprint = new Blueprint(command.adminId(), command.parkingId(), command.name(), command.dataUrl());
-        return Optional.of(blueprintRepository.save(blueprint));
-    }
-
-    @Override
-    public Optional<Blueprint> handle(UpdateBlueprintCommand command) {
-        var blueprintOpt = blueprintRepository.findById(command.blueprintId());
-        if (blueprintOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        var blueprint = blueprintOpt.get();
-        blueprint = new Blueprint(blueprint.getAdminId(), blueprint.getParkingId(), command.name(), command.dataUrl());
-        blueprint.setId(command.blueprintId());
-        return Optional.of(blueprintRepository.save(blueprint));
-    }
-
-    @Override
-    public Optional<DetectedSpot> handle(UpdateSpotStatusCommand command) {
-        var spot = detectedSpotRepository.findById(command.spotId());
-        if (spot.isEmpty()) return Optional.empty();
-        var detectedSpot = spot.get();
-        detectedSpot.updateStatus(command.status());
-        var savedSpot = detectedSpotRepository.save(detectedSpot);
-        parkingOccupancyService.reconcileParking(savedSpot.getParkingId(), LocalDateTime.now(clock));
-        return Optional.of(savedSpot);
-    }
-
-    @Override
-    public Optional<Reservation> handle(ReserveSpotCommand command) {
-        var parking = parkingRepository.findByIdForUpdate(command.parkingId())
-                .orElseThrow(() -> new IllegalArgumentException("Parking does not exist"));
-        var normalizedSpot = normalizeSpot(command.spot());
-        validateReservation(command.clientId(), command.parkingId(), normalizedSpot, command.startDate(), command.endDate(), null);
-        double baseAmount = calculateBaseAmount(parking.getPricePerHour(), command.startDate(), command.endDate());
-        double discountPercent = resolveDiscountPercent(command.clientId());
-        double amount = applyDiscount(baseAmount, discountPercent);
-        var reservation = new Reservation(
-                command.clientId(), command.parkingId(), generateReservationCode(), normalizedSpot,
-                command.startDate(), command.endDate(),
-                amount, baseAmount, command.rating());
-        var savedReservation = reservationRepository.save(reservation);
-        createReceiptForReservation(savedReservation, parking.getName());
-        registerReservationSavings(command.clientId(), discountPercent, baseAmount, amount);
-        parkingOccupancyService.reconcileParking(command.parkingId(), LocalDateTime.now(clock));
-        return Optional.of(savedReservation);
-    }
-
-    @Override
-    public Optional<Parking> handle(UpdateParkingRatingCommand command) {
-        var parkingOpt = parkingRepository.findById(command.parkingId());
-        if (parkingOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        var parking = parkingOpt.get();
-        parking.updateRating(command.rating());
-        return Optional.of(parkingRepository.save(parking));
-    }
-
-    @Override
-    public Optional<DetectedSpot> handle(CreateDetectedSpotCommand command) {
-        var blueprint = blueprintRepository.findById(command.blueprintId())
-                .orElseThrow(() -> new IllegalArgumentException("Blueprint does not exist"));
-        if (!blueprint.getParkingId().equals(command.parkingId())) {
-            throw new IllegalArgumentException("Blueprint does not belong to the provided parking");
-        }
-        var spot = new DetectedSpot(
-                command.localId(), command.blueprintId(), command.parkingId(),
-                command.row(), command.col(),
-                command.xPct(), command.yPct(), command.wPct(), command.hPct(),
-                command.status());
-        return Optional.of(detectedSpotRepository.save(spot));
-    }
-
-    @Override
-    public void handle(DeleteBlueprintCommand command) {
-        if (!detectedSpotRepository.findByBlueprintId(command.blueprintId()).isEmpty()) {
-            throw new IllegalStateException("Cannot delete blueprint with detected spots");
-        }
-        blueprintRepository.deleteById(command.blueprintId());
-    }
-
-    @Override
-    public Optional<ClientReport> handle(CreateClientReportCommand command) {
-        var reservation = reservationRepository.findById(command.reservationId())
-                .orElseThrow(() -> new IllegalArgumentException("Reservation does not exist"));
-        if (!reservation.getClientId().equals(command.clientId()) || !reservation.getParkingId().equals(command.parkingId())) {
-            throw new IllegalArgumentException("Report does not match reservation ownership");
-        }
-        var report = new ClientReport(
-                command.clientId(), command.parkingId(), command.reservationId(),
-                generateReportCode(), command.type(), parseDateTime(command.date()));
-        return Optional.of(clientReportRepository.save(report));
-    }
-
-    @Override
-    public Optional<ClientReport> handle(UpdateClientReportStatusCommand command) {
-        var reportOpt = clientReportRepository.findById(command.reportId());
-        if (reportOpt.isEmpty()) return Optional.empty();
-        var report = reportOpt.get();
-        report.updateStatus(command.status());
-        return Optional.of(clientReportRepository.save(report));
-    }
-
-    @Override
-    public Optional<Parking> handle(UpdateParkingCommand command) {
-        var parkingOpt = parkingRepository.findById(command.parkingId());
-        if (parkingOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        var parking = parkingOpt.get();
-        parking.updateStats(command.totalSpaces(), command.availableSpaces(), command.totalFloors(), command.city(), command.rating(), command.pricePerHour());
-        return Optional.of(parkingRepository.save(parking));
-    }
-
-    @Override
-    public Optional<Reservation> handle(UpdateReservationCommand command) {
-        var reservationOpt = reservationRepository.findById(command.reservationId());
-        if (reservationOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        var reservation = reservationOpt.get();
-        parkingRepository.findByIdForUpdate(reservation.getParkingId())
-                .orElseThrow(() -> new IllegalArgumentException("Parking does not exist"));
-        validateReservation(
-                reservation.getClientId(),
-                reservation.getParkingId(),
-                reservation.getSpot(),
-                reservation.getStartDate(),
-                command.endDate() == null ? reservation.getEndDate() : command.endDate(),
-                reservation.getId());
-        reservation.updateDetails(command.endDate(), command.amount(), command.baseAmount(), command.rating(), command.status());
-        if (command.endDate() != null) {
-            var parking = parkingRepository.findById(reservation.getParkingId())
-                    .orElseThrow(() -> new IllegalArgumentException("Parking does not exist"));
-            double recalculatedBase = calculateBaseAmount(parking.getPricePerHour(), reservation.getStartDate(), reservation.getEndDate());
-            double amount = command.amount() != null ? command.amount() : applyDiscount(recalculatedBase, resolveDiscountPercent(reservation.getClientId()));
-            double baseAmount = command.baseAmount() != null ? command.baseAmount() : recalculatedBase;
-            reservation.updatePricing(amount, baseAmount);
-        }
-        var savedReservation = reservationRepository.save(reservation);
-        parkingOccupancyService.reconcileParking(reservation.getParkingId(), LocalDateTime.now(clock));
-        return Optional.of(savedReservation);
-    }
-
-    private void validateReservation(String clientId, String parkingId, String spot, LocalDateTime startDate, LocalDateTime endDate, String reservationIdToIgnore) {
-        if (!userAccountRepository.existsById(clientId)) {
-            throw new IllegalArgumentException("Client does not exist");
-        }
-        if (!parkingRepository.existsById(parkingId)) {
-            throw new IllegalArgumentException("Parking does not exist");
-        }
-        if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
-            throw new IllegalArgumentException("Reservation time range is invalid");
-        }
-        var detectedSpot = resolveDetectedSpot(parkingId, spot);
-        if (detectedSpot == null) {
-            throw new IllegalArgumentException("Spot does not exist in the selected parking");
-        }
-        if (detectedSpot.getStatus() == SpotStatus.MAINTENANCE) {
-            throw new IllegalArgumentException("Spot is under maintenance");
-        }
-
-        var conflictingReservation = reservationRepository.findByParkingIdAndSpot(parkingId, spot).stream()
-                .filter(existing -> reservationIdToIgnore == null || !existing.getId().equals(reservationIdToIgnore))
-                .filter(existing -> existing.getStatus() == ReservationStatus.ACTIVE)
-                .anyMatch(existing -> overlaps(startDate, endDate, existing.getStartDate(), existing.getEndDate()));
-        if (conflictingReservation) {
-            throw new IllegalArgumentException("Spot is not available for the selected time range");
-        }
-        if (employeeSpotAssignmentService.isSpotReservedForEmployee(parkingId, spot, startDate, endDate)) {
-            throw new IllegalArgumentException("Spot is reserved for an on-duty employee during the selected time range");
-        }
-    }
-
-    private boolean overlaps(LocalDateTime startDate, LocalDateTime endDate, LocalDateTime otherStartDate, LocalDateTime otherEndDate) {
-        return startDate.isBefore(otherEndDate) && endDate.isAfter(otherStartDate);
-    }
-
-    private String generateReportCode() {
-        String code;
-        do {
-            code = "RPT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
-        } while (clientReportRepository.existsByCode(code));
-        return code;
-    }
-
-    private Instant parseDateTime(String value) {
-        return Instant.parse(value);
-    }
-
-    private DetectedSpot resolveDetectedSpot(String parkingId, String spotCode) {
-        var normalized = normalizeSpot(spotCode);
-        int row = normalized.charAt(0) - 'A';
-        int col = Integer.parseInt(normalized.substring(1)) - 1;
-        return detectedSpotRepository.findByParkingIdAndRowAndCol(parkingId, row, col).stream().findFirst().orElse(null);
-    }
-
-    private String normalizeSpot(String spotCode) {
-        if (spotCode == null) {
-            throw new IllegalArgumentException("Spot is required");
-        }
-        var normalized = spotCode.trim().toUpperCase();
-        if (!normalized.matches("[A-Z]+\\d+")) {
-            throw new IllegalArgumentException("Spot code is invalid");
-        }
-        return normalized;
-    }
-
-    private double calculateBaseAmount(Double pricePerHour, LocalDateTime startDate, LocalDateTime endDate) {
-        double hourlyRate = pricePerHour == null ? 0.0 : pricePerHour;
-        long minutes = Math.max(1, ChronoUnit.MINUTES.between(startDate, endDate));
-        return Math.round(((minutes / 60.0) * hourlyRate) * 100.0) / 100.0;
-    }
-
-    private double resolveDiscountPercent(String clientId) {
-        return subscriptionRepository.findAllByClientId(clientId).stream()
-                .findFirst()
-                .flatMap(subscription -> clientPlanRepository.findById(subscription.getPlanId()))
-                .map(plan -> plan.getDiscountPercent() == null ? 0.0 : plan.getDiscountPercent())
-                .orElse(0.0);
-    }
-
-    private double applyDiscount(double baseAmount, double discountPercent) {
-        double discounted = baseAmount * (1 - (Math.max(0.0, discountPercent) / 100.0));
-        return Math.round(discounted * 100.0) / 100.0;
-    }
-
-    private void createReceiptForReservation(Reservation reservation, String parkingName) {
-        if (!receiptRepository.findAllByReservationId(reservation.getId().toString()).isEmpty()) {
-            return;
-        }
-        long totalMinutes = Math.max(1, ChronoUnit.MINUTES.between(reservation.getStartDate(), reservation.getEndDate()));
-        int hours = (int) (totalMinutes / 60);
-        int minutes = (int) (totalMinutes % 60);
-        var receipt = new Receipt(
-                reservation.getClientId(),
-                reservation.getId().toString(),
-                generateInvoiceNumber(),
-                parkingName,
-                LocalDate.now(clock).toString(),
-                hours,
-                minutes,
-                "Simulated",
-                reservation.getAmount(),
-                ReceiptStatus.PAID);
-        receiptRepository.save(receipt);
-    }
-
-    private void registerReservationSavings(String clientId, double discountPercent, double baseAmount, double amount) {
-        subscriptionRepository.findAllByClientId(clientId).stream().findFirst().ifPresent(subscription -> {
-            double savings = discountPercent <= 0 ? 0.0 : Math.max(0.0, baseAmount - amount);
-            subscription.registerReservation(currentYearMonth(), savings);
-            subscriptionRepository.save(subscription);
-        });
-    }
-
-    private String currentYearMonth() {
-        var today = LocalDate.now(clock);
-        return "%d-%02d".formatted(today.getYear(), today.getMonthValue());
-    }
-
-    private String generateReservationCode() {
-        return "SPG-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-    }
-
-    private String generateInvoiceNumber() {
-        return "INV-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
-    }
+@Service @Transactional(readOnly=true)
+public class ParkingCommandServiceImpl {
+ private final TenantRepository tenants;
+ private final ParkingZoneRepository zones;
+ private final ParkingSpotRepository spots;
+ private final FloorPlanRepository plans;
+ private final DigitalParkingMapRepository maps;
+ private final ReservationRepository reservations;
+ private final ParkingSessionRepository sessions;
+ private final GuestParkingSessionRepository guests;
+ private final VehicleRepository vehicles;
+ private final ProfilesManagementService profiles;
+ private final ParkingPaymentGateway payments;
+ private final ParkingOccupancyGateway occupancy;
+ private final Clock clock;
+ public ParkingCommandServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,
+  FloorPlanRepository plans,DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,
+  GuestParkingSessionRepository guests,VehicleRepository vehicles,ProfilesManagementService profiles,ParkingPaymentGateway payments,Clock clock,ParkingOccupancyGateway occupancy) {
+  this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;
+  this.sessions=sessions;this.guests=guests;this.vehicles=vehicles;this.profiles=profiles;this.payments=payments;this.clock=clock;this.occupancy=occupancy;
+ }
+ public static ParkingException missing(String resource) {return new ParkingException(HttpStatus.NOT_FOUND,resource+" inexistente");}
+ public static ParkingException conflict(String message) {return new ParkingException(HttpStatus.CONFLICT,message);}
+ public void admin(SpotgoUserPrincipal actor,UUID tenant) {
+  if(actor==null || actor.getRole()!=UserRole.PARKING_ADMIN || !tenant.equals(actor.getTenantId()))
+   throw new AccessDeniedException("No administras este tenant");
+ }
+ public Tenant tenant(UUID id) {return tenants.findById(id).orElseThrow(()->missing("Tenant"));}
+ public ParkingZone zone(UUID id) {return zones.findById(id).orElseThrow(()->missing("Zona"));}
+ public ParkingSpot spot(UUID id) {return spots.findById(id).orElseThrow(()->missing("Espacio"));}
+ public FloorPlan plan(UUID id) {return plans.findById(id).orElseThrow(()->missing("Croquis"));}
+ private void operational(ParkingSpot spot) {
+  if(spot.getOperationalStatus()!=OperationalStatus.ACTIVE || spot.getZone().getStatus()!=ZoneStatus.ACTIVE ||
+   spot.getZone().getTenant().getStatus()!=TenantStatus.ACTIVE) throw conflict("Tenant, zona y espacio deben estar habilitados");
+ }
+ private ParkingSpot lockSpot(UUID id) {return spots.lock(id).orElseThrow(()->missing("Espacio"));}
+ private void usableInterval(Instant from,Instant to) {
+  com.yachiqo.spotgo.parking.domain.model.valueobjects.ParkingValues.interval(from,to);
+  if(Duration.between(from,to).compareTo(Duration.ofDays(365))>0) throw new IllegalArgumentException("El intervalo maximo es 365 dias");
+ }
+ @Transactional
+ public Tenant createTenant(SpotgoUserPrincipal actor,String name,String address,Map<String,Object> coordinates,Map<String,Object> contact,Map<String,Object> rules) {
+  if(actor==null || actor.getRole()!=UserRole.SUPER_ADMIN) throw new AccessDeniedException("Solo SUPER_ADMIN registra tenants");
+  validateCoordinates(coordinates);ParkingTariffs.validate(rules);
+  return tenants.saveAndFlush(new Tenant(name,address,coordinates,contact,rules));
+ }
+ @Transactional
+ public Tenant updateTenant(SpotgoUserPrincipal actor,UUID id,String name,String address,Map<String,Object> coordinates,Map<String,Object> contact,Map<String,Object> rules,TenantStatus status) {
+  admin(actor,id);var t=tenants.lock(id).orElseThrow(()->missing("Tenant"));
+  validateCoordinates(coordinates);ParkingTariffs.validate(rules);t.update(name,address,coordinates,contact,rules,status);return tenants.saveAndFlush(t);
+ }
+ private void validateCoordinates(Map<String,Object> coordinates) {
+  try {
+   double lat=Double.parseDouble(coordinates.get("latitude").toString()),lon=Double.parseDouble(coordinates.get("longitude").toString());
+   if(!Double.isFinite(lat)||!Double.isFinite(lon)||lat < -90||lat>90||lon < -180||lon>180) throw new IllegalArgumentException();
+  } catch(Exception e) {throw new IllegalArgumentException("coordinates requiere latitude [-90,90] y longitude [-180,180] numericos");}
+ }
+ @Transactional
+ public ParkingZone createZone(SpotgoUserPrincipal actor,UUID tenant,String name,Map<String,Object> location,String color) {
+  admin(actor,tenant);return zones.saveAndFlush(new ParkingZone(tenant(tenant),name,location,color));
+ }
+ @Transactional
+ public ParkingZone updateZone(SpotgoUserPrincipal actor,UUID id,String name,Map<String,Object> location,String color,ZoneStatus status) {
+  var z=zones.lock(id).orElseThrow(()->missing("Zona"));admin(actor,z.getTenantId());z.update(name,location,color,status);return zones.saveAndFlush(z);
+ }
+ @Transactional
+ public ParkingSpot createSpot(SpotgoUserPrincipal actor,UUID zone,String code,String type,Map<String,Object> features) {
+  var z=zone(zone);admin(actor,z.getTenantId());return spots.saveAndFlush(new ParkingSpot(z,code,type,features));
+ }
+ @Transactional
+ public ParkingSpot updateSpot(SpotgoUserPrincipal actor,UUID id,String code,String type,Map<String,Object> features,OperationalStatus status) {
+  var s=lockSpot(id);admin(actor,s.getTenantId());s.update(code,type,features,status);return spots.saveAndFlush(s);
+ }
+ @Transactional
+ public FloorPlan createPlan(SpotgoUserPrincipal actor,UUID zone,int version,String reference) {
+  var z=zones.lock(zone).orElseThrow(()->missing("Zona"));admin(actor,z.getTenantId());
+  if(plans.byZone(zone).stream().anyMatch(p->p.getVersion()==version)) throw conflict("La version del croquis ya existe en la zona");
+  return plans.saveAndFlush(new FloorPlan(z,version,reference));
+ }
+ @Transactional
+ public FloorPlan publishPlan(SpotgoUserPrincipal actor,UUID id,boolean archive) {
+  var p=plans.lock(id).orElseThrow(()->missing("Croquis"));admin(actor,p.getZone().getTenantId());
+  if(archive) {p.archive();maps.byPlan(id).forEach(DigitalParkingMap::archive);} else p.publish(clock.instant());
+  return plans.saveAndFlush(p);
+ }
+ @Transactional
+ public DigitalParkingMap createMap(SpotgoUserPrincipal actor,UUID plan,int version,List<Map<String,Object>> elements) {
+  var p=plans.lock(plan).orElseThrow(()->missing("Croquis"));admin(actor,p.getZone().getTenantId());
+  if(maps.byPlan(plan).stream().anyMatch(m->m.getVersion()==version)) throw conflict("La version del mapa ya existe");
+  // Validate spot references in the documented SPOT elements; positions remain renderer data.
+  for(var e:elements) if("SPOT".equals(e.get("type"))) {
+   if(e.get("spot_id")==null) throw new IllegalArgumentException("Un elemento SPOT requiere spot_id");
+   var s=spot(UUID.fromString(e.get("spot_id").toString()));
+   if(!s.getZoneId().equals(p.getZoneId())) throw conflict("El mapa referencia un espacio de otra zona");
+  }
+  return maps.saveAndFlush(new DigitalParkingMap(p,version,elements,clock.instant()));
+ }
+ @Transactional
+ public DigitalParkingMap publishMap(SpotgoUserPrincipal actor,UUID id,boolean archive) {
+  var selected=maps.findById(id).orElseThrow(()->missing("Mapa"));
+  var p=plans.lock(selected.getFloorPlanId()).orElseThrow(()->missing("Croquis"));admin(actor,p.getZone().getTenantId());
+  if(archive) selected.archive();
+  else {
+   if(p.getStatus()!=PublicationStatus.PUBLISHED) throw conflict("Publica primero el croquis");
+   maps.byPlan(p.getId()).forEach(DigitalParkingMap::archive);selected.publish();
+  }
+  return maps.saveAndFlush(selected);
+ }
+ @Transactional
+ public Reservation reserve(SpotgoUserPrincipal actor,UUID spotId,UUID vehicleId,Instant start,Instant end) {
+  var profile=profiles.driver(actor);payments.lockProfile(profile.getId());payments.requireNoDebt(profile.getId());usableInterval(start,end);
+  if(start.isBefore(clock.instant())) throw new IllegalArgumentException("No se puede reservar en el pasado");
+  var vehicle=vehicles.lock(vehicleId).orElseThrow(()->missing("Vehiculo"));
+  profiles.requireOwner(actor,vehicle);
+  if(vehicle.getStatus()!=VehicleStatus.ACTIVE) throw conflict("Vehiculo inactivo");
+  var spot=lockSpot(spotId);operational(spot);var now=clock.instant();
+  if(!start.isAfter(now)&&!occupancy.physicalOccupancy(spotId).equals("AVAILABLE"))throw conflict("No hay confirmacion fisica confiable de espacio libre para reservar ahora");
+  if(reservations.overlappingSpot(spotId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("El espacio ya tiene una reserva o bloqueo vigente");
+  if(reservations.overlappingVehicle(vehicleId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("El vehiculo ya tiene una reserva superpuesta");
+  if(!sessions.openSpot(spotId).isEmpty() || !guests.openSpot(spotId).isEmpty()) throw conflict("El espacio tiene una estadia abierta");
+  var rules=spot.getZone().getTenant().getRules();
+  return reservations.saveAndFlush(new Reservation(spot,profile,vehicle,start,end,payments.reservationPrice(profile.getId(),ParkingTariffs.price(rules,start,end),now),now,ParkingTariffs.lockMinutes(rules)));
+ }
+ public void reservationAccess(SpotgoUserPrincipal actor,Reservation r) {
+  if(actor!=null && actor.getRole()==UserRole.DRIVER && actor.getAccountId().equals(r.getProfile().getAccountId())) return;
+  admin(actor,r.getTenantId());
+ }
+ @Transactional
+ public Reservation cancel(SpotgoUserPrincipal actor,UUID id) {
+  var current=reservations.findById(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,current);payments.lockProfile(current.getProfileId());
+  var r=reservations.lock(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,r);
+  r.expire(clock.instant());if(r.getStatus()!=ReservationStatus.CANCELLED)r.cancel();payments.cancelled(r);return reservations.saveAndFlush(r);
+ }
+ @Transactional
+ public Reservation confirm(SpotgoUserPrincipal actor,UUID id,UUID payment) {
+  var current=reservations.findById(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,current);payments.lockProfile(current.getProfileId());
+  var r=reservations.lock(id).orElseThrow(()->missing("Reserva"));reservationAccess(actor,r);
+  if(r.getStatus()==ReservationStatus.RESERVED && payment.equals(r.getPaymentId()))return r;
+  if(!r.blocks(clock.instant()) || r.getStatus()!=ReservationStatus.PENDING_PAYMENT) throw conflict("Bloqueo vencido o reserva no pendiente");
+  if(!payment.equals(r.getPaymentId())) throw conflict("El pago no es la operacion asociada a esta reserva");
+  payments.requireApproved(payment,r.getProfileId(),r.getAmount());r.confirm(payment,clock.instant());return reservations.saveAndFlush(r);
+ }
+ @Transactional
+ public Reservation noShow(SpotgoUserPrincipal actor,UUID id) {
+  var r=reservations.lock(id).orElseThrow(()->missing("Reserva"));admin(actor,r.getTenantId());
+  if(clock.instant().isBefore(r.getEndAt())) throw conflict("Espera al fin del intervalo para registrar NO_SHOW");
+  r.noShow();return reservations.saveAndFlush(r);
+ }
+ @Transactional
+ public ParkingSession enter(SpotgoUserPrincipal actor,UUID reservation) {
+  // Same lock order as reservation creation: vehicle -> spot -> reservation.
+  var current=reservations.findById(reservation).orElseThrow(()->missing("Reserva"));admin(actor,current.getTenantId());
+  payments.lockProfile(current.getProfileId());
+  vehicles.lock(current.getVehicleId()).orElseThrow(()->missing("Vehiculo"));
+  var spot=lockSpot(current.getSpotId());var r=reservations.lock(reservation).orElseThrow(()->missing("Reserva"));operational(spot);
+  var now=clock.instant();
+  if(now.isBefore(r.getStartAt()) || !now.isBefore(r.getEndAt())) throw conflict("Entrada fuera del intervalo reservado");
+  if(sessions.byReservation(reservation).isPresent() || !sessions.openVehicle(r.getVehicleId()).isEmpty() ||
+    !sessions.openSpot(r.getSpotId()).isEmpty() || !guests.openSpot(r.getSpotId()).isEmpty()) throw conflict("Ya existe una estadia abierta o una sesion para esta reserva");
+  r.start();return sessions.saveAndFlush(new ParkingSession(r,now));
+ }
+ @Transactional
+ public ParkingSession exit(SpotgoUserPrincipal actor,UUID id) {
+  var current=sessions.findById(id).orElseThrow(()->missing("Sesion"));admin(actor,current.getReservation().getTenantId());payments.lockProfile(current.getProfileId());
+  var s=sessions.lock(id).orElseThrow(()->missing("Sesion"));admin(actor,s.getReservation().getTenantId());
+  var r=reservations.lock(s.getReservationId()).orElseThrow(()->missing("Reserva"));
+  var now=clock.instant();s.close(now);
+  boolean exceeded=now.isAfter(r.getEndAt().plusSeconds(ParkingTariffs.toleranceMinutes(r.getTenant().getRules())*60));
+  r.complete(exceeded);sessions.saveAndFlush(s);payments.completed(r,s);return s;
+ }
+ @Transactional
+ public GuestParkingSession guestEnter(SpotgoUserPrincipal actor,UUID spotId,String plate,PhysicalPaymentMethod method) {
+  var s=lockSpot(spotId);admin(actor,s.getTenantId());operational(s);var now=clock.instant();
+  if(!guests.openSpot(spotId).isEmpty() || !sessions.openSpot(spotId).isEmpty() ||
+   reservations.overlappingSpot(spotId,now,now.plusNanos(1)).stream().anyMatch(r->r.blocks(now))) throw conflict("Espacio no disponible ahora");
+  return guests.saveAndFlush(new GuestParkingSession(s,plate,method,now));
+ }
+ @Transactional
+ public GuestParkingSession guestExit(SpotgoUserPrincipal actor,UUID id,boolean paid) {
+  var g=guests.lock(id).orElseThrow(()->missing("Sesion de invitado"));admin(actor,g.getTenantId());
+  var now=clock.instant();g.close(now,ParkingTariffs.price(g.getTenant().getRules(),g.getEntryAt(),now),paid);return guests.saveAndFlush(g);
+ }
+ @Transactional
+ public GuestParkingSession guestPaid(SpotgoUserPrincipal actor,UUID id) {
+  var g=guests.lock(id).orElseThrow(()->missing("Sesion de invitado"));admin(actor,g.getTenantId());g.confirmPayment();return guests.saveAndFlush(g);
+ }
 }

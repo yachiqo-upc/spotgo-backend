@@ -1,15 +1,13 @@
 package com.yachiqo.spotgo.profiles.application.internal.commandservices;
 
 import com.yachiqo.spotgo.profiles.application.ProfilesCommandService;
-import com.yachiqo.spotgo.profiles.domain.model.aggregates.Favorite;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.Vehicle;
-import com.yachiqo.spotgo.profiles.domain.model.commands.CreateFavoriteCommand;
 import com.yachiqo.spotgo.profiles.domain.model.commands.CreateVehicleCommand;
-import com.yachiqo.spotgo.profiles.domain.model.commands.DeleteFavoriteCommand;
 import com.yachiqo.spotgo.profiles.domain.model.commands.DeleteVehicleCommand;
 import com.yachiqo.spotgo.profiles.domain.model.commands.UpdateVehicleCommand;
-import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.FavoriteRepository;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.VehicleRepository;
+import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.ProfileRepository;
+import com.yachiqo.spotgo.profiles.domain.model.valueobjects.VehicleStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,17 +17,20 @@ import java.util.Optional;
 @Transactional
 public class ProfilesCommandServiceImpl implements ProfilesCommandService {
     private final VehicleRepository vehicleRepository;
-    private final FavoriteRepository favoriteRepository;
+    private final ProfileRepository profileRepository;
 
-    public ProfilesCommandServiceImpl(VehicleRepository vehicleRepository, FavoriteRepository favoriteRepository) {
+    public ProfilesCommandServiceImpl(VehicleRepository vehicleRepository,
+                                      ProfileRepository profileRepository) {
         this.vehicleRepository = vehicleRepository;
-        this.favoriteRepository = favoriteRepository;
+        this.profileRepository = profileRepository;
     }
 
     @Override
     public Optional<Vehicle> handle(CreateVehicleCommand command) {
-        return Optional.of(vehicleRepository.save(new Vehicle(
-                command.clientId(), command.licensePlate(), command.vehicleType(), command.brand(), command.model())));
+        var profile = profileRepository.findById(command.profileId())
+                .orElseThrow(() -> new IllegalArgumentException("Perfil inexistente"));
+        return Optional.of(vehicleRepository.save(new Vehicle(profile,
+                command.plate(), command.make(), command.model(), command.color())));
     }
 
     @Override
@@ -39,23 +40,17 @@ public class ProfilesCommandServiceImpl implements ProfilesCommandService {
             return Optional.empty();
         }
         var vehicle = vehicleOpt.get();
-        vehicle.update(command.licensePlate(), command.vehicleType(), command.brand(), command.model());
+        vehicle.update(command.plate(), command.make(), command.model(), command.color(), command.status());
         return Optional.of(vehicleRepository.save(vehicle));
     }
 
     @Override
     public void handle(DeleteVehicleCommand command) {
-        vehicleRepository.deleteById(command.vehicleId());
+        var vehicle = vehicleRepository.findById(command.vehicleId())
+                .orElseThrow(() -> new IllegalArgumentException("Vehiculo inexistente"));
+        vehicle.update(null, null, null, null, VehicleStatus.INACTIVE);
+        vehicleRepository.save(vehicle);
     }
 
-    @Override
-    public Optional<Favorite> handle(CreateFavoriteCommand command) {
-        return Optional.of(favoriteRepository.save(new Favorite(
-                command.clientId(), command.parkingId(), command.distanceMi(), command.lastVisited())));
-    }
 
-    @Override
-    public void handle(DeleteFavoriteCommand command) {
-        favoriteRepository.deleteById(command.favoriteId());
-    }
 }

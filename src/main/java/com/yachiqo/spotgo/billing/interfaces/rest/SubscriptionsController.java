@@ -1,176 +1,41 @@
 package com.yachiqo.spotgo.billing.interfaces.rest;
-
-import com.yachiqo.spotgo.billing.application.commandservices.SubscriptionCommandService;
-import com.yachiqo.spotgo.billing.application.queryservices.SubscriptionQueryService;
-import com.yachiqo.spotgo.billing.domain.model.commands.CreateSubscriptionCommand;
-import com.yachiqo.spotgo.billing.domain.repositories.SubscriptionRepository;
+import com.yachiqo.spotgo.billing.application.*;
+import com.yachiqo.spotgo.billing.interfaces.rest.resources.BillingResources.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
-import com.yachiqo.spotgo.billing.domain.model.queries.GetSubscriptionByIdQuery;
-import com.yachiqo.spotgo.billing.interfaces.rest.resources.CreateSubscriptionResource;
-import com.yachiqo.spotgo.billing.interfaces.rest.resources.SubscriptionResource;
-import com.yachiqo.spotgo.billing.interfaces.rest.resources.UpdateSubscriptionResource;
-import com.yachiqo.spotgo.billing.interfaces.rest.transform.SubscriptionResourceFromEntityAssembler;
-import com.yachiqo.spotgo.billing.interfaces.rest.transform.UpdateSubscriptionCommandFromResourceAssembler;
-import com.yachiqo.spotgo.shared.application.result.ApplicationError;
-import com.yachiqo.spotgo.shared.interfaces.rest.transform.ErrorResponseAssembler;
-import com.yachiqo.spotgo.shared.interfaces.rest.transform.ResponseEntityAssembler;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
+import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.*;
+import io.swagger.v3.oas.annotations.media.Content;
+import java.util.*;
+import java.math.BigDecimal;
 
-@RestController
-@RequestMapping(value = "/api/v1/subscriptions", produces = MediaType.APPLICATION_JSON_VALUE)
-@PreAuthorize("hasRole('CLIENT')")
-@Tag(name = "Subscriptions", description = "Endpoints for managing client subscriptions")
+@RestController @RequestMapping(value="/api/v1/subscriptions",produces="application/json")
+@PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN','SUPER_ADMIN')")
+@Tag(name="Subscriptions",description="Titular Driver o Tenant, nunca ambos. Solo periodos pagados: payment_id obligatorio y unico. Cada periodo nuevo crea otra fila. plan.billing_period_months indica la duracion; 1 es mensual.")
+@ApiResponses({
+ @ApiResponse(responseCode="400",description="UUID, JSON, datos o importe invalidos",content=@Content),
+ @ApiResponse(responseCode="401",description="Sesion o access token invalidos",content=@Content),
+ @ApiResponse(responseCode="403",description="Rol, perfil o tenant fuera de tu alcance",content=@Content),
+ @ApiResponse(responseCode="404",description="Recurso inexistente",content=@Content),
+ @ApiResponse(responseCode="409",description="Duplicado, estado incompatible o conflicto de idempotencia",content=@Content),
+ @ApiResponse(responseCode="503",description="Proveedor de pagos no configurado o no disponible; no se inventa aprobacion",content=@Content)
+})
 public class SubscriptionsController {
+ private final BillingService service;private final BillingQueryService queries;private final SubscriptionPlans plans;
+ public SubscriptionsController(BillingService service,BillingQueryService queries,SubscriptionPlans plans){this.service=service;this.queries=queries;this.plans=plans;}
 
-    private final SubscriptionCommandService subscriptionCommandService;
-    private final SubscriptionQueryService subscriptionQueryService;
-    private final SubscriptionRepository subscriptionRepository;
+ @GetMapping @Operation(summary="Listar suscripciones de mi alcance",description="DRIVER: propias; PARKING_ADMIN: su Tenant; SUPER_ADMIN: consulta general.")
+ public List<SubscriptionView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor){return queries.subscriptions(actor).stream().map(SubscriptionView::of).toList();}
+ @GetMapping("/plans") @Operation(summary="Consultar catalogo de planes configurado",description="Los precios y beneficios los configura el servidor, no el pagador. Un catalogo vacio indica configuracion pendiente.")
+ public Collection<Map<String,Object>> plans(){return plans.all();}
+ @GetMapping("/{subscriptionId}") @Operation(summary="Consultar suscripcion autorizada")
+ public SubscriptionView get(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID subscriptionId){return SubscriptionView.of(queries.subscription(actor,subscriptionId));}
+ @PostMapping("/{subscriptionId}/cancel") @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Cerrar mi suscripcion",description="Conserva el historial y captura endAt al cancelar. Retomar requiere otra fila. No cambia el titular empresarial cuando cambia el administrador.")
+ public SubscriptionView cancel(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID subscriptionId){return SubscriptionView.of(service.cancelSubscription(actor,subscriptionId));}
 
-    public SubscriptionsController(SubscriptionCommandService subscriptionCommandService,
-                                   SubscriptionQueryService subscriptionQueryService,
-                                   SubscriptionRepository subscriptionRepository) {
-        this.subscriptionCommandService = subscriptionCommandService;
-        this.subscriptionQueryService = subscriptionQueryService;
-        this.subscriptionRepository = subscriptionRepository;
-    }
-
-    @PostMapping
-    @Operation(summary = "Create a subscription", description = "Creates a new subscription for a client.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Subscription created successfully",
-                    content = @Content(schema = @Schema(implementation = SubscriptionResource.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input data")
-    })
-    public ResponseEntity<?> createSubscription(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                                @Valid @RequestBody CreateSubscriptionResource resource) {
-        var command = new CreateSubscriptionCommand(
-                principal.getUserId(),
-                resource.planId(),
-                resource.autoRenewal(),
-                resource.paymentMethodLastFour(),
-                resource.paymentMethodExpiry());
-        var result = subscriptionCommandService.handle(command);
-        return ResponseEntityAssembler.toResponseEntityFromResult(
-                result,
-                SubscriptionResourceFromEntityAssembler::toResourceFromEntity,
-                HttpStatus.CREATED
-        );
-    }
-
-    @GetMapping
-    @Operation(summary = "Get all subscriptions", description = "Returns all subscriptions.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscriptions retrieved successfully",
-                    content = @Content(schema = @Schema(implementation = SubscriptionResource.class)))
-    })
-    public ResponseEntity<List<SubscriptionResource>> getAllSubscriptions(@AuthenticationPrincipal SpotgoUserPrincipal principal) {
-        var subscriptions = subscriptionRepository.findAllByClientId(principal.getUserId());
-        if (subscriptions.isEmpty()) {
-            return ResponseEntity.ok(List.of());
-        }
-        var resources = subscriptions.stream()
-                .map(SubscriptionResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
-        return ResponseEntity.ok(resources);
-    }
-
-    @GetMapping("/{subscriptionId}")
-    @Operation(summary = "Get subscription by ID", description = "Returns a specific subscription by its ID.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscription found",
-                    content = @Content(schema = @Schema(implementation = SubscriptionResource.class))),
-            @ApiResponse(responseCode = "404", description = "Subscription not found")
-    })
-    public ResponseEntity<?> getSubscriptionById(
-            @AuthenticationPrincipal SpotgoUserPrincipal principal,
-            @PathVariable
-            @Parameter(description = "Subscription unique identifier", example = "1", required = true)
-            String subscriptionId
-    ) {
-        var query = new GetSubscriptionByIdQuery(subscriptionId);
-        var subscription = subscriptionQueryService.handle(query);
-        if (subscription.isEmpty()) {
-            var error = ApplicationError.notFound("Subscription", "Subscription with ID %s not found".formatted(subscriptionId));
-            return ErrorResponseAssembler.toErrorResponseFromApplicationError(error);
-        }
-        if (!principal.getUserId().equals(subscription.get().getClientId())) {
-            throw new AccessDeniedException("Subscription is outside authenticated scope");
-        }
-        return ResponseEntity.ok(SubscriptionResourceFromEntityAssembler.toResourceFromEntity(subscription.get()));
-    }
-
-    @PutMapping("/{subscriptionId}")
-    @Operation(summary = "Update a subscription",
-            description = "Updates a subscription. Used for switching plans, toggling auto-renewal, or updating payment method.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscription updated successfully",
-                    content = @Content(schema = @Schema(implementation = SubscriptionResource.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input data"),
-            @ApiResponse(responseCode = "404", description = "Subscription not found")
-    })
-    public ResponseEntity<?> updateSubscription(
-            @AuthenticationPrincipal SpotgoUserPrincipal principal,
-            @PathVariable
-            @Parameter(description = "Subscription unique identifier", example = "1", required = true)
-            String subscriptionId,
-            @Valid @RequestBody UpdateSubscriptionResource resource
-    ) {
-        requireSubscriptionOwner(principal, subscriptionId);
-        var command = UpdateSubscriptionCommandFromResourceAssembler.toCommandFromResource(subscriptionId, resource);
-        var result = subscriptionCommandService.handle(command);
-        return ResponseEntityAssembler.toResponseEntityFromResult(
-                result,
-                SubscriptionResourceFromEntityAssembler::toResourceFromEntity,
-                HttpStatus.OK
-        );
-    }
-
-    @PatchMapping("/{subscriptionId}")
-    @Operation(summary = "Update a subscription (PATCH)",
-            description = "Partially updates a subscription. Used by the frontend for switching plans, toggling auto-renewal, or updating payment method.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscription updated successfully",
-                    content = @Content(schema = @Schema(implementation = SubscriptionResource.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input data"),
-            @ApiResponse(responseCode = "404", description = "Subscription not found")
-    })
-    public ResponseEntity<?> patchSubscription(
-            @AuthenticationPrincipal SpotgoUserPrincipal principal,
-            @PathVariable
-            @Parameter(description = "Subscription unique identifier", example = "1", required = true)
-            String subscriptionId,
-            @Valid @RequestBody UpdateSubscriptionResource resource
-    ) {
-        requireSubscriptionOwner(principal, subscriptionId);
-        var command = UpdateSubscriptionCommandFromResourceAssembler.toCommandFromResource(subscriptionId, resource);
-        var result = subscriptionCommandService.handle(command);
-        return ResponseEntityAssembler.toResponseEntityFromResult(
-                result,
-                SubscriptionResourceFromEntityAssembler::toResourceFromEntity,
-                HttpStatus.OK
-        );
-    }
-
-    private void requireSubscriptionOwner(SpotgoUserPrincipal principal, String subscriptionId) {
-        var subscription = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new AccessDeniedException("Subscription does not exist"));
-        if (!principal.getUserId().equals(subscription.getClientId())) {
-            throw new AccessDeniedException("Subscription is outside authenticated scope");
-        }
-    }
 }

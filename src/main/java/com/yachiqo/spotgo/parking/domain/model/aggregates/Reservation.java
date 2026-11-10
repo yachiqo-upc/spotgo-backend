@@ -1,84 +1,76 @@
 package com.yachiqo.spotgo.parking.domain.model.aggregates;
-
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
-import com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.entities.UuidIdentifiedAggregateRoot;
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.*;
+import java.time.Instant;
+import java.util.*;
+import java.math.BigDecimal;
+import static com.yachiqo.spotgo.parking.domain.model.valueobjects.ParkingValues.*;
 
-import java.time.LocalDateTime;
+@Entity @Table(name="reservations") @Getter
+public class Reservation {
+ @Id @GeneratedValue(strategy=GenerationType.UUID) @Column(name="reservation_id", nullable=false, updatable=false) private UUID id;
+ @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="tenant_id",nullable=false,updatable=false) private Tenant tenant;
+ @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="zone_id",nullable=false,updatable=false) private ParkingZone zone;
+ @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="spot_id",nullable=false,updatable=false) private ParkingSpot spot;
 
-@Entity
-@Table(name = "reservations", indexes = {
-    @Index(name = "idx_reservation_clientId", columnList = "clientId"),
-    @Index(name = "idx_reservation_parkingId", columnList = "parkingId"),
-    @Index(name = "idx_reservation_code", columnList = "code")
-})
-@Getter
-public class Reservation extends UuidIdentifiedAggregateRoot<Reservation> {
+ @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="profile_id",nullable=false,updatable=false)
+ private com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile profile;
+ @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="vehicle_id",nullable=false,updatable=false)
+ private com.yachiqo.spotgo.profiles.domain.model.aggregates.Vehicle vehicle;
+ // UUID exposed by the API; the read-only association enforces the payment FK.
+ @Column(name="payment_id",unique=true) private UUID paymentId;
+ @OneToOne(fetch=FetchType.LAZY) @JoinColumn(name="payment_id",insertable=false,updatable=false,unique=true)
+ private com.yachiqo.spotgo.billing.domain.model.aggregates.DigitalPayment payment;
+ @Column(name="start_at",nullable=false) private Instant startAt;
+ @Column(name="end_at",nullable=false) private Instant endAt;
+ @Column(nullable=false,precision=12,scale=2) private BigDecimal amount;
+ @Enumerated(EnumType.STRING) @Column(nullable=false) private ReservationStatus status;
+ @Enumerated(EnumType.STRING) @Column(name="lock_status",nullable=false) private LockStatus lockStatus;
+ @Column(name="locked_at") private Instant lockedAt;
+ @Column(name="lock_expires_at") private Instant lockExpiresAt;
+  @Column(name="created_at",nullable=false,updatable=false) private Instant createdAt;
+ @Column(name="updated_at",nullable=false) private Instant updatedAt;
+ @PrePersist void created() { createdAt=Instant.now(); updatedAt=createdAt; }
+ @PreUpdate void updated() { updatedAt=Instant.now(); }
 
-    @Column(name = "clientId")
-    private String clientId;
+ protected Reservation() {}
+ public Reservation(ParkingSpot spot,com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile profile,
+  com.yachiqo.spotgo.profiles.domain.model.aggregates.Vehicle vehicle,Instant start,Instant end,BigDecimal amount,Instant now,int lockMinutes) {
+  interval(start,end);this.spot=spot;this.zone=spot.getZone();this.tenant=zone.getTenant();this.profile=profile;this.vehicle=vehicle;
+  this.startAt=start;this.endAt=end;this.amount=Objects.requireNonNull(amount);this.status=ReservationStatus.PENDING_PAYMENT;
+  this.lockStatus=LockStatus.ACTIVE;this.lockedAt=now;this.lockExpiresAt=now.plusSeconds(lockMinutes*60L);
+ }
+ public UUID getTenantId() { return tenant.getId(); }
+ public UUID getZoneId() { return zone.getId(); }
+ public UUID getSpotId() { return spot.getId(); }
+ public UUID getProfileId() { return profile.getId(); }
+ public UUID getVehicleId() { return vehicle.getId(); }
+ public boolean blocks(Instant now) {
+  return status==ReservationStatus.RESERVED || status==ReservationStatus.ACTIVE || status==ReservationStatus.OVERSTAYED ||
+   (status==ReservationStatus.PENDING_PAYMENT && lockStatus==LockStatus.ACTIVE && lockExpiresAt!=null && now.isBefore(lockExpiresAt));
+ }
+ public void expire(Instant now) {
+  if(status==ReservationStatus.PENDING_PAYMENT && !now.isBefore(lockExpiresAt)) {
+   status=ReservationStatus.CANCELLED;lockStatus=LockStatus.EXPIRED;
+  }
+ }
+ public void attachPayment(UUID payment) {
+  if(status!=ReservationStatus.PENDING_PAYMENT || (paymentId!=null&&!paymentId.equals(payment))) throw new IllegalArgumentException("La reserva ya tiene una operacion de pago");
+  paymentId=Objects.requireNonNull(payment);
+ }
+ public void confirm(UUID payment,Instant now) {
+  if(status!=ReservationStatus.PENDING_PAYMENT || !blocks(now)) throw new IllegalArgumentException("El bloqueo de la reserva ya no esta vigente");
+  paymentId=Objects.requireNonNull(payment);status=ReservationStatus.RESERVED;lockStatus=LockStatus.CONFIRMED;
+ }
+ public void cancel() {
+  if(status!=ReservationStatus.PENDING_PAYMENT && status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("Solo puedes cancelar una reserva pendiente o confirmada");
+  status=ReservationStatus.CANCELLED;lockStatus=LockStatus.RELEASED;
+ }
+ public void start() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("La reserva debe estar confirmada");status=ReservationStatus.ACTIVE; }
+ public void complete(boolean overstay) { status=overstay?ReservationStatus.OVERSTAYED:ReservationStatus.COMPLETED; }
+ public void noShow() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("Estado incompatible");status=ReservationStatus.NO_SHOW; }
 
-    @Column(name = "parkingId")
-    private String parkingId;
-
-    @Column(name = "code")
-    private String code;
-
-    @Column(name = "spot")
-    private String spot;
-
-    @Column(name = "startDate")
-    private LocalDateTime startDate;
-
-    @Column(name = "endDate")
-    private LocalDateTime endDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ReservationStatus status;
-
-    @Column(name = "amount")
-    private Double amount;
-
-    @Column(name = "baseAmount")
-    private Double baseAmount;
-
-    @Column(name = "rating")
-    private Double rating;
-
-    public Reservation() {
-    }
-
-    public Reservation(String clientId, String parkingId, String code, String spot,
-                       LocalDateTime startDate, LocalDateTime endDate,
-                       Double amount, Double baseAmount, Double rating) {
-        this.clientId = clientId;
-        this.parkingId = parkingId;
-        this.code = code;
-        this.spot = spot;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.amount = amount;
-        this.baseAmount = baseAmount;
-        this.rating = rating;
-        this.status = ReservationStatus.ACTIVE;
-    }
-
-    public void updateStatus(ReservationStatus newStatus) {
-        this.status = newStatus;
-    }
-
-    public void updateDetails(LocalDateTime endDate, Double amount, Double baseAmount, Double rating, ReservationStatus status) {
-        if (endDate != null) this.endDate = endDate;
-        if (amount != null) this.amount = amount;
-        if (baseAmount != null) this.baseAmount = baseAmount;
-        if (rating != null) this.rating = rating;
-        if (status != null) this.status = status;
-    }
-
-    public void updatePricing(Double amount, Double baseAmount) {
-        this.amount = amount;
-        this.baseAmount = baseAmount;
-    }
 }
