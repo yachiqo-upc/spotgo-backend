@@ -21,7 +21,7 @@ src/main/java/com/yachiqo/spotgo/
 ├── iam/            # Accounts, credentials, roles, sessions and audit
 ├── parking/        # Tenants, zones, spots, floor plans, maps, reservations and stays
 ├── monitoring/     # Sensors, readings, health, conflicts, alerts, snapshots and reports
-├── billing/        # Billing domain: receipts, subscriptions, client plans
+├── billing/        # Payments, tokens, attempts, subscriptions, charges, debts, refunds and documents
 ├── profiles/       # Profiles, vehicles and driver classifications
 └── shared/         # Shared kernel: base entities, error handling, config
 ```
@@ -131,7 +131,7 @@ Parking Infrastructure implementa las ocho tablas del README DIAGRAM.md, con UUI
 | `parking_sessions` | Entrada y salida efectivas de una reserva, con una sola sesión por reserva. |
 | `guest_parking_sessions` | Estadía manual de un invitado sin cuenta; placa y pago físico CASH/POS. |
 
-Las referencias internas y las de Profiles son FK físicas. IAM y driver_classifications también referencian tenants. `payment_id` es UUID nullable y UNIQUE, pendiente de una FK física cuando Billing implemente `digital_payments`. No se crea una tabla de pagos alternativa.
+Las referencias internas y las de Profiles son FK físicas. IAM y driver_classifications también referencian tenants. `reservations.payment_id` es UUID nullable y UNIQUE, con FK física a `digital_payments.payment_id`. Es NULL mientras no se haya creado la operación de pago. No se crea una tabla de pagos alternativa.
 
 | Método | Ruta | Permiso / acción |
 |---|---|---|
@@ -169,9 +169,9 @@ Las referencias internas y las de Profiles son FK físicas. IAM y driver_classif
 - Se calcula el importe en el servidor: el conductor no envía amount, profileId, tenantId ni status para crear una reserva. El tenant y la zona se obtienen del espacio; el perfil se obtiene de la cuenta autenticada.
 - Se rechazan solapamientos del espacio o del mismo vehículo; intervalos adyacentes sí se permiten. Los bloqueos de filas serializan solicitudes concurrentes sobre el vehículo y el espacio.
 - La reserva empieza PENDING_PAYMENT, payment_id NULL y lock_status ACTIVE. La duración del bloqueo usa la regla del tenant; por defecto 10 minutos. Una tarea cada 30 segundos marca los bloqueos vencidos CANCELLED/EXPIRED; un bloqueo vencido ya no impide reservar aunque todavía no se haya ejecutado esa tarea.
-- Confirmar exige un pago APPROVED de operación RESERVATION, mismo perfil y mismo importe, además del bloqueo vigente. Si Billing aún no tiene digital_payments, responde 503; no se simula un pago exitoso.
+- Confirmar exige un pago APPROVED de operación RESERVATION, mismo perfil y mismo importe, además del bloqueo vigente. El proveedor financiero no configurado responde 503 al procesar el cobro; no se simula un pago exitoso.
 - Registrar entrada exige reserva RESERVED y estar dentro de su intervalo. No permite dos sesiones abiertas para el mismo vehículo o espacio. Una reserva genera como máximo una sesión, respaldada por UNIQUE(reservation_id).
-- La salida captura exit_at automáticamente. Si supera el fin más la tolerancia, la reserva queda OVERSTAYED. La generación de additional_charges corresponde a Billing y todavía está pendiente.
+- La salida captura exit_at automáticamente. Si supera el fin más la tolerancia, la reserva queda OVERSTAYED. Billing genera el cargo adicional de sobretiempo y su deuda al finalizar la estadía.
 - Invitado: no crea cuenta, perfil, vehículo ni pago digital. La salida calcula su importe; queda CLOSED si el administrador confirma pago físico o PENDING_REVIEW si no. Puede confirmar ese pago posteriormente.
 - Croquis y mapas: versión positiva y única dentro de su zona/croquis. Publicar un mapa exige croquis publicado y archiva los otros mapas del mismo croquis. El archivo debe existir previamente en su almacenamiento: este cambio no implementa carga de archivos ni conversión automática de croquis.
 - Disponibilidad es una proyección, sin tabla adicional. Combina habilitación administrativa, reservas y estadías abiertas. physicalOccupancy proviene de Monitoring (AVAILABLE, OCCUPIED o UNAVAILABLE). Una reserva inmediata exige lectura confiable libre; para una reserva futura se valida el intervalo sin prometer su estado físico futuro.
@@ -191,7 +191,7 @@ El seeder ahora carga tenants, zonas, espacios, croquis, mapas e invitados en su
 
 **Integración actual:** Billing verifica pagos, aplica descuentos de membresías vigentes, bloquea nuevas reservas con deudas y registra sobretiempo al finalizar una estadía. Monitoring integra lecturas, salud, conflictos y avisos con Parking, respetando el límite de sensores de la suscripción empresarial. Los cinco contextos utilizan el modelo actualizado.
 
-**Base de datos existente:** Hibernate update no migra automáticamente IDs antiguos ni elimina tablas. En particular, la antigua tabla reservations tiene columnas y clave primaria incompatibles con este modelo. Antes de usar este cambio con esa BD hay que migrar esa tabla o recrear una BD local de pruebas. Este cambio no ejecuta DROP ni migra datos de tu PostgreSQL.
+**Base de datos existente:** Hibernate update no migra automáticamente IDs antiguos ni elimina tablas. En particular, la antigua tabla reservations tiene columnas y clave primaria incompatibles con este modelo. Antes de usar este cambio con esa BD hay que migrar esa tabla o recrear una BD local de pruebas. No se ejecutó una migración ni un arranque contra tu PostgreSQL durante estos cambios. El próximo arranque con dev sí borrará y recreará las tablas mapeadas; úsalo únicamente con una BD local descartable.
 
 ### Payments & Billing
 
@@ -239,7 +239,7 @@ Este contexto implementa `payment_tokens`, `digital_payments`, `payment_attempts
 1. DRIVER crea su reserva en Parking. Se calcula tarifa en PEN y descuento de su membresía vigente; una deuda OPEN impide nuevas reservas.
 2. Crea el pago de esa reserva usando su token y una clave idempotente. El backend asocia reservations.payment_id y crea el primer intento. Todavía no está pagado.
 3. Procesa el pago. APPROVED confirma la reserva si el bloqueo sigue vigente. Una aprobación tardía conserva el pago y solicita refund, sin apropiarse de un espacio cuyo bloqueo venció.
-4. El administrador registra entrada y salida. Si hay sobretiempo más allá de la tolerancia, se crea un cargo OVERSTAY con referencia a la sesión y su deuda impaga. No se modifica el pago inicial ni se cobra automáticamente una tarjeta sin intervención del pagador.
+4. El administrador registra entrada y salida. Si hay sobretiempo más allá de la tolerancia, se crea un cargo OVERSTAY asociado a la reserva y su deuda impaga. No se modifica el pago inicial ni se cobra automáticamente una tarjeta sin intervención del pagador.
 5. DRIVER crea/procesa el pago del cargo. Al confirmarse se actualizan coherentemente charge PAID y balance REGULARIZED, amount 0 y regularizedAt. La fila de deuda se conserva.
 6. Cancelar una reserva pagada solicita devolver el saldo elegible; no devuelve dos veces el importe. Procesar el reembolso requiere el proveedor. Las solicitudes repetidas conservan la misma operación.
 
@@ -280,7 +280,7 @@ Registrar datos de una boleta/factura no equivale a enviarla a SUNAT ni a recibi
 
 Swagger en http://localhost:8080/swagger-ui/index.html muestra los cinco contextos en 04-backend-completo. Monitoring también está en monitoring-actualizado. Se retiraron los endpoints antiguos de empleados, occupancyByHour, weeklyTrends y analytics, además de Receipts y ClientPlans.
 
-**BD existente:** subscriptions y reservations del backend anterior pueden ser incompatibles con este esquema. Hibernate update no convierte IDs ni borra tablas antiguas. No se ejecutó ninguna migración ni borrado en tu PostgreSQL.
+**BD existente:** subscriptions y reservations del backend anterior pueden ser incompatibles con este esquema. Hibernate update no convierte IDs ni borra tablas antiguas. No se ejecutó ninguna migración ni borrado en tu PostgreSQL durante la configuración. En el próximo arranque dev se recrearán las tablas mapeadas.
 
 ### Monitoring
 
@@ -303,6 +303,7 @@ Implementa occupancy_sensors, occupancy_readings, sensor_health_events, occupanc
 | GET | `/api/v1/occupancy-alerts` | Consultar avisos del Tenant. |
 | POST | `/api/v1/occupancy-alerts/{alertId}/acknowledge` | Reconocer aviso. |
 | PUT | `/api/v1/occupancy-alerts/{alertId}/evidence` | Subir archivo JPEG/PNG en image (multipart/form-data). evidence_ref es NULL hasta la subida. |
+| GET | `/api/v1/occupancy-alerts/{alertId}/evidence` | Obtener la foto actual usando solo alertId; 404 si no tiene evidencia. |
 | POST | `/api/v1/occupancy-alerts/{alertId}/close` | Cerrar aviso de incidente resuelto o recuperado. |
 | GET / POST | `/api/v1/capacity-snapshots` | Consultar o calcular resumen confiable de zona o Tenant. |
 | GET / POST | `/api/v1/occupancy-reports` | Consultar o generar reporte de zona en [inicio,fin). |
@@ -343,31 +344,33 @@ El procesamiento financiero real sigue requiriendo PaymentProvider. Las pruebas 
 ## Running Locally
 
 ```bash
-# Run the app
+# dev resets mapped tables and loads db.json on each startup
 ./mvnw spring-boot:run
 ```
+
+Se utilizan solo application.properties (base/local) y application-production.properties (sobrescrituras del servidor). El perfil predeterminado es dev; en el servidor definir SPRING_PROFILES_ACTIVE=production. ddl-auto=create reinicia las tablas mapeadas al arrancar; no se usa create-drop. Los archivos de fotos en storage/evidence no se borran automáticamente, aunque se pierdan sus referencias al reiniciar la BD local. Producción mantiene su configuración independiente, sin cambios en esta actualización.
 
 The API starts on `http://localhost:8080`. Swagger UI is available at `/swagger-ui/index.html`.
 
 ### Probar IAM en Swagger
 
 1. Configura `PASSWORD` y `JWT_SECRET` en el entorno local y deja activo `dev`. JWT_SECRET debe tener al menos 32 bytes. No publiques sus valores reales.
-2. Con PostgreSQL y la base `spotgo` disponibles, inicia el backend. Con el seeder habilitado se insertan las cuentas demo anteriores sin sobrescribir filas existentes.
-3. Abre http://localhost:8080/swagger-ui/index.html y selecciona **02-iam-actualizado**. **01-profiles-actualizado** reúne Profiles y autenticación; **04-backend-completo** muestra todos los contextos, incluidos los aún pendientes de actualizar.
+2. Con PostgreSQL y la base `spotgo` disponibles, inicia el backend. La configuracion local de application.properties recrea las tablas mapeadas en cada arranque (ddl-auto=create) y después carga db.json. Se pierden los cambios locales de la ejecución anterior. Esto también ocurre con los reinicios de DevTools.
+3. Abre http://localhost:8080/swagger-ui/index.html y selecciona **02-iam-actualizado**. **01-profiles-actualizado** reúne Profiles y autenticación; **04-backend-completo** muestra todos los contextos, todos ya adaptados al modelo actual.
 4. Ejecuta sign-in con una cuenta demo. Copia solamente `accessToken` en **Authorize**.
 5. Prueba `/accounts/me`, `/accounts/me/role` y `/sessions/me`. Con DRIVER, listar `/accounts` responde 403; con SUPER_ADMIN responde 200.
 6. Para renovar, usa el `refreshToken` recibido en el cuerpo de `/authentication/refresh`. Actualiza el token de Authorize con el nuevo accessToken.
 
-Los JWT de la implementación anterior ya no sirven: vuelve a iniciar sesión. Hibernate `update` no elimina tablas antiguas como `users` ni migra automáticamente sus cuentas a `accounts`. El seeder carga datos demo compatibles; no es una migración de usuarios reales.
+Los JWT de la implementación anterior ya no sirven: vuelve a iniciar sesión. Hibernate `update` no elimina tablas antiguas como `users` ni migra automáticamente sus cuentas a `accounts`. El seeder carga datos demo compatibles; no es una migración de usuarios reales. En dev se recrean primero las tablas mapeadas; no conectes ese perfil a una BD que quieras conservar.
 
 En producción se usan las variables indicadas en `application-production.properties`, incluida `SPRING_DATASOURCE_PASSWORD`. Las cuentas demo son para desarrollo; el seeder actual está limitado a los perfiles locales habilitados.
 El pago de un plan se solicita con POST /api/v1/digital-payments/subscriptions (planCode, tokenId, idempotencyKey) y se procesa por su paymentId. No existe POST /api/v1/subscriptions para crear filas sin pago. result_reference conserva temporalmente el plan seleccionado y el titular (máximo 8192 caracteres), y después identifica la suscripción creada. No se añade subscription_id a digital_payments.
 
-Estado verificado del seeder: las 31 tablas de db.json están implementadas. Inserta filas compatibles que no existan; no actualiza filas ya guardadas ni elimina tablas antiguas. No se ejecutó una limpieza ni actualización de tu PostgreSQL.
+Estado verificado del seeder: las 31 tablas de db.json están implementadas, con 79 registros y 123 referencias no nulas sin referencias rotas. El seeder inserta filas compatibles que no existan; no actualiza ni borra registros. En dev es Hibernate quien recrea primero las tablas mapeadas; después el seeder carga los datos iniciales. No se ejecutó este reinicio contra tu PostgreSQL durante la configuración.
 
 Producción: ddl-auto=update conserva las tablas existentes y app.seeder.enabled=false desactiva los datos demo. No convierte esquemas antiguos incompatibles ni elimina tablas retiradas. Activar el perfil production mediante SPRING_PROFILES_ACTIVE=production.
 
-Validación de esta adaptación: 145 pruebas sin fallos en H2, incluidas 30 de Monitoring, permisos HTTP, deduplicación, concurrencia, salud/alertas, snapshots/reportes y el flujo entre los cinco contextos. Se verificaron las columnas y tipos UUID de las 31 tablas del JSON. Ejecutado con JDK 21 mediante override local de Maven, sin cambiar la versión Java 26 del pom. No se ejecutó contra PostgreSQL ni contra hardware o proveedores financieros reales.
+Validación de esta adaptación: 155 pruebas sin fallos en H2, incluidas 34 de integración de Monitoring y 4 de almacenamiento de imágenes, permisos HTTP, deduplicación, concurrencia, salud/alertas, snapshots/reportes y el flujo entre los cinco contextos. Se verificaron las columnas y tipos UUID de las 31 tablas del JSON. Ejecutado con JDK 21 mediante override local de Maven, sin cambiar la versión Java 26 del pom. No se ejecutó contra PostgreSQL ni contra hardware o proveedores financieros reales.
 
 Evidencia de alertas: PUT /api/v1/occupancy-alerts/{alertId}/evidence recibe multipart/form-data con campo image (archivo), no un JSON con evidenceRef. JPEG o PNG real, máximo 5 MB y 20 millones de píxeles. El servidor guarda la foto y genera la referencia; no consulta ninguna API externa. GET /api/v1/occupancy-alerts/{alertId}/evidence devuelve los bytes de la foto y exige JWT del administrador del Tenant o SUPER_ADMIN.
 
@@ -382,7 +385,7 @@ WHERE evidence_ref LIKE '/api/v1/occupancy-conflicts/%'
    OR evidence_ref LIKE '/api/v1/sensor-health-events/%';
 ```
 
-Cambiar db.json no reemplaza los registros que el seeder ya insertó. Las URLs de imagen existentes se conservan.
+En dev, los cambios de db.json se cargan en el siguiente arranque porque Hibernate recrea las tablas antes de ejecutar el seeder. En otros perfiles, ejecutar solo el seeder no sobrescribe registros existentes. Las alertas demo tienen evidence_ref NULL: no se inventan fotos.
 
 Subir una foto desde Swagger: iniciar sesión y Authorize; abrir PUT /api/v1/occupancy-alerts/{alertId}/evidence; pulsar Try it out; indicar alertId; seleccionar el archivo en image; ejecutar. Consultar GET /api/v1/occupancy-alerts/{alertId}/evidence para ver o descargar la foto. Una petición JSON antigua responde 415. Archivo vacío responde 400; formato no admitido 415; tamaño excesivo 413; almacenamiento no disponible 503. No se inventa una referencia si falla la subida.
 
