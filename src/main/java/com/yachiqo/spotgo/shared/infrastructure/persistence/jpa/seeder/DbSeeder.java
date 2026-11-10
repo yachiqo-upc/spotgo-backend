@@ -24,7 +24,7 @@ import java.util.*;
 
 /** Loads demo fixtures only into compatible, existing tables. Never creates or deletes tables. */
 @Component
-@Profile({"dev", "local", "profiles-check"})
+@Profile({"dev", "local", "profiles-check", "production"})
 @ConditionalOnProperty(name = "app.seeder.enabled", havingValue = "true")
 public class DbSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DbSeeder.class);
@@ -60,6 +60,9 @@ public class DbSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        if (demoPassword == null || demoPassword.isBlank()) {
+            throw new IllegalStateException("A non-empty app.seeder.demo-password is required to seed demo accounts.");
+        }
         JsonNode data;
         try (var input = new ClassPathResource("db.json").getInputStream()) {
             data = JSON.readTree(input);

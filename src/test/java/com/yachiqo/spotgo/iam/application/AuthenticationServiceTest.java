@@ -277,15 +277,14 @@ class AuthenticationServiceTest {
         assertFalse(response.body().contains(driver.refreshToken()));
     }
 
-    @Test void seederUsesTheRealIamTablesAndAllDemoRolesCanSignIn() throws Exception {
+    @Test void seederUsesTheRealIamTablesAndDemoRolesCanSignIn() throws Exception {
         new com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.seeder.DbSeeder(jdbc, encoder).run();
-        assertEquals(UserRole.SUPER_ADMIN, service.signIn("super.admin@example.com", "Password123!", "TEST").role());
         assertEquals(UserRole.PARKING_ADMIN, service.signIn("ana.admin@example.com", "Password123!", "TEST").role());
         var driver = service.signIn("juan.driver@example.com", "Password123!", "TEST");
         assertEquals(UserRole.DRIVER, driver.role());
         assertEquals("Juan", profileService.current(principal(driver)).getFirstName());
-        assertEquals(4, accounts.count());
-        assertEquals(4, roles.count());
+        assertEquals(3, accounts.count());
+        assertEquals(3, roles.count());
     }
 
     @Test void swaggerDocumentsIamRolesRefreshAndRevocationWithoutTheOldUsersController() throws Exception {

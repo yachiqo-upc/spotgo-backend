@@ -46,9 +46,10 @@ class DbSeederTest {
     @Test void loadsOnlyCompatibleTablesWithWorkingDemoPasswordsAndUuidRelationships() throws Exception {
         currentSchema();
         seeder.run();
-        assertEquals(4, count("accounts"));
-        assertEquals(4, count("credentials"));
-        assertEquals(4, count("role_assignments"));
+        assertEquals(3, count("accounts"));
+        assertEquals(3, count("credentials"));
+        assertEquals(3, count("role_assignments"));
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM role_assignments WHERE role_type='SUPER_ADMIN'", Integer.class));
         assertEquals(1, count("sessions"));
         assertEquals(2, count("audit_entries"));
         assertEquals(1, count("tenants"));
