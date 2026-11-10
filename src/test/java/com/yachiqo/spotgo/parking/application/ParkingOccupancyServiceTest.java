@@ -47,7 +47,7 @@ class ParkingOccupancyServiceTest {
                 LocalDateTime.of(2026, 7, 8, 10, 0), LocalDateTime.of(2026, 7, 8, 13, 0), 10.0, 10.0, null);
         var spotA1 = new DetectedSpot(1, "bp-1", "parking-1", 0, 0, 0.1, 0.1, 0.1, 0.1, SpotStatus.AVAILABLE);
         var spotA2 = new DetectedSpot(2, "bp-1", "parking-1", 0, 1, 0.1, 0.1, 0.1, 0.1, SpotStatus.OCCUPIED);
-        var parking = new Parking("admin-1", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
+        var parking = new Parking("00000000-0000-4000-8000-000000000901", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
 
         when(reservationRepository.findByParkingIdAndStatus("parking-1", ReservationStatus.ACTIVE)).thenReturn(List.of(active));
         when(detectedSpotRepository.findByParkingId("parking-1")).thenReturn(List.of(spotA1, spotA2));
@@ -67,7 +67,7 @@ class ParkingOccupancyServiceTest {
     void reconcileParkingMarksAssignedOnDutySpotAsReserved() {
         var spotA1 = new DetectedSpot(1, "bp-1", "parking-1", 0, 0, 0.1, 0.1, 0.1, 0.1, SpotStatus.AVAILABLE);
         var spotA2 = new DetectedSpot(2, "bp-1", "parking-1", 0, 1, 0.1, 0.1, 0.1, 0.1, SpotStatus.AVAILABLE);
-        var parking = new Parking("admin-1", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
+        var parking = new Parking("00000000-0000-4000-8000-000000000901", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
 
         when(reservationRepository.findByParkingIdAndStatus("parking-1", ReservationStatus.ACTIVE)).thenReturn(List.of());
         when(detectedSpotRepository.findByParkingId("parking-1")).thenReturn(List.of(spotA1, spotA2));

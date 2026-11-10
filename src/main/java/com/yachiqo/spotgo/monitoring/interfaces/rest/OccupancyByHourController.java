@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/occupancyByHour")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('PARKING_ADMIN')")
 @Tag(name = "OccupancyByHour", description = "Endpoints for reading hourly occupancy data")
 public class OccupancyByHourController {
 

@@ -16,10 +16,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(value = "/api/v1/profiles", produces = "application/json")
 @Tag(name = "Profiles", description = "Perfiles personales de la cuenta autenticada. Primero inicia sesion y pega el token en Authorize.")
 @ApiResponses({
+    @ApiResponse(responseCode = "401", description = "Falta accessToken valido, la cuenta no esta activa o la sesion esta vencida/revocada. Inicia sesion y usa Authorize.", content = @Content),
     @ApiResponse(responseCode = "400", description = "JSON invalido o nombres, apellidos o telefono vacios.", content = @Content),
-    @ApiResponse(responseCode = "403", description = "Acceso rechazado: falta el token Bearer, es invalido o no tienes permiso. Usa sign-in y Authorize.", content = @Content),
+    @ApiResponse(responseCode = "403", description = "La cuenta autenticada no tiene permiso para esta accion.", content = @Content),
     @ApiResponse(responseCode = "404", description = "La cuenta o el perfil solicitado no existe. Si falta el perfil, utiliza POST /api/v1/profiles.", content = @Content),
-    @ApiResponse(responseCode = "409", description = "La cuenta ya tiene perfil, existe un conflicto de integridad o la cuenta antigua requiere migracion a UUID.", content = @Content),
+    @ApiResponse(responseCode = "409", description = "La cuenta ya tiene perfil o existe un conflicto de integridad.", content = @Content),
     @ApiResponse(responseCode = "500", description = "Error inesperado del backend. Revisar la consola del servidor.", content = @Content)
 })
 public class ProfilesController {

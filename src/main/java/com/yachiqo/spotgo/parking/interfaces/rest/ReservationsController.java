@@ -53,7 +53,7 @@ public class ReservationsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('DRIVER')")
     @Operation(summary = "Reserve a spot", description = "Creates a new parking spot reservation.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Reservation created successfully",
@@ -82,7 +82,7 @@ public class ReservationsController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
+    @PreAuthorize("hasAnyRole('PARKING_ADMIN','DRIVER')")
     @Operation(summary = "Get all reservations", description = "Returns a list of reservations, optionally filtered by parking ID.")
     @ApiResponse(responseCode = "200", description = "List of reservations returned",
             content = @Content(schema = @Schema(implementation = ReservationResource.class)))
@@ -109,7 +109,7 @@ public class ReservationsController {
     }
 
     @PatchMapping("/{reservationId}")
-    @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
+    @PreAuthorize("hasAnyRole('PARKING_ADMIN','DRIVER')")
     public ResponseEntity<ReservationResource> updateReservation(@AuthenticationPrincipal SpotgoUserPrincipal principal,
                                                                  @PathVariable String reservationId,
                                                                  @RequestBody UpdateReservationResource resource) {

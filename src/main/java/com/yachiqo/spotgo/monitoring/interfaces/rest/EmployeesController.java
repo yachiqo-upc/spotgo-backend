@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/employees")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('PARKING_ADMIN')")
 @Tag(name = "Employees", description = "Endpoints for managing parking employees")
 public class EmployeesController {
 

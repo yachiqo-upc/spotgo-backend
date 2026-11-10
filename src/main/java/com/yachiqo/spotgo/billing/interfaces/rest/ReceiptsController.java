@@ -32,7 +32,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/api/v1/receipts", produces = MediaType.APPLICATION_JSON_VALUE)
-@PreAuthorize("hasRole('CLIENT')")
+@PreAuthorize("hasRole('DRIVER')")
 @Tag(name = "Receipts", description = "Endpoints for managing parking receipts")
 public class ReceiptsController {
 

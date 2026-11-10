@@ -1,6 +1,13 @@
 {
   "accounts": [
     {
+      "account_id": "00000000-0000-4000-8000-000000000004",
+      "email": "super.admin@example.com",
+      "status": "ACTIVE",
+      "created_at": "2026-11-09T07:00:00Z",
+      "updated_at": "2026-11-09T07:00:00Z"
+    },
+    {
       "account_id": "00000000-0000-4000-8000-000000000001",
       "email": "ana.admin@example.com",
       "status": "ACTIVE",
@@ -23,6 +30,15 @@
     }
   ],
   "credentials": [
+    {
+      "credential_id": "00000000-0000-4000-8000-000000000104",
+      "account_id": "00000000-0000-4000-8000-000000000004",
+      "authentication_method": "PASSWORD",
+      "secret_hash": "${DEMO_PASSWORD_HASH}",
+      "external_subject": null,
+      "last_used_at": null,
+      "status": "ACTIVE"
+    },
     {
       "credential_id": "00000000-0000-4000-8000-000000000101",
       "account_id": "00000000-0000-4000-8000-000000000001",
@@ -84,6 +100,15 @@
     }
   ],
   "role_assignments": [
+    {
+      "assignment_id": "00000000-0000-4000-8000-000000000114",
+      "account_id": "00000000-0000-4000-8000-000000000004",
+      "role_type": "SUPER_ADMIN",
+      "tenant_id": null,
+      "valid_from": "2026-11-09T07:00:00Z",
+      "valid_to": null,
+      "status": "ACTIVE"
+    },
     {
       "assignment_id": "00000000-0000-4000-8000-000000000111",
       "account_id": "00000000-0000-4000-8000-000000000001",

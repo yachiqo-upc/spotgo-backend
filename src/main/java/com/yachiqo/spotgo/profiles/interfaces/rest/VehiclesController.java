@@ -24,12 +24,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/api/v1/vehicles", produces = "application/json")
-@Tag(name = "Vehicles", description = "Vehiculos del conductor autenticado. El rol del IAM actual se llama CLIENT. Un perfil puede tener varios vehiculos.")
+@Tag(name = "Vehicles", description = "Vehiculos del conductor autenticado. El rol del IAM actual se llama DRIVER. Un perfil puede tener varios vehiculos.")
 @ApiResponses({
+    @ApiResponse(responseCode = "401", description = "Requiere accessToken valido y sesion habilitada.", content = @Content),
     @ApiResponse(responseCode = "400", description = "UUID, JSON o estado invalido; marca, modelo o color vacios.", content = @Content),
-    @ApiResponse(responseCode = "403", description = "Token ausente/invalido, rol distinto de CLIENT o vehiculo de otra cuenta.", content = @Content),
+    @ApiResponse(responseCode = "403", description = "Rol distinto de DRIVER o vehiculo de otra cuenta.", content = @Content),
     @ApiResponse(responseCode = "404", description = "No existe el vehiculo o todavia no creaste tu perfil.", content = @Content),
-    @ApiResponse(responseCode = "409", description = "Placa duplicada, conflicto de integridad o cuenta antigua sin UUID.", content = @Content),
+    @ApiResponse(responseCode = "409", description = "Placa duplicada o conflicto de integridad.", content = @Content),
     @ApiResponse(responseCode = "500", description = "Error inesperado del backend. Revisar la consola del servidor.", content = @Content)
 })
 public class VehiclesController {
@@ -48,7 +49,7 @@ public class VehiclesController {
     @GetMapping
     @Operation(summary = "Listar mis vehiculos", description = "Devuelve solo los vehiculos del perfil autenticado, incluidos los INACTIVE. No recibe clientId ni profileId.")
     @ApiResponse(responseCode = "200", description = "Lista propia; puede estar vacia.")
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('DRIVER')")
     public List<VehicleResource> mine(@AuthenticationPrincipal SpotgoUserPrincipal actor) {
         var profile = profiles.driver(actor);
         return queries.handle(new GetVehiclesByProfileIdQuery(profile.getId())).stream()
@@ -58,7 +59,7 @@ public class VehiclesController {
     @PostMapping
     @Operation(summary = "Agregar un vehiculo", description = "Asocia el vehiculo al perfil del token y genera su UUID y fechas. La placa se normaliza a mayusculas; puede omitirse. No envies profileId.")
     @ApiResponse(responseCode = "201", description = "Vehiculo creado con estado ACTIVE.")
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<VehicleResource> create(@AuthenticationPrincipal SpotgoUserPrincipal actor,
                                                  @Valid @RequestBody CreateVehicleResource resource) {
         var profile = profiles.driver(actor);
@@ -70,7 +71,7 @@ public class VehiclesController {
     @PatchMapping("/{vehicleId}")
     @Operation(summary = "Actualizar mi vehiculo", description = "Envia solo los campos que deseas cambiar. Los omitidos se conservan. plate vacio elimina la placa. status admite ACTIVE o INACTIVE.")
     @ApiResponse(responseCode = "200", description = "Vehiculo propio actualizado.")
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('DRIVER')")
     public VehicleResource update(@AuthenticationPrincipal SpotgoUserPrincipal actor,
                                    @Parameter(description = "UUID del vehiculo, no del perfil", example = "00000000-0000-4000-8000-000000000051") @PathVariable UUID vehicleId,
                                    @Valid @RequestBody UpdateVehicleResource resource) {
@@ -84,7 +85,7 @@ public class VehiclesController {
     @DeleteMapping("/{vehicleId}")
     @Operation(summary = "Desactivar mi vehiculo", description = "Cambia status a INACTIVE; no elimina la fila. Una respuesta 204 es exitosa y no tiene cuerpo.")
     @ApiResponse(responseCode = "204", description = "Vehiculo desactivado; respuesta sin contenido.", content = @Content)
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('DRIVER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal SpotgoUserPrincipal actor,
                        @Parameter(description = "UUID del vehiculo propio", example = "00000000-0000-4000-8000-000000000051") @PathVariable UUID vehicleId) {

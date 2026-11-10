@@ -2,6 +2,7 @@ package com.yachiqo.spotgo.profiles.application.internal;
 
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.UserAccountRepository;
+import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.RoleAssignmentRepository;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.*;
@@ -14,8 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.UUID;
+import java.time.Clock;
 
-/** Transitional integration: IAM still stores UUID text in users; Parking still uses parkings. */
+/** IAM uses native UUID accounts and role assignments. Parking still uses parkings. */
 @Service
 @Transactional(readOnly = true)
 public class ProfilesManagementService {
@@ -23,13 +25,18 @@ public class ProfilesManagementService {
     private final DriverClassificationRepository classifications;
     private final UserAccountRepository accounts;
     private final ParkingRepository parkings;
+    private final RoleAssignmentRepository roles;
+    private final Clock clock;
 
     public ProfilesManagementService(ProfileRepository profiles, DriverClassificationRepository classifications,
-                                     UserAccountRepository accounts, ParkingRepository parkings) {
+                                     UserAccountRepository accounts, ParkingRepository parkings,
+                                     RoleAssignmentRepository roles, Clock clock) {
         this.profiles = profiles;
         this.classifications = classifications;
         this.accounts = accounts;
         this.parkings = parkings;
+        this.roles = roles;
+        this.clock = clock;
     }
 
     public Profile current(SpotgoUserPrincipal actor) {
@@ -40,7 +47,7 @@ public class ProfilesManagementService {
     @Transactional
     public Profile create(SpotgoUserPrincipal actor, String firstName, String lastName, String phone) {
         UUID accountId = accountId(actor);
-        if (!accounts.existsById(actor.getUserId()))
+        if (!accounts.existsById(actor.getAccountId()))
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cuenta inexistente");
         if (profiles.existsByAccountId(accountId))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La cuenta ya tiene un perfil");
@@ -55,12 +62,12 @@ public class ProfilesManagementService {
     }
 
     public Profile driver(SpotgoUserPrincipal actor) {
-        requireRole(actor, UserRole.CLIENT);
+        requireRole(actor, UserRole.DRIVER);
         return current(actor);
     }
 
     public void requireOwner(SpotgoUserPrincipal actor, Vehicle vehicle) {
-        requireRole(actor, UserRole.CLIENT);
+        requireRole(actor, UserRole.DRIVER);
         if (!vehicle.getProfile().getAccountId().equals(accountId(actor)))
             throw new AccessDeniedException("El vehiculo pertenece a otra cuenta");
     }
@@ -71,9 +78,10 @@ public class ProfilesManagementService {
         Profile administrator = current(actor);
         Profile driver = profiles.findById(profileId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Perfil inexistente"));
-        var account = accounts.findById(driver.getAccountId().toString())
+        var account = accounts.findById(driver.getAccountId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cuenta del conductor inexistente"));
-        if (account.getRole() != UserRole.CLIENT)
+        if (!roles.findByAccountId(account.getId())
+                .filter(role -> role.isEffectiveAt(clock.instant()) && role.getRoleType() == UserRole.DRIVER).isPresent())
             throw new IllegalArgumentException("Solo se clasifican perfiles de conductores");
         var classification = classifications.findByProfileIdAndTenantId(profileId, tenantId)
             .orElseGet(() -> new DriverClassification(driver, tenantId, type, administrator));
@@ -91,11 +99,11 @@ public class ProfilesManagementService {
     }
 
     private void requireTenantAdmin(SpotgoUserPrincipal actor, UUID tenantId) {
-        requireRole(actor, UserRole.ADMIN);
-        var parking = parkings.findById(tenantId.toString())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Estacionamiento inexistente"));
-        if (!actor.getUserId().equals(parking.getAdminId()))
+        requireRole(actor, UserRole.PARKING_ADMIN);
+        if (!tenantId.equals(actor.getTenantId()))
             throw new AccessDeniedException("No administras este estacionamiento");
+        if (!parkings.existsById(tenantId.toString()))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Estacionamiento inexistente");
     }
 
     private static void requireRole(SpotgoUserPrincipal actor, UserRole role) {
@@ -105,10 +113,6 @@ public class ProfilesManagementService {
 
     private static UUID accountId(SpotgoUserPrincipal actor) {
         if (actor == null) throw new AccessDeniedException("Autenticacion requerida");
-        try { return UUID.fromString(actor.getUserId()); }
-        catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "La cuenta antigua debe migrarse a UUID antes de crear un perfil");
-        }
+        return actor.getAccountId();
     }
 }

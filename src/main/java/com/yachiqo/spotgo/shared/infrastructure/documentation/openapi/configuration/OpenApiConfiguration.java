@@ -24,7 +24,14 @@ public class OpenApiConfiguration {
 
     @Bean
     public GroupedOpenApi completeApi() {
-        return GroupedOpenApi.builder().group("02-backend-completo").pathsToMatch("/api/**").build();
+        return GroupedOpenApi.builder().group("03-backend-completo").pathsToMatch("/api/**").build();
+    }
+
+    @Bean
+    public GroupedOpenApi iamApi() {
+        return GroupedOpenApi.builder().group("02-iam-actualizado")
+                .pathsToMatch("/api/v1/authentication/**", "/api/v1/accounts/**", "/api/v1/sessions/**", "/api/v1/audit-entries/**")
+                .build();
     }
     // Properties
     @Value("${spring.application.name}")

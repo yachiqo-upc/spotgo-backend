@@ -34,7 +34,7 @@ class ProfilesOpenApiTest {
         assertTrue(paths.has("/api/v1/driver-classifications/me"));
         assertTrue(paths.has("/api/v1/authentication/sign-in"));
         assertFalse(paths.has("/api/v1/receipts"));
-        assertTrue(api("02-backend-completo").path("paths").has("/api/v1/receipts"));
+        assertTrue(api("03-backend-completo").path("paths").has("/api/v1/receipts"));
     }
 
     @Test void generatedDocumentationDescribesOperationsCodesAndDistinctUuidExamples() throws Exception {
@@ -66,7 +66,7 @@ class ProfilesOpenApiTest {
         assertFalse(properties.path("accountId").path("description").asText().isBlank());
     }
 
-    @Test void unauthenticatedProfileRequestMatchesDocumented403() throws Exception {
-        assertEquals(403, get("/api/v1/profiles/me").statusCode());
+    @Test void unauthenticatedProfileRequestMatchesDocumented401() throws Exception {
+        assertEquals(401, get("/api/v1/profiles/me").statusCode());
     }
 }

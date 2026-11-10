@@ -68,7 +68,7 @@ public class DbSeeder implements CommandLineRunner {
         String passwordHash = encoder.encode(demoPassword);
 
         // Temporary support for the old IAM/Parking APIs while those contexts are being adapted.
-        seedLegacyAccounts(data, schema, passwordHash);
+
         seedLegacyParkings(data, schema, passwordHash);
 
         int inserted = 0, compatible = 0, skippedRows = 0, existing = 0;
@@ -94,7 +94,7 @@ public class DbSeeder implements CommandLineRunner {
             }
             rows.get(0).fieldNames().forEachRemaining(column -> {
                 Column actual = table.columns.get(lower(column));
-                if (actual != null && (column.endsWith("_id") || column.equals("assigned_by")) && !lower(actual.typeName).equals("uuid"))
+                if (actual != null && !column.equals("correlation_id") && (column.endsWith("_id") || column.equals("assigned_by")) && !lower(actual.typeName).equals("uuid"))
                     missing.add("tipo UUID requerido: " + column);
             });
             if (!missing.isEmpty() || table.primaryKeys.size() != 1 || field(rows.get(0), table.primaryKeys.get(0)) == null) {
@@ -154,7 +154,7 @@ public class DbSeeder implements CommandLineRunner {
             Table parent = schema.get(destination);
             String key = PRIMARY_KEYS.get(destination);
             if (destination.equals("accounts") && (parent == null || !parent.columns.containsKey(key))) {
-                parent = schema.get("users"); key = "id";
+                parent = null;
             }
             if (destination.equals("tenants") && (parent == null || !parent.columns.containsKey(key))) {
                 parent = schema.get("parkings"); key = "id";
@@ -207,29 +207,6 @@ public class DbSeeder implements CommandLineRunner {
         else statement.setString(index, value.asText().equals("${DEMO_PASSWORD_HASH}") ? passwordHash : value.asText());
     }
 
-    private void seedLegacyAccounts(JsonNode data, Map<String, Table> schema, String hash) {
-        if (schema.containsKey("accounts") || !schema.containsKey("users")) return;
-        Table users = schema.get("users");
-        for (JsonNode profile : data.path("profiles")) {
-            String id = profile.path("account_id").asText();
-            JsonNode account = find(data.path("accounts"), "account_id", id);
-            JsonNode assignment = find(data.path("role_assignments"), "account_id", id);
-            if (account == null || assignment == null) continue;
-            ObjectNode row = JSON.createObjectNode();
-            row.put("id", id).put("firstName", profile.path("first_name").asText())
-                .put("lastName", profile.path("last_name").asText()).put("phone", profile.path("phone").asText())
-                .put("email", account.path("email").asText()).put("passwordHash", hash)
-                .put("role", assignment.path("role_type").asText().equals("PARKING_ADMIN") ? "admin" : "client")
-                .put("tokenVersion", 0);
-            if (exists(users, "id", row.get("id"))) continue;
-            if (exists(users, "email", row.get("email"))) {
-                log.warn("SEED IAM ANTIGUO OMITIDO: correo demo ya registrado con otra cuenta; no se sobrescribe");
-                continue;
-            }
-            insert(users, row, hash);
-        }
-        log.info("SEED COMPATIBILIDAD: cuentas demo en users para probar el login actual");
-    }
 
     private void seedLegacyParkings(JsonNode data, Map<String, Table> schema, String hash) {
         if (schema.containsKey("tenants") || !schema.containsKey("parkings")) return;
@@ -238,8 +215,7 @@ public class DbSeeder implements CommandLineRunner {
             String id = tenant.path("tenant_id").asText();
             JsonNode admin = find(data.path("role_assignments"), "tenant_id", id);
             if (admin == null) continue;
-            Table users = schema.get("users");
-            if (users != null && !exists(users, "id", admin.path("account_id"))) continue;
+
             ObjectNode row = JSON.createObjectNode();
             row.put("id", id).put("adminId", admin.path("account_id").asText()).put("name", tenant.path("name").asText())
                 .put("address", tenant.path("address").asText()).put("city", "Lima")

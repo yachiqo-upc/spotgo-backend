@@ -46,33 +46,33 @@ class SubscriptionsControllerTest {
 
     @Test
     void createSubscriptionUsesAuthenticatedClientId() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
         var resource = new CreateSubscriptionResource("plan-pro", true, "4242", "12/28");
         when(subscriptionCommandService.handle(any(CreateSubscriptionCommand.class))).thenReturn(Result.success(
-                new Subscription("sub-1", "client-auth", "plan-pro", SubscriptionStatus.ACTIVE, "2026-08-01", 29.9, 0, 0.0, "", "2026-07-01", true, "4242", "12/28")));
+                new Subscription("sub-1", "00000000-0000-4000-8000-000000000902", "plan-pro", SubscriptionStatus.ACTIVE, "2026-08-01", 29.9, 0, 0.0, "", "2026-07-01", true, "4242", "12/28")));
 
         controller.createSubscription(principal, resource);
 
         var captor = ArgumentCaptor.forClass(CreateSubscriptionCommand.class);
         verify(subscriptionCommandService).handle(captor.capture());
-        assertEquals("client-auth", captor.getValue().clientId());
+        assertEquals("00000000-0000-4000-8000-000000000902", captor.getValue().clientId());
     }
 
     @Test
     void getAllSubscriptionsReturnsOnlyAuthenticatedClientSubscriptions() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
-        when(subscriptionRepository.findAllByClientId("client-auth")).thenReturn(List.of(
-                new Subscription("sub-1", "client-auth", "plan-pro", SubscriptionStatus.ACTIVE, "2026-08-01", 29.9, 0, 0.0, "", "2026-07-01", true, "4242", "12/28")));
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
+        when(subscriptionRepository.findAllByClientId("00000000-0000-4000-8000-000000000902")).thenReturn(List.of(
+                new Subscription("sub-1", "00000000-0000-4000-8000-000000000902", "plan-pro", SubscriptionStatus.ACTIVE, "2026-08-01", 29.9, 0, 0.0, "", "2026-07-01", true, "4242", "12/28")));
 
         var response = controller.getAllSubscriptions(principal);
 
         assertEquals(1, response.getBody().size());
-        assertEquals("client-auth", response.getBody().get(0).clientId());
+        assertEquals("00000000-0000-4000-8000-000000000902", response.getBody().get(0).clientId());
     }
 
     @Test
     void updateSubscriptionRejectsForeignOwner() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
         var resource = new UpdateSubscriptionResource("plan-pro", true, "4242", "12/28");
         when(subscriptionRepository.findById("sub-1")).thenReturn(Optional.of(
                 new Subscription("sub-1", "other-client", "plan-pro", SubscriptionStatus.ACTIVE, "2026-08-01", 29.9, 0, 0.0, "", "2026-07-01", true, "4242", "12/28")));

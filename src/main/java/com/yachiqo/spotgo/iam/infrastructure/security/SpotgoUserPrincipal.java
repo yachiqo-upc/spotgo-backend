@@ -1,54 +1,30 @@
 package com.yachiqo.spotgo.iam.infrastructure.security;
 
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public class SpotgoUserPrincipal implements UserDetails {
-
-    private final String userId;
+    private final UUID accountId;
     private final String email;
-    private final String passwordHash;
     private final UserRole role;
-    private final Long tokenVersion;
-    private final List<GrantedAuthority> authorities;
-
-    public SpotgoUserPrincipal(String userId, String email, String passwordHash, UserRole role, Long tokenVersion) {
-        this.userId = userId;
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.role = role;
-        this.tokenVersion = tokenVersion;
-        this.authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+    private final UUID tenantId;
+    private final UUID sessionId;
+    public SpotgoUserPrincipal(UUID accountId, String email, UserRole role, UUID tenantId, UUID sessionId) {
+        this.accountId = Objects.requireNonNull(accountId); this.email = email; this.role = role;
+        this.tenantId = tenantId; this.sessionId = sessionId;
     }
-
-    public String getUserId() {
-        return userId;
+    public UUID getAccountId() { return accountId; }
+    // String adapter for the three bounded contexts that still use their previous API contracts.
+    public String getUserId() { return accountId.toString(); }
+    public UserRole getRole() { return role; }
+    public UUID getTenantId() { return tenantId; }
+    public UUID getSessionId() { return sessionId; }
+    @Override public Collection<? extends GrantedAuthority> getAuthorities() {
+        return role == null ? List.of() : List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public Long getTokenVersion() {
-        return tokenVersion;
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
-    }
-
-    @Override
-    public String getPassword() {
-        return passwordHash;
-    }
-
-    @Override
-    public String getUsername() {
-        return email;
-    }
+    @Override public String getPassword() { return ""; }
+    @Override public String getUsername() { return email; }
 }

@@ -1,11 +1,14 @@
 package com.yachiqo.spotgo.iam.domain.model.aggregates;
 
-import com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.entities.UuidIdentifiedAggregateRoot;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 
 @Entity
@@ -13,7 +16,12 @@ import lombok.Getter;
         @Index(name = "idx_passwordResetCode_email", columnList = "email", unique = true)
 })
 @Getter
-public class PasswordResetCode extends UuidIdentifiedAggregateRoot<PasswordResetCode> {
+public class PasswordResetCode {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(nullable = false, updatable = false)
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -61,7 +69,7 @@ public class PasswordResetCode extends UuidIdentifiedAggregateRoot<PasswordReset
     }
 
     public boolean isExpiredAt(Instant now) {
-        return expiresAt.isBefore(now);
+        return !now.isBefore(expiresAt);
     }
 
     public boolean isUsed() {

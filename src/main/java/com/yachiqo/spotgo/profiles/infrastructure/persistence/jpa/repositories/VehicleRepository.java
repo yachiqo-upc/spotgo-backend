@@ -6,5 +6,6 @@ import java.util.UUID;
 public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "profile")
     java.util.Optional<Vehicle> findById(UUID id);
-    List<Vehicle> findAllByProfileId(UUID profileId);
+    @org.springframework.data.jpa.repository.Query("select v from Vehicle v where v.profile.id = :profileId")
+    List<Vehicle> findAllByProfileId(@org.springframework.data.repository.query.Param("profileId") UUID profileId);
 }

@@ -30,7 +30,7 @@ class ProfilesHttpTest {
     ProfilesCommandService commands;
     MockMvc mvc;
     UUID accountId = UUID.randomUUID();
-    SpotgoUserPrincipal actor = new SpotgoUserPrincipal(accountId.toString(), "juan@example.com", "hash", UserRole.CLIENT, 0L);
+    SpotgoUserPrincipal actor = new SpotgoUserPrincipal(accountId, "juan@example.com", UserRole.DRIVER, null, null);
 
     @BeforeEach void setup() {
         profiles = mock(ProfilesManagementService.class);

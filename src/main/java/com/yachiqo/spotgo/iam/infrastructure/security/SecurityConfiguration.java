@@ -33,10 +33,19 @@ public class SecurityConfiguration {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/authentication/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/v1/authentication/sign-in", "/api/v1/authentication/sign-up",
+                                "/api/v1/authentication/refresh", "/api/v1/authentication/password-reset/request",
+                                "/api/v1/authentication/password-reset/confirm").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler()))
+                .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler())
+                        .authenticationEntryPoint((request, response, error) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write("{\"code\":\"UNAUTHENTICATED\",\"message\":\"Inicia sesion y envia accessToken como Bearer; el token o la sesion pueden haber vencido\"}");
+                        }))
                 .addFilterBefore(authenticationRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

@@ -1,65 +1,38 @@
 package com.yachiqo.spotgo.iam.domain.model.aggregates;
 
-import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
-import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.converters.UserRoleConverter;
-import com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.entities.UuidIdentifiedAggregateRoot;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import com.yachiqo.spotgo.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
+import com.yachiqo.spotgo.iam.domain.model.valueobjects.AccountStatus;
+import jakarta.persistence.*;
 import lombok.Getter;
+import java.time.Instant;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "accounts")
 @Getter
-public class UserAccount extends UuidIdentifiedAggregateRoot<UserAccount> {
-
-    @Column(nullable = false)
-    private String firstName;
-
-    @Column(nullable = false)
-    private String lastName;
-
-    @Column(nullable = false, unique = true)
+public class UserAccount extends AbstractDomainAggregateRoot<UserAccount> {
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "account_id", nullable = false, updatable = false)
+    private UUID id;
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
-
-    @Column(nullable = false)
-    private String passwordHash;
-
-    @Column(nullable = false)
-    private String phone;
-
-    @Convert(converter = UserRoleConverter.class)
-    @Column(nullable = false)
-    private UserRole role;
-
-    @Column(nullable = false)
-    private Long tokenVersion = 0L;
-
-    protected UserAccount() {
-    }
-
-    public UserAccount(String firstName, String lastName, String email, String passwordHash, String phone, UserRole role) {
-        this.firstName = firstName;
-        this.lastName = lastName;
+    @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false)
+    private AccountStatus status;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+    protected UserAccount() {}
+    public UserAccount(String email) {
         this.email = normalizeEmail(email);
-        this.passwordHash = passwordHash;
-        this.phone = phone == null ? "" : phone;
-        this.role = role;
+        if (this.email == null || this.email.isBlank()) throw new IllegalArgumentException("El correo es obligatorio");
+        this.status = AccountStatus.ACTIVE;
     }
-
-    public void updateProfile(String firstName, String lastName, String phone) {
-        if (firstName != null) this.firstName = firstName;
-        if (lastName != null) this.lastName = lastName;
-        if (phone != null) this.phone = phone;
-    }
-
-    public void updatePasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-        this.tokenVersion = this.tokenVersion + 1;
-    }
-
-    public static String normalizeEmail(String email) {
-        return email == null ? null : email.trim().toLowerCase();
-    }
+    public static String normalizeEmail(String email) { return email == null ? null : email.trim().toLowerCase(Locale.ROOT); }
+    public void changeStatus(AccountStatus status) { this.status = Objects.requireNonNull(status); }
+    public boolean isActive() { return status == AccountStatus.ACTIVE; }
+    @PrePersist protected void onCreate() { createdAt = updatedAt = Instant.now(); }
+    @PreUpdate protected void onUpdate() { updatedAt = Instant.now(); }
 }

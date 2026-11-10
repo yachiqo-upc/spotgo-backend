@@ -149,7 +149,7 @@ public class DetectedSpotsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Create a detected spot", description = "Creates a new detected parking spot on a blueprint.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Detected spot created successfully",

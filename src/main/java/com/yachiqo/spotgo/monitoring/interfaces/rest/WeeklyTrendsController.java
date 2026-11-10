@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/weeklyTrends")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('PARKING_ADMIN')")
 @Tag(name = "WeeklyTrends", description = "Endpoints for reading weekly occupancy trend data")
 public class WeeklyTrendsController {
 

@@ -47,7 +47,7 @@ public class ClientReportsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('DRIVER')")
     @Operation(summary = "Create a client report", description = "Submits a new report from a client about a past reservation.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Report created successfully",
@@ -71,7 +71,7 @@ public class ClientReportsController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
+    @PreAuthorize("hasAnyRole('PARKING_ADMIN','DRIVER')")
     @Operation(summary = "Get all client reports", description = "Returns the full list of client reports.")
     @ApiResponse(responseCode = "200", description = "List of client reports returned",
             content = @Content(schema = @Schema(implementation = ClientReportResource.class)))
@@ -94,7 +94,7 @@ public class ClientReportsController {
     }
 
     @PatchMapping("/{reportId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Update report status", description = "Updates the status of a client report (e.g. mark as resolved).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Status updated successfully",

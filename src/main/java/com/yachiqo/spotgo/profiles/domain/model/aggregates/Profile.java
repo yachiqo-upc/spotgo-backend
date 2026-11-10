@@ -28,6 +28,12 @@ public class Profile extends AbstractDomainAggregateRoot<Profile>{
     @Column(name = "account_id", nullable = false, unique = true, updatable = false)
     private UUID accountId;
 
+    // Enforces the physical FK while keeping the UUID-based constructor and API.
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(name = "fk_profile_account"))
+    private com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount account;
+
     //First name
     @Column(name = "first_name", nullable = false)
     private String firstName;

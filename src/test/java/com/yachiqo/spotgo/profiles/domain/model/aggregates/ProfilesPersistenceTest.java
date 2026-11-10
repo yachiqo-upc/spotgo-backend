@@ -13,6 +13,7 @@ class ProfilesPersistenceTest {
 
     @BeforeEach void setup() {
         factory = new Configuration().addAnnotatedClass(Profile.class).addAnnotatedClass(Vehicle.class)
+            .addAnnotatedClass(com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount.class)
             .addAnnotatedClass(DriverClassification.class)
             .setProperty("hibernate.connection.driver_class", "org.h2.Driver")
             .setProperty("hibernate.connection.url", "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL")
@@ -22,8 +23,23 @@ class ProfilesPersistenceTest {
     }
     @AfterEach void close() { if (factory != null) factory.close(); }
 
+    private Profile profile(UUID accountId, String firstName, String lastName, String phone) {
+        factory.inTransaction(session -> {
+            if (session.find(com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount.class, accountId) == null) {
+                session.doWork(connection -> {
+                    try (var statement = connection.prepareStatement("INSERT INTO accounts(account_id,email,status,created_at,updated_at) VALUES (?,?,'ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)")) {
+                        statement.setObject(1, accountId);
+                        statement.setString(2, accountId + "@example.com");
+                        statement.executeUpdate();
+                    }
+                });
+            }
+        });
+        return new Profile(accountId, firstName, lastName, phone);
+    }
+
     @Test void generatesUuidAndDatesAndLoadsThroughEmptyConstructor() {
-        var profile = new Profile(UUID.randomUUID(), " Juan ", " Perez ", "999888777");
+        var profile = profile(UUID.randomUUID(), " Juan ", " Perez ", "999888777");
         factory.inTransaction(s -> s.persist(profile));
         assertNotNull(profile.getId());
         assertNotNull(profile.getCreatedAt());
@@ -43,13 +59,13 @@ class ProfilesPersistenceTest {
 
     @Test void accountCannotHaveTwoProfiles() {
         UUID account = UUID.randomUUID();
-        factory.inTransaction(s -> s.persist(new Profile(account, "Juan", "Perez", "999")));
+        factory.inTransaction(s -> s.persist(profile(account, "Juan", "Perez", "999")));
         assertThrows(RuntimeException.class, () -> factory.inTransaction(s ->
-            s.persist(new Profile(account, "Ana", "Ruiz", "888"))));
+            s.persist(profile(account, "Ana", "Ruiz", "888"))));
     }
 
     @Test void multipleVehiclesBelongToOneProfileAndPlateIsUniqueWhenPresent() {
-        var profile = new Profile(UUID.randomUUID(), "Juan", "Perez", "999");
+        var profile = profile(UUID.randomUUID(), "Juan", "Perez", "999");
         var first = new Vehicle(profile, " abc-123 ", "Toyota", "Yaris", "Azul");
         factory.inTransaction(s -> {
             s.persist(profile);
@@ -66,9 +82,9 @@ class ProfilesPersistenceTest {
     }
 
     @Test void classificationIsUniquePerPairAndDefaultsToPrivate() {
-        var driver = new Profile(UUID.randomUUID(), "Juan", "Perez", "999");
-        var other = new Profile(UUID.randomUUID(), "Luis", "Ruiz", "888");
-        var admin = new Profile(UUID.randomUUID(), "Ana", "Ruiz", "777");
+        var driver = profile(UUID.randomUUID(), "Juan", "Perez", "999");
+        var other = profile(UUID.randomUUID(), "Luis", "Ruiz", "888");
+        var admin = profile(UUID.randomUUID(), "Ana", "Ruiz", "777");
         UUID tenant = UUID.randomUUID();
         var classification = new DriverClassification(driver, tenant, null, admin);
         factory.inTransaction(s -> {
@@ -86,7 +102,7 @@ class ProfilesPersistenceTest {
     }
 
     @Test void refusesToDeleteAProfileReferencedByVehicles() {
-        var profile = new Profile(UUID.randomUUID(), "Juan", "Perez", "999");
+        var profile = profile(UUID.randomUUID(), "Juan", "Perez", "999");
         factory.inTransaction(s -> {
             s.persist(profile);
             s.persist(new Vehicle(profile, "ABC-123", "Kia", "Rio", "Rojo"));
@@ -96,8 +112,8 @@ class ProfilesPersistenceTest {
     }
 
     @Test void rejectsBlankNamesAndVehicleDescriptions() {
-        assertThrows(IllegalArgumentException.class, () -> new Profile(UUID.randomUUID(), "  ", "Perez", "999"));
-        var profile = new Profile(UUID.randomUUID(), "Juan", "Perez", "999");
+        assertThrows(IllegalArgumentException.class, () -> profile(UUID.randomUUID(), "  ", "Perez", "999"));
+        var profile = profile(UUID.randomUUID(), "Juan", "Perez", "999");
         assertThrows(IllegalArgumentException.class, () -> new Vehicle(profile, "ABC", " ", "Rio", "Rojo"));
     }
 }

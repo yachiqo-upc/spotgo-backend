@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 public interface DriverClassificationRepository extends JpaRepository<DriverClassification, UUID> {
-    Optional<DriverClassification> findByProfileIdAndTenantId(UUID profileId, UUID tenantId);
+    @org.springframework.data.jpa.repository.Query("select c from DriverClassification c where c.profile.id = :profileId and c.tenantId = :tenantId")
+    Optional<DriverClassification> findByProfileIdAndTenantId(@org.springframework.data.repository.query.Param("profileId") UUID profileId,
+        @org.springframework.data.repository.query.Param("tenantId") UUID tenantId);
     List<DriverClassification> findAllByTenantId(UUID tenantId);
-    List<DriverClassification> findAllByProfileId(UUID profileId);
+    @org.springframework.data.jpa.repository.Query("select c from DriverClassification c where c.profile.id = :profileId")
+    List<DriverClassification> findAllByProfileId(@org.springframework.data.repository.query.Param("profileId") UUID profileId);
 }

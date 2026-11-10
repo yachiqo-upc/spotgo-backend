@@ -56,7 +56,7 @@ public class BlueprintsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Create a blueprint", description = "Creates a new blueprint (map) for a parking facility.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Blueprint created successfully",
@@ -121,7 +121,7 @@ public class BlueprintsController {
     }
 
     @RequestMapping(value = "/{blueprintId}", method = {RequestMethod.PUT, RequestMethod.PATCH})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Update a blueprint", description = "Updates a blueprint's name and/or image. Blocked if the parking has active reservations.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Blueprint updated successfully",
@@ -154,7 +154,7 @@ public class BlueprintsController {
     }
 
     @DeleteMapping("/{blueprintId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Delete a blueprint", description = "Deletes a blueprint by its ID. Blocked if the parking has active reservations.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Blueprint deleted successfully"),

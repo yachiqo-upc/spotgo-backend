@@ -42,7 +42,7 @@ class ReservationLifecycleServiceTest {
     void reconcileExpiredReservationsCompletesExpiredReservationsAndReconcilesParking() {
         var expired = new Reservation("client-1", "parking-1", "SPG-001", "A1",
                 LocalDateTime.of(2026, 7, 8, 10, 0), LocalDateTime.of(2026, 7, 8, 11, 0), 10.0, 10.0, null);
-        var parking = new Parking("admin-1", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
+        var parking = new Parking("00000000-0000-4000-8000-000000000901", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
         parking.setId("parking-1");
 
         when(reservationRepository.findByStatusAndEndDateBefore(ReservationStatus.ACTIVE, LocalDateTime.of(2026, 7, 8, 12, 0)))
@@ -57,7 +57,7 @@ class ReservationLifecycleServiceTest {
 
     @Test
     void reconcileExpiredReservationsStillReconcilesParkingsWhenNothingExpired() {
-        var parking = new Parking("admin-1", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
+        var parking = new Parking("00000000-0000-4000-8000-000000000901", "Main", "Addr", "Lima", 2, 2, 1, null, null, null, null, null, 0.0, 5.0, null, null, null);
         parking.setId("parking-1");
         when(reservationRepository.findByStatusAndEndDateBefore(ReservationStatus.ACTIVE, LocalDateTime.of(2026, 7, 8, 12, 0))).thenReturn(List.of());
         when(parkingRepository.findAll()).thenReturn(List.of(parking));

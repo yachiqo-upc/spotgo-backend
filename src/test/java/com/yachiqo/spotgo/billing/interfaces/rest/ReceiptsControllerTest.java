@@ -42,7 +42,7 @@ class ReceiptsControllerTest {
 
     @Test
     void createReceiptIsRejectedBecauseReceiptsAreGeneratedServerSide() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
         var resource = new CreateReceiptResource(
                 "body-client",
                 "res-1",
@@ -61,19 +61,19 @@ class ReceiptsControllerTest {
 
     @Test
     void getAllReceiptsReturnsOnlyAuthenticatedClientReceipts() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
-        when(receiptRepository.findAllByClientId("client-auth")).thenReturn(List.of(
-                new Receipt("receipt-1", "client-auth", "res-1", "INV-001", "SpotGo Center", "2026-07-08", 1, 30, "Visa 4242", 10.0, ReceiptStatus.PENDING)));
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
+        when(receiptRepository.findAllByClientId("00000000-0000-4000-8000-000000000902")).thenReturn(List.of(
+                new Receipt("receipt-1", "00000000-0000-4000-8000-000000000902", "res-1", "INV-001", "SpotGo Center", "2026-07-08", 1, 30, "Visa 4242", 10.0, ReceiptStatus.PENDING)));
 
         var response = controller.getAllReceipts(principal, null);
 
         assertEquals(1, response.getBody().size());
-        assertEquals("client-auth", response.getBody().get(0).clientId());
+        assertEquals("00000000-0000-4000-8000-000000000902", response.getBody().get(0).clientId());
     }
 
     @Test
     void getReceiptByIdRejectsForeignReceipt() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
         when(receiptQueryService.handle(any(GetReceiptByIdQuery.class))).thenReturn(Optional.of(
                 new Receipt("receipt-1", "other-client", "res-1", "INV-001", "SpotGo Center", "2026-07-08", 1, 30, "Visa 4242", 10.0, ReceiptStatus.PENDING)));
 

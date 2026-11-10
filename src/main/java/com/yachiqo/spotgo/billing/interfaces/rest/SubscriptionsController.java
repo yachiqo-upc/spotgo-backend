@@ -33,7 +33,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/api/v1/subscriptions", produces = MediaType.APPLICATION_JSON_VALUE)
-@PreAuthorize("hasRole('CLIENT')")
+@PreAuthorize("hasRole('DRIVER')")
 @Tag(name = "Subscriptions", description = "Endpoints for managing client subscriptions")
 public class SubscriptionsController {
 

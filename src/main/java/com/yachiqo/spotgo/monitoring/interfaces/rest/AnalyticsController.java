@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/analytics")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('PARKING_ADMIN')")
 @Tag(name = "Analytics", description = "Aggregated analytics for the authenticated admin parking")
 public class AnalyticsController {
 

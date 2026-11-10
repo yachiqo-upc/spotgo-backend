@@ -22,20 +22,21 @@ public class AuthorizationService {
     }
 
     public boolean isAdmin(SpotgoUserPrincipal principal) {
-        return principal.getRole() == UserRole.ADMIN;
+        return principal.getRole() == UserRole.PARKING_ADMIN;
     }
 
     public boolean isClient(SpotgoUserPrincipal principal) {
-        return principal.getRole() == UserRole.CLIENT;
+        return principal.getRole() == UserRole.DRIVER;
     }
 
     public String requireAdminParkingId(SpotgoUserPrincipal principal) {
         if (!isAdmin(principal)) {
             throw new AccessDeniedException("Admin role required");
         }
-        return parkingRepository.findByAdminId(principal.getUserId())
-                .map(parking -> parking.getId())
-                .orElseThrow(() -> new AccessDeniedException("Admin does not own a parking resource"));
+        if (principal.getTenantId() == null || !parkingRepository.existsById(principal.getTenantId().toString())) {
+            throw new AccessDeniedException("El rol no tiene un estacionamiento disponible asignado");
+        }
+        return principal.getTenantId().toString();
     }
 
     public void requireParkingOwnership(SpotgoUserPrincipal principal, String parkingId) {

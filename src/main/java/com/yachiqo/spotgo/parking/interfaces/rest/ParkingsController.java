@@ -43,7 +43,7 @@ public class ParkingsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Create a parking", description = "Creates a new parking facility.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Parking created successfully",
@@ -93,7 +93,7 @@ public class ParkingsController {
     }
 
     @PatchMapping("/{parkingId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('PARKING_ADMIN')")
     @Operation(summary = "Update parking", description = "Updates mutable parking fields used by the frontend.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Rating updated successfully",

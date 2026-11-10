@@ -49,14 +49,14 @@ class ReservationsControllerTest {
 
     @Test
     void reserveSpotUsesAuthenticatedClientIdInsteadOfRequestBodyClientId() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
         var resource = new CreateReservationResource(
                 "parking-1",
                 "B5",
                 OffsetDateTime.parse("2026-07-07T10:00:00.000-05:00"),
                 OffsetDateTime.parse("2026-07-07T11:00:00.000-05:00"));
         when(parkingCommandService.handle(any(ReserveSpotCommand.class))).thenReturn(Optional.of(new Reservation(
-                "client-auth",
+                "00000000-0000-4000-8000-000000000902",
                 "parking-1",
                 "SPG-001",
                 "B5",
@@ -70,19 +70,19 @@ class ReservationsControllerTest {
 
         var commandCaptor = ArgumentCaptor.forClass(ReserveSpotCommand.class);
         verify(parkingCommandService).handle(commandCaptor.capture());
-        assertEquals("client-auth", commandCaptor.getValue().clientId());
+        assertEquals("00000000-0000-4000-8000-000000000902", commandCaptor.getValue().clientId());
     }
 
     @Test
     void reserveSpotConvertsOffsetDateTimesToLimaLocalTime() {
-        var principal = new SpotgoUserPrincipal("client-auth", "client@spotgo.com", "pw", UserRole.CLIENT, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000902"), "client@spotgo.com", UserRole.DRIVER, null, null);
         var resource = new CreateReservationResource(
                 "parking-1",
                 "A1",
                 OffsetDateTime.parse("2026-07-07T12:00:00.000-05:00"),
                 OffsetDateTime.parse("2026-07-07T13:30:00.000-05:00"));
         when(parkingCommandService.handle(any(ReserveSpotCommand.class))).thenReturn(Optional.of(new Reservation(
-                "client-auth",
+                "00000000-0000-4000-8000-000000000902",
                 "parking-1",
                 "SPG-001",
                 "A1",
@@ -102,7 +102,7 @@ class ReservationsControllerTest {
 
     @Test
     void getAllReservationsRejectsAdminRequestForForeignParking() {
-        var principal = new SpotgoUserPrincipal("admin-1", "admin@spotgo.com", "pw", UserRole.ADMIN, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000901"), "admin@spotgo.com", UserRole.PARKING_ADMIN, null, null);
         when(authorizationService.isAdmin(principal)).thenReturn(true);
         when(authorizationService.requireAdminParkingId(principal)).thenReturn("parking-owned");
 
@@ -112,7 +112,7 @@ class ReservationsControllerTest {
 
     @Test
     void getAllReservationsScopesAdminToOwnedParking() {
-        var principal = new SpotgoUserPrincipal("admin-1", "admin@spotgo.com", "pw", UserRole.ADMIN, 0L);
+        var principal = new SpotgoUserPrincipal(java.util.UUID.fromString("00000000-0000-4000-8000-000000000901"), "admin@spotgo.com", UserRole.PARKING_ADMIN, null, null);
         when(authorizationService.isAdmin(principal)).thenReturn(true);
         when(authorizationService.requireAdminParkingId(principal)).thenReturn("parking-owned");
         when(parkingQueryService.handle(any(GetReservationsByParkingIdQuery.class))).thenReturn(List.of());

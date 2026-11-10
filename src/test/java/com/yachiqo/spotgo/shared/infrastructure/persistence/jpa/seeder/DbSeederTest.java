@@ -28,7 +28,11 @@ class DbSeederTest {
     }
 
     private void currentSchema() {
-        jdbc.execute("CREATE TABLE users (id VARCHAR(36) PRIMARY KEY, firstName VARCHAR NOT NULL, lastName VARCHAR NOT NULL, email VARCHAR UNIQUE NOT NULL, passwordHash VARCHAR NOT NULL, phone VARCHAR NOT NULL, role VARCHAR NOT NULL, tokenVersion BIGINT NOT NULL)");
+        jdbc.execute("CREATE TABLE accounts (account_id UUID PRIMARY KEY, email VARCHAR UNIQUE NOT NULL, status VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
+        jdbc.execute("CREATE TABLE credentials (credential_id UUID PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts(account_id), authentication_method VARCHAR NOT NULL, secret_hash VARCHAR, external_subject VARCHAR, last_used_at TIMESTAMP WITH TIME ZONE, status VARCHAR NOT NULL)");
+        jdbc.execute("CREATE TABLE role_assignments (assignment_id UUID PRIMARY KEY, account_id UUID UNIQUE NOT NULL REFERENCES accounts(account_id), role_type VARCHAR NOT NULL, tenant_id UUID, valid_from TIMESTAMP WITH TIME ZONE NOT NULL, valid_to TIMESTAMP WITH TIME ZONE, status VARCHAR NOT NULL)");
+        jdbc.execute("CREATE TABLE sessions (session_id UUID PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts(account_id), refresh_token_hash VARCHAR UNIQUE NOT NULL, last_activity_at TIMESTAMP WITH TIME ZONE NOT NULL, status VARCHAR NOT NULL, revoked_at TIMESTAMP WITH TIME ZONE, created_at TIMESTAMP WITH TIME ZONE NOT NULL, expires_at TIMESTAMP WITH TIME ZONE NOT NULL)");
+        jdbc.execute("CREATE TABLE audit_entries (audit_id UUID PRIMARY KEY, account_id UUID REFERENCES accounts(account_id), action VARCHAR NOT NULL, result VARCHAR NOT NULL, source VARCHAR NOT NULL, occurred_at TIMESTAMP WITH TIME ZONE NOT NULL, correlation_id VARCHAR NOT NULL)");
         jdbc.execute("CREATE TABLE parkings (id VARCHAR(36) PRIMARY KEY, adminId VARCHAR, name VARCHAR NOT NULL, address VARCHAR NOT NULL, city VARCHAR, totalSpaces INTEGER NOT NULL)");
         jdbc.execute("CREATE TABLE profiles (profile_id UUID PRIMARY KEY, account_id UUID UNIQUE NOT NULL, first_name VARCHAR NOT NULL, last_name VARCHAR NOT NULL, phone VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE vehicles (vehicle_id UUID PRIMARY KEY, profile_id UUID NOT NULL REFERENCES profiles(profile_id), plate VARCHAR UNIQUE, make VARCHAR NOT NULL, model VARCHAR NOT NULL, color VARCHAR NOT NULL, status VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
@@ -43,14 +47,18 @@ class DbSeederTest {
     @Test void loadsOnlyCompatibleTablesWithWorkingDemoPasswordsAndUuidRelationships() throws Exception {
         currentSchema();
         seeder.run();
-        assertEquals(3, count("users"));
+        assertEquals(4, count("accounts"));
+        assertEquals(4, count("credentials"));
+        assertEquals(4, count("role_assignments"));
+        assertEquals(1, count("sessions"));
+        assertEquals(2, count("audit_entries"));
         assertEquals(1, count("parkings"));
         assertEquals(3, count("profiles"));
         assertEquals(3, count("vehicles"));
         assertEquals(2, count("driver_classifications"));
         assertEquals(0, count("reservations"));
         assertEquals(0, count("subscriptions"));
-        String hash = jdbc.queryForObject("SELECT passwordHash FROM users WHERE email='juan.driver@example.com'", String.class);
+        String hash = jdbc.queryForObject("SELECT c.secret_hash FROM credentials c JOIN accounts a ON c.account_id=a.account_id WHERE a.email='juan.driver@example.com'", String.class);
         assertTrue(new BCryptPasswordEncoder().matches("Password123!", hash));
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM vehicles v JOIN profiles p ON v.profile_id=p.profile_id WHERE p.first_name='Juan'", Integer.class));
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM driver_classifications c JOIN profiles p ON c.assigned_by=p.profile_id WHERE p.first_name='Ana'", Integer.class));
@@ -75,7 +83,7 @@ class DbSeederTest {
     @Test void missingAccountPreventsInsertingOrphanProfilesAndVehicles() throws Exception {
         currentSchema();
         jdbc.execute("DROP TABLE parkings");
-        jdbc.execute("DROP TABLE users");
+        jdbc.execute("DROP TABLE accounts CASCADE");
         seeder.run();
         assertEquals(0, count("profiles"));
         assertEquals(0, count("vehicles"));
