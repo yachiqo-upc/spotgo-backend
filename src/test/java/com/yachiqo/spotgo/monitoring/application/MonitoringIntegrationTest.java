@@ -262,7 +262,7 @@ class MonitoringIntegrationTest {
   assertEquals(1,monitoring.sensors(superAdmin,null).size());
  }
  @Test void swaggerContainsAllSevenCurrentMonitoringResourcesAndNoOldEndpoints() throws Exception {
-  var response=request("GET","/v3/api-docs/04-backend-completo",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).get("paths");
+  var response=request("GET","/v3/api-docs/06-backend-completo",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).get("paths");
   for(var path:List.of("occupancy-sensors","occupancy-readings","sensor-health-events","occupancy-conflicts","occupancy-alerts","capacity-snapshots","occupancy-reports"))assertTrue(paths.has("/api/v1/"+path),path);
   for(var path:List.of("employees","occupancyByHour","weeklyTrends","analytics","receipts","clientPlans"))assertFalse(paths.has("/api/v1/"+path),path);
  }

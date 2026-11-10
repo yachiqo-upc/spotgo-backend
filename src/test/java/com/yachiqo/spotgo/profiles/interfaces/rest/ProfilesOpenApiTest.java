@@ -28,14 +28,25 @@ class ProfilesOpenApiTest {
     }
 
     @Test void updatedGroupExcludesLegacyControllersButKeepsAuthentication() throws Exception {
+        var configResponse = get("/v3/api-docs/swagger-config");
+        assertEquals(200, configResponse.statusCode());
+        JsonNode config = new ObjectMapper().readTree(configResponse.body());
+        var names = new java.util.ArrayList<String>();
+        for (var group : config.path("urls")) names.add(group.path("name").asText());
+        assertEquals(java.util.List.of("01-profiles-actualizado", "02-iam-actualizado", "03-parking-actualizado",
+            "04-payments-billing-actualizado", "05-monitoring-actualizado", "06-backend-completo"), names);
+        assertEquals("06-backend-completo", config.path("urls.primaryName").asText());
+        JsonNode complete = api("06-backend-completo");
+        java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "swagger-order-review"));
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target", "swagger-order-review", "endpoint-inventory.json"), complete.toString());
         JsonNode paths = api("01-profiles-actualizado").path("paths");
         assertTrue(paths.has("/api/v1/profiles/me"));
         assertTrue(paths.has("/api/v1/vehicles"));
         assertTrue(paths.has("/api/v1/driver-classifications/me"));
         assertTrue(paths.has("/api/v1/authentication/sign-in"));
         assertFalse(paths.has("/api/v1/receipts"));
-        assertTrue(api("04-backend-completo").path("paths").has("/api/v1/digital-payments"));
-        assertFalse(api("04-backend-completo").path("paths").has("/api/v1/receipts"));
+        assertTrue(api("06-backend-completo").path("paths").has("/api/v1/digital-payments"));
+        assertFalse(api("06-backend-completo").path("paths").has("/api/v1/receipts"));
     }
 
     @Test void generatedDocumentationDescribesOperationsCodesAndDistinctUuidExamples() throws Exception {

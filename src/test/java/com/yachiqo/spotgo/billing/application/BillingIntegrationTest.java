@@ -403,7 +403,7 @@ class BillingIntegrationTest {
   assertEquals(BillingDocumentStatus.VOID,billing.voidDocument(admin,doc.getId()).getStatus());
  }
  @Test void swaggerShowsCurrentBillingAndNoOldControllers() throws Exception{
-  var response=request("GET","/v3/api-docs/04-backend-completo",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).path("paths");
+  var response=request("GET","/v3/api-docs/06-backend-completo",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).path("paths");
   for(String path:List.of("payment-tokens","digital-payments","payment-attempts","subscriptions","additional-charges","outstanding-balances","refunds","billing-documents"))assertTrue(paths.has("/api/v1/"+path),path);
   for(String old:List.of("receipts","clientPlans","parkings","detectedSpots","employees","occupancyByHour","weeklyTrends"))assertFalse(paths.has("/api/v1/"+old),old);
  }

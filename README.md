@@ -87,6 +87,20 @@ The backend allows requests from:
 Allowed methods: `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`, `HEAD`, `PATCH`. Credentials are enabled with a 1-hour max-age cache.
 
 ## API Endpoints
+Swagger muestra los grupos en orden: `01-profiles-actualizado`, `02-iam-actualizado`, `03-parking-actualizado`, `04-payments-billing-actualizado`, `05-monitoring-actualizado` y `06-backend-completo`. Backend completo aparece al final y sigue seleccionado por defecto.
+
+Inventario verificado contra el OpenAPI generado: **110 operaciones HTTP unicas**. Se cuenta cada combinacion metodo + ruta; GET y POST en la misma ruta cuentan como dos. Los endpoints de Authentication repetidos en otras vistas se cuentan una sola vez. No se incluyen las rutas tecnicas de Swagger.
+
+| Bounded context | Operaciones propias | Desglose por recurso |
+|---|---:|---|
+| Profiles & Vehicles | 10 | profiles: 3; vehicles: 4; driver-classifications: 3 |
+| Identity & Access Management | 17 | authentication: 6; accounts: 8; sessions: 2; audit-entries: 1 |
+| Parking Infrastructure | 32 | tenants: 4; parking-zones: 3; parking-spots: 4; floor-plans: 4; digital-parking-maps: 4; reservations: 6; parking-sessions: 3; guest-parking-sessions: 4 |
+| Payments & Billing | 27 | payment-tokens: 3; digital-payments: 8; payment-attempts: 1; subscriptions: 4; additional-charges: 3; outstanding-balances: 2; refunds: 3; billing-documents: 3 |
+| Monitoring | 24 | occupancy-sensors: 5; occupancy-readings: 2; sensor-health-events: 4; occupancy-conflicts: 4; occupancy-alerts: 5; capacity-snapshots: 2; occupancy-reports: 2 |
+| **Total** | **110** | Sin duplicar operaciones entre grupos. |
+
+Los metodos, rutas y funciones se detallan en las tablas siguientes. Las vistas de Profiles, Parking, Payments y Monitoring incluyen ademas los seis endpoints de Authentication para facilitar las pruebas; no forman parte del conteo propio de esos contextos.
 
 ### IAM / Profiles
 
@@ -178,7 +192,7 @@ Las referencias internas y las de Profiles son FK físicas. IAM y driver_classif
 
 #### Probar Parking en Swagger
 
-Usa http://localhost:8080/swagger-ui/index.html. La vista predeterminada es **04-backend-completo**; **03-parking-actualizado** reúne este contexto y autenticación. Las secciones usan los nombres de los recursos, sin prefijo del bounded context.
+Usa http://localhost:8080/swagger-ui/index.html. La vista predeterminada es **06-backend-completo**; **03-parking-actualizado** reúne este contexto y autenticación. Las secciones usan los nombres de los recursos, sin prefijo del bounded context.
 
 1. Inicia sesión con `ana.admin@example.com` / `Password123!` y pega accessToken en Authorize. Consulta su tenantId con `/accounts/me/role` en la vista completa.
 2. Consulta las zonas y espacios demo. Puedes registrar/actualizar recursos únicamente dentro de ese tenant.
@@ -278,7 +292,7 @@ No hay proveedor financiero real configurado en este repositorio. La implementac
 
 Registrar datos de una boleta/factura no equivale a enviarla a SUNAT ni a recibir autorización tributaria. El emisor autorizado debe proporcionar serie, número y datos. Esta integración externa no se simula como si fuese real.
 
-Swagger en http://localhost:8080/swagger-ui/index.html muestra los cinco contextos en 04-backend-completo. Monitoring también está en monitoring-actualizado. Se retiraron los endpoints antiguos de empleados, occupancyByHour, weeklyTrends y analytics, además de Receipts y ClientPlans.
+Swagger en http://localhost:8080/swagger-ui/index.html muestra los cinco contextos en 06-backend-completo. Monitoring también está en 05-monitoring-actualizado. Se retiraron los endpoints antiguos de empleados, occupancyByHour, weeklyTrends y analytics, además de Receipts y ClientPlans.
 
 **BD existente:** subscriptions y reservations del backend anterior pueden ser incompatibles con este esquema. Hibernate update no convierte IDs ni borra tablas antiguas. No se ejecutó ninguna migración ni borrado en tu PostgreSQL durante la configuración. En el próximo arranque dev se recrearán las tablas mapeadas.
 
@@ -356,7 +370,7 @@ The API starts on `http://localhost:8080`. Swagger UI is available at `/swagger-
 
 1. Configura `PASSWORD` y `JWT_SECRET` en el entorno local y deja activo `dev`. JWT_SECRET debe tener al menos 32 bytes. No publiques sus valores reales.
 2. Con PostgreSQL y la base `spotgo` disponibles, inicia el backend. La configuracion local de application.properties recrea las tablas mapeadas en cada arranque (ddl-auto=create) y después carga db.json. Se pierden los cambios locales de la ejecución anterior. Esto también ocurre con los reinicios de DevTools.
-3. Abre http://localhost:8080/swagger-ui/index.html y selecciona **02-iam-actualizado**. **01-profiles-actualizado** reúne Profiles y autenticación; **04-backend-completo** muestra todos los contextos, todos ya adaptados al modelo actual.
+3. Abre http://localhost:8080/swagger-ui/index.html y selecciona **02-iam-actualizado**. **01-profiles-actualizado** reúne Profiles y autenticación; **06-backend-completo** muestra todos los contextos, todos ya adaptados al modelo actual.
 4. Ejecuta sign-in con una cuenta demo. Copia solamente `accessToken` en **Authorize**.
 5. Prueba `/accounts/me`, `/accounts/me/role` y `/sessions/me`. Con DRIVER, listar `/accounts` responde 403; con SUPER_ADMIN responde 200.
 6. Para renovar, usa el `refreshToken` recibido en el cuerpo de `/authentication/refresh`. Actualiza el token de Authorize con el nuevo accessToken.
