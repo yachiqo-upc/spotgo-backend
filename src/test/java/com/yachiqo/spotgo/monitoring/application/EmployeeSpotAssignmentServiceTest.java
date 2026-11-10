@@ -11,11 +11,11 @@ import com.yachiqo.spotgo.monitoring.domain.model.valueobjects.EmployeeRole;
 import com.yachiqo.spotgo.monitoring.domain.model.valueobjects.EmployeeSchedule;
 import com.yachiqo.spotgo.monitoring.domain.model.valueobjects.EmployeeStatus;
 import com.yachiqo.spotgo.monitoring.infrastructure.persistence.jpa.repositories.EmployeeRepository;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.DetectedSpot;
+import com.yachiqo.spotgo.parking.domain.model.aggregates.ParkingSpot;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.Reservation;
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.SpotStatus;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.OperationalStatus;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.DetectedSpotRepository;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingSpotRepository;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,12 +32,21 @@ class EmployeeSpotAssignmentServiceTest {
     @Mock
     private EmployeeRepository employeeRepository;
     @Mock
-    private DetectedSpotRepository detectedSpotRepository;
+    private ParkingSpotRepository detectedSpotRepository;
     @Mock
     private ReservationRepository reservationRepository;
 
     private EmployeeSpotAssignmentService service;
 
+    private ParkingSpot spot() {
+        var tenant=new com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant("Demo","Demo",java.util.Map.of(),java.util.Map.of(),java.util.Map.of());
+        var zone=new com.yachiqo.spotgo.parking.domain.model.aggregates.ParkingZone(tenant,"A",java.util.Map.of(),"#2563EB");
+        return new ParkingSpot(zone,"A1","STANDARD",java.util.Map.of());
+    }
+    private Reservation reservation(ParkingSpot spot,LocalDateTime start,LocalDateTime end) {
+        var r=new Reservation(spot,null,null,start.atZone(java.time.ZoneId.of("America/Lima")).toInstant(),end.atZone(java.time.ZoneId.of("America/Lima")).toInstant(),java.math.BigDecimal.TEN,java.time.Instant.EPOCH,10);
+        org.springframework.test.util.ReflectionTestUtils.setField(r,"status",ReservationStatus.ACTIVE);return r;
+    }
     @BeforeEach
     void setUp() {
         service = new EmployeeSpotAssignmentService(employeeRepository, detectedSpotRepository, reservationRepository);
@@ -45,23 +54,14 @@ class EmployeeSpotAssignmentServiceTest {
 
     @Test
     void validateAssignmentRejectsOnDutyEmployeeWhenSpotHasConflictingReservation() {
-        var spotA1 = new DetectedSpot(1, "bp-1", "parking-1", 0, 0, 0.1, 0.1, 0.1, 0.1, SpotStatus.AVAILABLE);
-        var reservation = new Reservation(
-                "client-1",
-                "parking-1",
-                "SPG-001",
-                "A1",
-                LocalDateTime.of(2026, 7, 9, 10, 0),
-                LocalDateTime.of(2026, 7, 9, 11, 0),
-                10.0,
-                10.0,
-                null);
-        when(detectedSpotRepository.findByParkingId("parking-1")).thenReturn(List.of(spotA1));
-        when(employeeRepository.findByParkingIdAndAssignedSpot("parking-1", "A1")).thenReturn(Optional.empty());
-        when(reservationRepository.findByParkingIdAndSpot("parking-1", "A1")).thenReturn(List.of(reservation));
+        var spotA1 = spot();
+        var reservation = reservation(spotA1, LocalDateTime.of(2026, 7, 9, 10, 0), LocalDateTime.of(2026, 7, 9, 11, 0));
+        when(detectedSpotRepository.byTenant(java.util.UUID.fromString("00000000-0000-4000-8000-000000000021"))).thenReturn(List.of(spotA1));
+        when(employeeRepository.findByParkingIdAndAssignedSpot("00000000-0000-4000-8000-000000000021", "A1")).thenReturn(Optional.empty());
+        when(reservationRepository.byTenant(java.util.UUID.fromString("00000000-0000-4000-8000-000000000021"))).thenReturn(List.of(reservation));
 
         var exception = assertThrows(IllegalArgumentException.class, () -> service.validateAssignment(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 null,
                 "a1",
                 EmployeeSchedule.ALL_WEEK,
@@ -74,24 +74,21 @@ class EmployeeSpotAssignmentServiceTest {
 
     @Test
     void validateAssignmentIgnoresCompletedReservation() {
-        var spotA1 = new DetectedSpot(1, "bp-1", "parking-1", 0, 0, 0.1, 0.1, 0.1, 0.1, SpotStatus.AVAILABLE);
-        var reservation = new Reservation(
-                "client-1", "parking-1", "SPG-001", "A1",
-                LocalDateTime.of(2026, 7, 9, 10, 0), LocalDateTime.of(2026, 7, 9, 11, 0),
-                10.0, 10.0, null);
-        reservation.updateStatus(ReservationStatus.COMPLETED);
-        when(detectedSpotRepository.findByParkingId("parking-1")).thenReturn(List.of(spotA1));
-        when(employeeRepository.findByParkingIdAndAssignedSpot("parking-1", "A1")).thenReturn(Optional.empty());
-        when(reservationRepository.findByParkingIdAndSpot("parking-1", "A1")).thenReturn(List.of(reservation));
+        var spotA1 = spot();
+        var reservation = reservation(spotA1, LocalDateTime.of(2026, 7, 9, 10, 0), LocalDateTime.of(2026, 7, 9, 11, 0));
+        org.springframework.test.util.ReflectionTestUtils.setField(reservation,"status",ReservationStatus.COMPLETED);
+        when(detectedSpotRepository.byTenant(java.util.UUID.fromString("00000000-0000-4000-8000-000000000021"))).thenReturn(List.of(spotA1));
+        when(employeeRepository.findByParkingIdAndAssignedSpot("00000000-0000-4000-8000-000000000021", "A1")).thenReturn(Optional.empty());
+        when(reservationRepository.byTenant(java.util.UUID.fromString("00000000-0000-4000-8000-000000000021"))).thenReturn(List.of(reservation));
 
         assertDoesNotThrow(() -> service.validateAssignment(
-                "parking-1", null, "A1", EmployeeSchedule.ALL_WEEK, "09:00", "17:00", EmployeeStatus.ON_DUTY));
+                "00000000-0000-4000-8000-000000000021", null, "A1", EmployeeSchedule.ALL_WEEK, "09:00", "17:00", EmployeeStatus.ON_DUTY));
     }
 
     @Test
     void reservedEmployeesBySpotIncludesOnlyOnDutyEmployeesInsideShift() {
         var onDutyEmployee = new Employee(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 "Ana",
                 "Diaz",
                 EmployeeRole.GUARD,
@@ -101,7 +98,7 @@ class EmployeeSpotAssignmentServiceTest {
                 "A1",
                 EmployeeStatus.ON_DUTY);
         var offDutyEmployee = new Employee(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 "Luis",
                 "Perez",
                 EmployeeRole.GUARD,
@@ -110,9 +107,9 @@ class EmployeeSpotAssignmentServiceTest {
                 "17:00",
                 "A2",
                 EmployeeStatus.OFF_DUTY);
-        when(employeeRepository.findByParkingId("parking-1")).thenReturn(List.of(onDutyEmployee, offDutyEmployee));
+        when(employeeRepository.findByParkingId("00000000-0000-4000-8000-000000000021")).thenReturn(List.of(onDutyEmployee, offDutyEmployee));
 
-        var reservedBySpot = service.getReservedEmployeesBySpot("parking-1", LocalDateTime.of(2026, 7, 9, 10, 0));
+        var reservedBySpot = service.getReservedEmployeesBySpot("00000000-0000-4000-8000-000000000021", LocalDateTime.of(2026, 7, 9, 10, 0));
 
         assertEquals(1, reservedBySpot.size());
         assertTrue(reservedBySpot.containsKey("A1"));
@@ -122,7 +119,7 @@ class EmployeeSpotAssignmentServiceTest {
     @Test
     void reservedEmployeesBySpotSkipsWeekdayEmployeeOnWeekend() {
         var weekdayEmployee = new Employee(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 "Ana",
                 "Diaz",
                 EmployeeRole.GUARD,
@@ -131,9 +128,9 @@ class EmployeeSpotAssignmentServiceTest {
                 "17:00",
                 "A1",
                 EmployeeStatus.ON_DUTY);
-        when(employeeRepository.findByParkingId("parking-1")).thenReturn(List.of(weekdayEmployee));
+        when(employeeRepository.findByParkingId("00000000-0000-4000-8000-000000000021")).thenReturn(List.of(weekdayEmployee));
 
-        var reservedBySpot = service.getReservedEmployeesBySpot("parking-1", LocalDateTime.of(2026, 7, 11, 10, 0));
+        var reservedBySpot = service.getReservedEmployeesBySpot("00000000-0000-4000-8000-000000000021", LocalDateTime.of(2026, 7, 11, 10, 0));
 
         assertTrue(reservedBySpot.isEmpty());
     }
@@ -141,7 +138,7 @@ class EmployeeSpotAssignmentServiceTest {
     @Test
     void reservedEmployeesBySpotIncludesWeekendEmployeeOnWeekend() {
         var weekendEmployee = new Employee(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 "Ana",
                 "Diaz",
                 EmployeeRole.GUARD,
@@ -150,9 +147,9 @@ class EmployeeSpotAssignmentServiceTest {
                 "17:00",
                 "A1",
                 EmployeeStatus.ON_DUTY);
-        when(employeeRepository.findByParkingId("parking-1")).thenReturn(List.of(weekendEmployee));
+        when(employeeRepository.findByParkingId("00000000-0000-4000-8000-000000000021")).thenReturn(List.of(weekendEmployee));
 
-        var reservedBySpot = service.getReservedEmployeesBySpot("parking-1", LocalDateTime.of(2026, 7, 11, 10, 0));
+        var reservedBySpot = service.getReservedEmployeesBySpot("00000000-0000-4000-8000-000000000021", LocalDateTime.of(2026, 7, 11, 10, 0));
 
         assertEquals(1, reservedBySpot.size());
         assertTrue(reservedBySpot.containsKey("A1"));
@@ -161,7 +158,7 @@ class EmployeeSpotAssignmentServiceTest {
     @Test
     void isSpotReservedForEmployeeSkipsWeekendEmployeeOnWeekday() {
         var weekendEmployee = new Employee(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 "Ana",
                 "Diaz",
                 EmployeeRole.GUARD,
@@ -170,10 +167,10 @@ class EmployeeSpotAssignmentServiceTest {
                 "17:00",
                 "A1",
                 EmployeeStatus.ON_DUTY);
-        when(employeeRepository.findByParkingId("parking-1")).thenReturn(List.of(weekendEmployee));
+        when(employeeRepository.findByParkingId("00000000-0000-4000-8000-000000000021")).thenReturn(List.of(weekendEmployee));
 
         var reserved = service.isSpotReservedForEmployee(
-                "parking-1",
+                "00000000-0000-4000-8000-000000000021",
                 "A1",
                 LocalDateTime.of(2026, 7, 10, 10, 0),
                 LocalDateTime.of(2026, 7, 10, 11, 0));
@@ -183,22 +180,13 @@ class EmployeeSpotAssignmentServiceTest {
 
     @Test
     void validateAssignmentIgnoresReservationOutsideWeekendSchedule() {
-        var spotA1 = new DetectedSpot(1, "bp-1", "parking-1", 0, 0, 0.1, 0.1, 0.1, 0.1, SpotStatus.AVAILABLE);
-        var fridayReservation = new Reservation(
-                "client-1",
-                "parking-1",
-                "SPG-001",
-                "A1",
-                LocalDateTime.of(2026, 7, 10, 10, 0),
-                LocalDateTime.of(2026, 7, 10, 11, 0),
-                10.0,
-                10.0,
-                null);
-        when(detectedSpotRepository.findByParkingId("parking-1")).thenReturn(List.of(spotA1));
-        when(employeeRepository.findByParkingIdAndAssignedSpot("parking-1", "A1")).thenReturn(Optional.empty());
-        when(reservationRepository.findByParkingIdAndSpot("parking-1", "A1")).thenReturn(List.of(fridayReservation));
+        var spotA1 = spot();
+        var fridayReservation = reservation(spotA1, LocalDateTime.of(2026, 7, 10, 10, 0), LocalDateTime.of(2026, 7, 10, 11, 0));
+        when(detectedSpotRepository.byTenant(java.util.UUID.fromString("00000000-0000-4000-8000-000000000021"))).thenReturn(List.of(spotA1));
+        when(employeeRepository.findByParkingIdAndAssignedSpot("00000000-0000-4000-8000-000000000021", "A1")).thenReturn(Optional.empty());
+        when(reservationRepository.byTenant(java.util.UUID.fromString("00000000-0000-4000-8000-000000000021"))).thenReturn(List.of(fridayReservation));
 
         assertDoesNotThrow(() -> service.validateAssignment(
-                "parking-1", null, "A1", EmployeeSchedule.WEEKENDS, "09:00", "17:00", EmployeeStatus.ON_DUTY));
+                "00000000-0000-4000-8000-000000000021", null, "A1", EmployeeSchedule.WEEKENDS, "09:00", "17:00", EmployeeStatus.ON_DUTY));
     }
 }

@@ -17,7 +17,7 @@ public class SpotgoUserPrincipal implements UserDetails {
         this.tenantId = tenantId; this.sessionId = sessionId;
     }
     public UUID getAccountId() { return accountId; }
-    // String adapter for the three bounded contexts that still use their previous API contracts.
+    // String adapter still required by the pending Billing API contracts.
     public String getUserId() { return accountId.toString(); }
     public UserRole getRole() { return role; }
     public UUID getTenantId() { return tenantId; }

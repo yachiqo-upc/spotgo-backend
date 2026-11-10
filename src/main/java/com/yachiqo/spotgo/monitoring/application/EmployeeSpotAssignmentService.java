@@ -5,8 +5,8 @@ import com.yachiqo.spotgo.monitoring.domain.model.valueobjects.EmployeeSchedule;
 import com.yachiqo.spotgo.monitoring.domain.model.valueobjects.EmployeeStatus;
 import com.yachiqo.spotgo.monitoring.infrastructure.persistence.jpa.repositories.EmployeeRepository;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.SpotStatus;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.DetectedSpotRepository;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.OperationalStatus;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingSpotRepository;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,11 +22,11 @@ import org.springframework.stereotype.Service;
 public class EmployeeSpotAssignmentService {
 
     private final EmployeeRepository employeeRepository;
-    private final DetectedSpotRepository detectedSpotRepository;
+    private final ParkingSpotRepository detectedSpotRepository;
     private final ReservationRepository reservationRepository;
 
     public EmployeeSpotAssignmentService(EmployeeRepository employeeRepository,
-                                         DetectedSpotRepository detectedSpotRepository,
+                                         ParkingSpotRepository detectedSpotRepository,
                                          ReservationRepository reservationRepository) {
         this.employeeRepository = employeeRepository;
         this.detectedSpotRepository = detectedSpotRepository;
@@ -45,12 +45,12 @@ public class EmployeeSpotAssignmentService {
             return;
         }
 
-        var detectedSpot = detectedSpotRepository.findByParkingId(parkingId).stream()
-                .filter(spot -> normalizedSpot.equals(toSpotCode(spot.getRow(), spot.getCol())))
+        var detectedSpot = detectedSpotRepository.byTenant(java.util.UUID.fromString(parkingId)).stream()
+                .filter(spot -> normalizedSpot.equals(spot.getCode()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Assigned spot does not exist in admin parking"));
 
-        if (detectedSpot.getStatus() == SpotStatus.MAINTENANCE) {
+        if (detectedSpot.getOperationalStatus() == OperationalStatus.MAINTENANCE) {
             throw new IllegalArgumentException("Assigned spot is under maintenance");
         }
 
@@ -63,14 +63,14 @@ public class EmployeeSpotAssignmentService {
             return;
         }
 
-        var conflictingReservation = reservationRepository.findByParkingIdAndSpot(parkingId, normalizedSpot).stream()
-                .filter(reservation -> reservation.getStatus() == ReservationStatus.ACTIVE)
+        var conflictingReservation = reservationRepository.byTenant(java.util.UUID.fromString(parkingId)).stream().filter(r -> normalizedSpot.equals(r.getSpot().getCode()))
+                .filter(reservation -> (reservation.getStatus() == ReservationStatus.ACTIVE || reservation.getStatus() == ReservationStatus.RESERVED))
                 .filter(reservation -> scheduleApplies(schedule,
-                        reservation.getStartDate().toLocalDate(),
-                        reservation.getEndDate().toLocalDate()))
+                        java.time.LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")).toLocalDate(),
+                        java.time.LocalDateTime.ofInstant(reservation.getEndAt(), java.time.ZoneId.of("America/Lima")).toLocalDate()))
                 .anyMatch(reservation -> overlapsRecurringShift(
-                        reservation.getStartDate(),
-                        reservation.getEndDate(),
+                        java.time.LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")),
+                        java.time.LocalDateTime.ofInstant(reservation.getEndAt(), java.time.ZoneId.of("America/Lima")),
                         shiftStart,
                         shiftEnd));
         if (conflictingReservation) {

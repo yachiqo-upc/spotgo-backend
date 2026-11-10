@@ -1,5 +1,5 @@
 package com.yachiqo.spotgo.iam.interfaces.rest;
-import com.yachiqo.spotgo.iam.application.UserAccountService;
+import com.yachiqo.spotgo.iam.application.AuthenticationService;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.iam.interfaces.rest.resources.SessionResource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,9 +22,9 @@ import java.util.*;
     @ApiResponse(responseCode = "400", description = "UUID invalido.", content = @Content)
 })
 public class SessionsController {
-    private final UserAccountService service;
+    private final AuthenticationService service;
     private final Clock clock;
-    public SessionsController(UserAccountService service, Clock clock) { this.service = service; this.clock = clock; }
+    public SessionsController(AuthenticationService service, Clock clock) { this.service = service; this.clock = clock; }
     @GetMapping("/me")
     @Operation(summary = "Listar mis sesiones", description = "Incluye las revocadas y vencidas. usable combina el estado guardado y expiresAt; no expone refreshTokenHash.")
     @ApiResponse(responseCode = "200", description = "Sesiones propias.")

@@ -4,7 +4,7 @@ import com.yachiqo.spotgo.iam.domain.model.aggregates.*;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.*;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.TenantRepository;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,29 +15,29 @@ import java.util.UUID;
 @Service
 @Transactional(readOnly = true)
 public class AccountAdministrationService {
-    private final UserAccountRepository accounts;
+    private final AccountRepository accounts;
     private final RoleAssignmentRepository roles;
-    private final AccessSessionRepository sessions;
+    private final SessionRepository sessions;
     private final AuditEntryRepository audits;
-    private final ParkingRepository parkings;
+    private final TenantRepository parkings;
     private final Clock clock;
-    public AccountAdministrationService(UserAccountRepository accounts, RoleAssignmentRepository roles,
-            AccessSessionRepository sessions, AuditEntryRepository audits, ParkingRepository parkings, Clock clock) {
+    public AccountAdministrationService(AccountRepository accounts, RoleAssignmentRepository roles,
+            SessionRepository sessions, AuditEntryRepository audits, TenantRepository parkings, Clock clock) {
         this.accounts = accounts; this.roles = roles; this.sessions = sessions; this.audits = audits;
         this.parkings = parkings; this.clock = clock;
     }
-    public UserAccount own(SpotgoUserPrincipal actor) { return account(actor.getAccountId()); }
-    public Page<UserAccount> list(SpotgoUserPrincipal actor, int page, int size) {
+    public Account own(SpotgoUserPrincipal actor) { return account(actor.getAccountId()); }
+    public Page<Account> list(SpotgoUserPrincipal actor, int page, int size) {
         requireSuper(actor); return accounts.findAll(page(page, size));
     }
-    public UserAccount get(SpotgoUserPrincipal actor, UUID id) { requireSuper(actor); return account(id); }
+    public Account get(SpotgoUserPrincipal actor, UUID id) { requireSuper(actor); return account(id); }
     public RoleAssignment role(SpotgoUserPrincipal actor, UUID id) {
         if (!actor.getAccountId().equals(id)) requireSuper(actor);
         account(id);
         return roles.findByAccountId(id).orElseThrow(() -> new IamException(HttpStatus.NOT_FOUND, "Cuenta sin asignacion de rol"));
     }
     @Transactional
-    public UserAccount status(SpotgoUserPrincipal actor, UUID id, AccountStatus status, String source) {
+    public Account status(SpotgoUserPrincipal actor, UUID id, AccountStatus status, String source) {
         requireSuper(actor);
         var account = accounts.findByIdForUpdate(id).orElseThrow(() -> notFound());
         account.changeStatus(status);
@@ -50,7 +50,7 @@ public class AccountAdministrationService {
                                   Instant from, Instant to, AssignmentStatus status, String source) {
         requireSuper(actor);
         var account = accounts.findByIdForUpdate(id).orElseThrow(() -> notFound());
-        if (role == UserRole.PARKING_ADMIN && (tenantId == null || !parkings.existsById(tenantId.toString())))
+        if (role == UserRole.PARKING_ADMIN && (tenantId == null || !parkings.existsById(tenantId)))
             throw new IamException(HttpStatus.BAD_REQUEST, "PARKING_ADMIN requiere un estacionamiento existente");
         Instant start = from == null ? clock.instant() : from;
         AssignmentStatus enabled = status == null ? AssignmentStatus.ACTIVE : status;
@@ -65,7 +65,7 @@ public class AccountAdministrationService {
         return accountId == null ? audits.findAll(paging) : audits.findAllByAccountId(accountId, paging);
     }
     public Instant now() { return clock.instant(); }
-    private UserAccount account(UUID id) { return accounts.findById(id).orElseThrow(() -> notFound()); }
+    private Account account(UUID id) { return accounts.findById(id).orElseThrow(() -> notFound()); }
     private static IamException notFound() { return new IamException(HttpStatus.NOT_FOUND, "Cuenta inexistente"); }
     private static void requireSuper(SpotgoUserPrincipal actor) {
         if (actor == null || actor.getRole() != UserRole.SUPER_ADMIN)

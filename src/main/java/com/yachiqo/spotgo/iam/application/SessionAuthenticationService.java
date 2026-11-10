@@ -1,6 +1,6 @@
 package com.yachiqo.spotgo.iam.application;
 
-import com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount;
+import com.yachiqo.spotgo.iam.domain.model.aggregates.Account;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import org.springframework.http.HttpStatus;
@@ -11,10 +11,10 @@ import java.util.UUID;
 
 @Service
 public class SessionAuthenticationService {
-    private final AccessSessionRepository sessions;
+    private final SessionRepository sessions;
     private final RoleAssignmentRepository roles;
     private final Clock clock;
-    public SessionAuthenticationService(AccessSessionRepository sessions, RoleAssignmentRepository roles, Clock clock) {
+    public SessionAuthenticationService(SessionRepository sessions, RoleAssignmentRepository roles, Clock clock) {
         this.sessions = sessions; this.roles = roles; this.clock = clock;
     }
     @Transactional
@@ -25,7 +25,7 @@ public class SessionAuthenticationService {
         session.touch(clock.instant());
         return principal(session.getAccount(), session.getId());
     }
-    public SpotgoUserPrincipal principal(UserAccount account, UUID sessionId) {
+    public SpotgoUserPrincipal principal(Account account, UUID sessionId) {
         var role = roles.findByAccountId(account.getId()).filter(r -> r.isEffectiveAt(clock.instant())).orElse(null);
         return new SpotgoUserPrincipal(account.getId(), account.getEmail(),
             role == null ? null : role.getRoleType(), role == null ? null : role.getTenantId(), sessionId);

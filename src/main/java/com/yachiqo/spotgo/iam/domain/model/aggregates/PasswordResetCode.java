@@ -45,7 +45,7 @@ public class PasswordResetCode {
     }
 
     public PasswordResetCode(String email, String codeHash, Instant expiresAt, Instant requestedAt) {
-        this.email = UserAccount.normalizeEmail(email);
+        this.email = Account.normalizeEmail(email);
         this.codeHash = codeHash;
         this.expiresAt = expiresAt;
         this.requestedAt = requestedAt;

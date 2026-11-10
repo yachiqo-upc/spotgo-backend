@@ -19,9 +19,12 @@ public class DriverClassification extends AbstractDomainAggregateRoot<DriverClas
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "profile_id", nullable = false, updatable = false)
     private Profile profile;
-    // Logical reference until Parking is migrated to tenants with native UUID keys.
+    // The tenant association enforces the UUID reference in the shared database.
     @Column(name = "tenant_id", nullable = false, updatable = false)
     private UUID tenantId;
+    @ManyToOne(fetch=FetchType.LAZY,optional=false)
+    @JoinColumn(name="tenant_id",insertable=false,updatable=false,foreignKey=@ForeignKey(name="fk_classification_tenant"))
+    private com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant tenant;
     @Enumerated(EnumType.STRING) @Column(name = "profile_type", nullable = false)
     private DriverProfileType profileType;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

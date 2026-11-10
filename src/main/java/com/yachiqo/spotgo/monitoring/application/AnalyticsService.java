@@ -4,13 +4,13 @@ import com.yachiqo.spotgo.monitoring.interfaces.rest.resources.AnalyticsResource
 import com.yachiqo.spotgo.monitoring.interfaces.rest.resources.OccupancyByHourResource;
 import com.yachiqo.spotgo.monitoring.interfaces.rest.resources.SpotUtilizationResource;
 import com.yachiqo.spotgo.monitoring.interfaces.rest.resources.WeeklyTrendResource;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.DetectedSpot;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.Parking;
+import com.yachiqo.spotgo.parking.domain.model.aggregates.ParkingSpot;
+import com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.Reservation;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.SpotStatus;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.DetectedSpotRepository;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.OperationalStatus;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingSpotRepository;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.TenantRepository;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -34,14 +34,14 @@ public class AnalyticsService {
     private static final int MAX_CUSTOM_RANGE_DAYS = 31;
     private static final int MAX_UTILIZED_SPOTS = 10;
 
-    private final ParkingRepository parkingRepository;
+    private final TenantRepository parkingRepository;
     private final ReservationRepository reservationRepository;
-    private final DetectedSpotRepository detectedSpotRepository;
+    private final ParkingSpotRepository detectedSpotRepository;
     private final Clock clock;
 
-    public AnalyticsService(ParkingRepository parkingRepository,
+    public AnalyticsService(TenantRepository parkingRepository,
                             ReservationRepository reservationRepository,
-                            DetectedSpotRepository detectedSpotRepository,
+                            ParkingSpotRepository detectedSpotRepository,
                             Clock clock) {
         this.parkingRepository = parkingRepository;
         this.reservationRepository = reservationRepository;
@@ -50,13 +50,13 @@ public class AnalyticsService {
     }
 
     public AnalyticsResource getAnalytics(String parkingId, String period, LocalDate from, LocalDate to) {
-        var parking = parkingRepository.findById(parkingId)
-                .orElseThrow(() -> new IllegalArgumentException("Parking not found: " + parkingId));
+        var parking = parkingRepository.findById(UUID.fromString(parkingId))
+                .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + parkingId));
         var range = resolveRange(period, from, to);
         var previousRange = range.previous();
 
-        var reservations = reservationRepository.findByParkingId(parkingId);
-        var detectedSpots = detectedSpotRepository.findByParkingId(parkingId);
+        var reservations = reservationRepository.byTenant(UUID.fromString(parkingId));
+        var detectedSpots = detectedSpotRepository.byTenant(UUID.fromString(parkingId));
 
         var currentReservations = reservations.stream()
                 .filter(reservation -> overlaps(reservation, range.start(), range.endExclusive()))
@@ -68,7 +68,7 @@ public class AnalyticsService {
         var occupancyByHour = buildOccupancyByHour(parkingId, currentReservations, parking, range);
         var weeklyTrends = buildWeeklyTrends(parkingId, reservations, parking, range, period);
         var maintenanceSpotsCount = (int) detectedSpots.stream()
-                .filter(spot -> spot.getStatus() == SpotStatus.MAINTENANCE)
+                .filter(spot -> spot.getOperationalStatus() == OperationalStatus.MAINTENANCE)
                 .count();
         var mostUtilizedSpots = buildMostUtilizedSpots(currentReservations, detectedSpots);
 
@@ -81,15 +81,15 @@ public class AnalyticsService {
                 .max(Comparator.comparingDouble(OccupancyByHourResource::intensity))
                 .map(OccupancyByHourResource::hour)
                 .orElse("00:00");
-        var totalCapacity = parking.getTotalCapacity() != null ? parking.getTotalCapacity() : parking.getTotalSpaces();
+        var totalCapacity = Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()) != null ? Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()) : Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size());
         var efficiencyIndex = calculateEfficiencyIndex(currentReservations, detectedSpots, parking, averageOccupancy);
 
         return new AnalyticsResource(
-                parking.getId(),
-                parking.getAdminId(),
+                parking.getId().toString(),
+                null,
                 parking.getName(),
-                parking.getTotalSpaces(),
-                parking.getAvailableSpaces(),
+                Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()),
+                null,
                 averageOccupancy,
                 trendPercent(averageOccupancy, previousAverageOccupancy),
                 peakHour,
@@ -107,10 +107,10 @@ public class AnalyticsService {
 
     private List<OccupancyByHourResource> buildOccupancyByHour(String parkingId,
                                                                List<Reservation> reservations,
-                                                               Parking parking,
+                                                               Tenant parking,
                                                                TimeRange range) {
         var points = new ArrayList<OccupancyByHourResource>(24);
-        double capacity = Math.max(1, parking.getTotalSpaces() == null ? 1 : parking.getTotalSpaces());
+        double capacity = Math.max(1, Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()) == null ? 1 : Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()));
 
         for (int hour = 0; hour < 24; hour++) {
             double occupancySum = 0;
@@ -125,8 +125,8 @@ public class AnalyticsService {
                 sampledDays++;
                 long activeReservations = reservations.stream()
                         .filter(this::isCountableReservation)
-                        .filter(reservation -> reservation.getStartDate().isBefore(slotEnd)
-                                && reservation.getEndDate().isAfter(slotStart))
+                        .filter(reservation -> LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")).isBefore(slotEnd)
+                                && LocalDateTime.ofInstant(reservation.getEndAt(), java.time.ZoneId.of("America/Lima")).isAfter(slotStart))
                         .count();
                 occupancySum += Math.min(1.0, activeReservations / capacity);
             }
@@ -145,14 +145,14 @@ public class AnalyticsService {
 
     private List<WeeklyTrendResource> buildWeeklyTrends(String parkingId,
                                                         List<Reservation> reservations,
-                                                        Parking parking,
+                                                        Tenant parking,
                                                         TimeRange currentRange,
                                                         String period) {
         var trendRange = "today".equalsIgnoreCase(period)
                 ? new TimeRange(currentRange.endExclusive().toLocalDate().minusDays(6).atStartOfDay(), currentRange.endExclusive(), 7)
                 : currentRange;
         var points = new ArrayList<WeeklyTrendResource>();
-        double capacity = Math.max(1, parking.getTotalSpaces() == null ? 1 : parking.getTotalSpaces());
+        double capacity = Math.max(1, Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()) == null ? 1 : Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()));
 
         for (LocalDate date = trendRange.start().toLocalDate(); date.isBefore(trendRange.endExclusive().toLocalDate()); date = date.plusDays(1)) {
             double dailyOccupancy = 0;
@@ -161,8 +161,8 @@ public class AnalyticsService {
                 var slotEnd = slotStart.plusHours(1);
                 long activeReservations = reservations.stream()
                         .filter(this::isCountableReservation)
-                        .filter(reservation -> reservation.getStartDate().isBefore(slotEnd)
-                                && reservation.getEndDate().isAfter(slotStart))
+                        .filter(reservation -> LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")).isBefore(slotEnd)
+                                && LocalDateTime.ofInstant(reservation.getEndAt(), java.time.ZoneId.of("America/Lima")).isAfter(slotStart))
                         .count();
                 dailyOccupancy += Math.min(1.0, activeReservations / capacity);
             }
@@ -180,23 +180,23 @@ public class AnalyticsService {
         return points;
     }
 
-    private List<SpotUtilizationResource> buildMostUtilizedSpots(List<Reservation> reservations, List<DetectedSpot> detectedSpots) {
+    private List<SpotUtilizationResource> buildMostUtilizedSpots(List<Reservation> reservations, List<ParkingSpot> detectedSpots) {
         record SpotStats(int count, double revenue) {}
 
         Map<String, SpotStats> spotStats = new HashMap<>();
         for (var reservation : reservations) {
-            if (!isCountableReservation(reservation) || reservation.getSpot() == null || reservation.getSpot().isBlank()) {
+            if (!isCountableReservation(reservation) || reservation.getSpot().getCode() == null || reservation.getSpot().getCode().isBlank()) {
                 continue;
             }
-            var current = spotStats.getOrDefault(reservation.getSpot(), new SpotStats(0, 0));
-            double amount = reservation.getBaseAmount() != null ? reservation.getBaseAmount() : reservation.getAmount() != null ? reservation.getAmount() : 0;
-            spotStats.put(reservation.getSpot(), new SpotStats(current.count() + 1, current.revenue() + amount));
+            var current = spotStats.getOrDefault(reservation.getSpot().getCode(), new SpotStats(0, 0));
+            double amount = reservation.getAmount().doubleValue();
+            spotStats.put(reservation.getSpot().getCode(), new SpotStats(current.count() + 1, current.revenue() + amount));
         }
 
         int maxCount = spotStats.values().stream().mapToInt(SpotStats::count).max().orElse(1);
         Map<String, String> statusBySpotCode = new HashMap<>();
         for (var spot : detectedSpots) {
-            statusBySpotCode.put(toSpotCode(spot), toFrontendStatus(spot.getStatus()));
+            statusBySpotCode.put(toSpotCode(spot), toFrontendStatus(spot.getOperationalStatus()));
         }
 
         var resources = new ArrayList<SpotUtilizationResource>();
@@ -223,20 +223,19 @@ public class AnalyticsService {
     }
 
     private boolean overlaps(Reservation reservation, LocalDateTime startInclusive, LocalDateTime endExclusive) {
-        return reservation.getStartDate().isBefore(endExclusive) && reservation.getEndDate().isAfter(startInclusive);
+        return LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")).isBefore(endExclusive) && LocalDateTime.ofInstant(reservation.getEndAt(), java.time.ZoneId.of("America/Lima")).isAfter(startInclusive);
     }
 
     private boolean isCountableReservation(Reservation reservation) {
-        return reservation.getStatus() != ReservationStatus.CANCELLED;
+        return java.util.Set.of(ReservationStatus.RESERVED,ReservationStatus.ACTIVE,ReservationStatus.COMPLETED,ReservationStatus.OVERSTAYED).contains(reservation.getStatus());
     }
 
     private double calculateRevenue(List<Reservation> reservations, TimeRange range) {
         return round(reservations.stream()
                 .filter(this::isCountableReservation)
-                .filter(reservation -> !reservation.getStartDate().isBefore(range.start())
-                        && reservation.getStartDate().isBefore(range.endExclusive()))
-                .mapToDouble(reservation -> reservation.getBaseAmount() != null ? reservation.getBaseAmount()
-                        : reservation.getAmount() != null ? reservation.getAmount() : 0)
+                .filter(reservation -> !LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")).isBefore(range.start())
+                        && LocalDateTime.ofInstant(reservation.getStartAt(), java.time.ZoneId.of("America/Lima")).isBefore(range.endExclusive()))
+                .mapToDouble(reservation -> reservation.getAmount().doubleValue())
                 .sum());
     }
 
@@ -256,10 +255,10 @@ public class AnalyticsService {
     }
 
     private double calculateEfficiencyIndex(List<Reservation> reservations,
-                                            List<DetectedSpot> detectedSpots,
-                                            Parking parking,
+                                            List<ParkingSpot> detectedSpots,
+                                            Tenant parking,
                                             double averageOccupancy) {
-        double totalSpaces = Math.max(1, parking.getTotalSpaces() == null ? 1 : parking.getTotalSpaces());
+        double totalSpaces = Math.max(1, Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()) == null ? 1 : Integer.valueOf(detectedSpotRepository.byTenant(parking.getId()).size()));
 
         long nonCancelledReservations = reservations.stream()
                 .filter(this::isCountableReservation)
@@ -269,12 +268,12 @@ public class AnalyticsService {
                 .count();
         long utilizedSpots = reservations.stream()
                 .filter(this::isCountableReservation)
-                .map(Reservation::getSpot)
+                .map(r -> r.getSpot().getCode())
                 .filter(spot -> spot != null && !spot.isBlank())
                 .distinct()
                 .count();
         long maintenanceSpots = detectedSpots.stream()
-                .filter(spot -> spot.getStatus() == SpotStatus.MAINTENANCE)
+                .filter(spot -> spot.getOperationalStatus() == OperationalStatus.MAINTENANCE)
                 .count();
 
         double occupancyScore = Math.min(10.0, averageOccupancy / 10.0);
@@ -296,21 +295,16 @@ public class AnalyticsService {
         return Math.round(value * 1000.0) / 1000.0;
     }
 
-    private String toSpotCode(DetectedSpot spot) {
-        if (spot.getRow() == null || spot.getCol() == null) {
-            return "Unknown";
-        }
-        return String.valueOf((char) ('A' + spot.getRow())) + (spot.getCol() + 1);
-    }
+    private String toSpotCode(ParkingSpot spot) { return spot.getCode(); }
 
-    private String toFrontendStatus(SpotStatus status) {
+    private String toFrontendStatus(OperationalStatus status) {
         if (status == null) {
             return "available";
         }
         return switch (status) {
             case MAINTENANCE -> "maintenance";
-            case OCCUPIED, RESERVED -> "occupied";
-            case AVAILABLE -> "available";
+            case INACTIVE -> "inactive";
+            case ACTIVE -> "unknown";
         };
     }
 

@@ -2,7 +2,7 @@ package com.yachiqo.spotgo.monitoring.interfaces.rest;
 
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.monitoring.application.EmployeeSpotAssignmentService;
-import com.yachiqo.spotgo.parking.application.ParkingOccupancyService;
+
 import com.yachiqo.spotgo.monitoring.domain.model.aggregates.Employee;
 import com.yachiqo.spotgo.monitoring.domain.model.commands.CreateEmployeeCommand;
 import com.yachiqo.spotgo.monitoring.domain.model.commands.DeleteEmployeeCommand;
@@ -43,18 +43,17 @@ public class EmployeesController {
     private final EmployeeRepository employeeRepository;
     private final AuthorizationService authorizationService;
     private final EmployeeSpotAssignmentService employeeSpotAssignmentService;
-    private final ParkingOccupancyService parkingOccupancyService;
+
 
     public EmployeesController(MonitoringCommandService monitoringCommandService, MonitoringQueryService monitoringQueryService,
                                EmployeeRepository employeeRepository, AuthorizationService authorizationService,
-                               EmployeeSpotAssignmentService employeeSpotAssignmentService,
-                               ParkingOccupancyService parkingOccupancyService) {
+                               EmployeeSpotAssignmentService employeeSpotAssignmentService) {
         this.monitoringCommandService = monitoringCommandService;
         this.monitoringQueryService = monitoringQueryService;
         this.employeeRepository = employeeRepository;
         this.authorizationService = authorizationService;
         this.employeeSpotAssignmentService = employeeSpotAssignmentService;
-        this.parkingOccupancyService = parkingOccupancyService;
+
     }
 
     @PostMapping
@@ -86,7 +85,6 @@ public class EmployeesController {
         if (employeeOptional.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        parkingOccupancyService.reconcileParking(parkingId, java.time.LocalDateTime.now());
         return new ResponseEntity<>(toResource(employeeOptional.get()), HttpStatus.CREATED);
     }
 
@@ -136,7 +134,6 @@ public class EmployeesController {
         if (employeeOptional.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        parkingOccupancyService.reconcileParking(currentEmployee.getParkingId(), java.time.LocalDateTime.now());
         return ResponseEntity.ok(toResource(employeeOptional.get()));
     }
 
@@ -149,7 +146,6 @@ public class EmployeesController {
                 .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
         authorizationService.requireEmployeeOwnership(principal, currentEmployee);
         monitoringCommandService.handle(new DeleteEmployeeCommand(employeeId));
-        parkingOccupancyService.reconcileParking(currentEmployee.getParkingId(), java.time.LocalDateTime.now());
         return ResponseEntity.noContent().build();
     }
 

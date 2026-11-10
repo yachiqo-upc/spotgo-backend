@@ -34,7 +34,7 @@ class ProfilesOpenApiTest {
         assertTrue(paths.has("/api/v1/driver-classifications/me"));
         assertTrue(paths.has("/api/v1/authentication/sign-in"));
         assertFalse(paths.has("/api/v1/receipts"));
-        assertTrue(api("03-backend-completo").path("paths").has("/api/v1/receipts"));
+        assertTrue(api("04-backend-completo").path("paths").has("/api/v1/receipts"));
     }
 
     @Test void generatedDocumentationDescribesOperationsCodesAndDistinctUuidExamples() throws Exception {

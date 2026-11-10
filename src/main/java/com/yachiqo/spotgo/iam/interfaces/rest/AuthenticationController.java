@@ -1,6 +1,6 @@
 package com.yachiqo.spotgo.iam.interfaces.rest;
 
-import com.yachiqo.spotgo.iam.application.UserAccountService;
+import com.yachiqo.spotgo.iam.application.AuthenticationService;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.iam.interfaces.rest.resources.*;
 import io.swagger.v3.oas.annotations.*;
@@ -25,8 +25,8 @@ import org.springframework.web.bind.annotation.*;
     @ApiResponse(responseCode = "500", description = "Error inesperado del servidor.", content = @Content)
 })
 public class AuthenticationController {
-    private final UserAccountService service;
-    public AuthenticationController(UserAccountService service) { this.service = service; }
+    private final AuthenticationService service;
+    public AuthenticationController(AuthenticationService service) { this.service = service; }
 
     @PostMapping("/sign-in")
     @SecurityRequirements

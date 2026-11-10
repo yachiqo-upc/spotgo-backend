@@ -1,14 +1,14 @@
 package com.yachiqo.spotgo.profiles.application;
 
-import com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount;
+import com.yachiqo.spotgo.iam.domain.model.aggregates.Account;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
-import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.UserAccountRepository;
+import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.AccountRepository;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.RoleAssignmentRepository;
 import com.yachiqo.spotgo.iam.domain.model.aggregates.RoleAssignment;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.AssignmentStatus;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
-import com.yachiqo.spotgo.parking.domain.model.aggregates.Parking;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
+
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.TenantRepository;
 import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.*;
 import com.yachiqo.spotgo.profiles.domain.model.valueobjects.DriverProfileType;
@@ -30,8 +30,8 @@ import static org.mockito.Mockito.*;
 class ProfilesManagementServiceTest {
     @Mock ProfileRepository profiles;
     @Mock DriverClassificationRepository classifications;
-    @Mock UserAccountRepository accounts;
-    @Mock ParkingRepository parkings;
+    @Mock AccountRepository accounts;
+    @Mock TenantRepository parkings;
     @Mock RoleAssignmentRepository roles;
     ProfilesManagementService service;
     UUID accountId = UUID.randomUUID();
@@ -76,14 +76,14 @@ class ProfilesManagementServiceTest {
 
     @Test void assignsDefaultPrivateAndRecordsAdministratorsProfile() {
         UUID tenant = tenantId, driverId = UUID.randomUUID();
-        when(parkings.existsById(tenant.toString())).thenReturn(true);
+        when(parkings.existsById(tenant)).thenReturn(true);
         var admin = new Profile(accountId, "Ana", "Ruiz", "999");
         UUID adminProfileId = UUID.randomUUID();
         ReflectionTestUtils.setField(admin, "id", adminProfileId);
         when(profiles.findByAccountId(accountId)).thenReturn(Optional.of(admin));
         var driver = new Profile(UUID.randomUUID(), "Juan", "Perez", "888");
         when(profiles.findById(driverId)).thenReturn(Optional.of(driver));
-        var account = new UserAccount("juan@example.com");
+        var account = new Account("juan@example.com");
         ReflectionTestUtils.setField(account, "id", driver.getAccountId());
         when(accounts.findById(driver.getAccountId())).thenReturn(Optional.of(account));
         when(roles.findByAccountId(account.getId())).thenReturn(Optional.of(new RoleAssignment(

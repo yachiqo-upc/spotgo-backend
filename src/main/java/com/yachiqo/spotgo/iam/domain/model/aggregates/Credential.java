@@ -19,7 +19,7 @@ public class Credential {
     private UUID id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false, updatable = false)
-    private UserAccount account;
+    private Account account;
     @Enumerated(EnumType.STRING) @Column(name = "authentication_method", nullable = false)
     private AuthenticationMethod authenticationMethod;
     @Column(name = "secret_hash") private String secretHash;
@@ -28,14 +28,14 @@ public class Credential {
     @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false)
     private CredentialStatus status;
     protected Credential() {}
-    private Credential(UserAccount account, AuthenticationMethod method) {
+    private Credential(Account account, AuthenticationMethod method) {
         this.account = Objects.requireNonNull(account); this.authenticationMethod = method; this.status = CredentialStatus.ACTIVE;
     }
-    public static Credential password(UserAccount account, String hash) {
+    public static Credential password(Account account, String hash) {
         var credential = new Credential(account, AuthenticationMethod.PASSWORD);
         credential.rotate(hash); return credential;
     }
-    public static Credential google(UserAccount account, String subject) {
+    public static Credential google(Account account, String subject) {
         if (subject == null || subject.isBlank()) throw new IllegalArgumentException("Google requiere external_subject verificado");
         var credential = new Credential(account, AuthenticationMethod.GOOGLE);
         credential.externalSubject = subject; return credential;

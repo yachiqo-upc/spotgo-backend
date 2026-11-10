@@ -522,7 +522,7 @@
       "calculated_amount": 5,
       "physical_payment_method": "CASH",
       "physical_payment_confirmed": true,
-      "status": "COMPLETED"
+      "status": "CLOSED"
     }
   ],
   "payment_attempts": [

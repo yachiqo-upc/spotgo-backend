@@ -33,7 +33,7 @@ class DbSeederTest {
         jdbc.execute("CREATE TABLE role_assignments (assignment_id UUID PRIMARY KEY, account_id UUID UNIQUE NOT NULL REFERENCES accounts(account_id), role_type VARCHAR NOT NULL, tenant_id UUID, valid_from TIMESTAMP WITH TIME ZONE NOT NULL, valid_to TIMESTAMP WITH TIME ZONE, status VARCHAR NOT NULL)");
         jdbc.execute("CREATE TABLE sessions (session_id UUID PRIMARY KEY, account_id UUID NOT NULL REFERENCES accounts(account_id), refresh_token_hash VARCHAR UNIQUE NOT NULL, last_activity_at TIMESTAMP WITH TIME ZONE NOT NULL, status VARCHAR NOT NULL, revoked_at TIMESTAMP WITH TIME ZONE, created_at TIMESTAMP WITH TIME ZONE NOT NULL, expires_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE audit_entries (audit_id UUID PRIMARY KEY, account_id UUID REFERENCES accounts(account_id), action VARCHAR NOT NULL, result VARCHAR NOT NULL, source VARCHAR NOT NULL, occurred_at TIMESTAMP WITH TIME ZONE NOT NULL, correlation_id VARCHAR NOT NULL)");
-        jdbc.execute("CREATE TABLE parkings (id VARCHAR(36) PRIMARY KEY, adminId VARCHAR, name VARCHAR NOT NULL, address VARCHAR NOT NULL, city VARCHAR, totalSpaces INTEGER NOT NULL)");
+        jdbc.execute("CREATE TABLE tenants (tenant_id UUID PRIMARY KEY, name VARCHAR NOT NULL, status VARCHAR NOT NULL, coordinates JSONB NOT NULL, address VARCHAR NOT NULL, contact_data JSONB NOT NULL, rules JSONB NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE profiles (profile_id UUID PRIMARY KEY, account_id UUID UNIQUE NOT NULL, first_name VARCHAR NOT NULL, last_name VARCHAR NOT NULL, phone VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE vehicles (vehicle_id UUID PRIMARY KEY, profile_id UUID NOT NULL REFERENCES profiles(profile_id), plate VARCHAR UNIQUE, make VARCHAR NOT NULL, model VARCHAR NOT NULL, color VARCHAR NOT NULL, status VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE driver_classifications (classification_id UUID PRIMARY KEY, profile_id UUID NOT NULL REFERENCES profiles(profile_id), tenant_id UUID NOT NULL, profile_type VARCHAR NOT NULL, assigned_by UUID NOT NULL REFERENCES profiles(profile_id), created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL, UNIQUE(profile_id,tenant_id))");
@@ -52,7 +52,7 @@ class DbSeederTest {
         assertEquals(4, count("role_assignments"));
         assertEquals(1, count("sessions"));
         assertEquals(2, count("audit_entries"));
-        assertEquals(1, count("parkings"));
+        assertEquals(1, count("tenants"));
         assertEquals(3, count("profiles"));
         assertEquals(3, count("vehicles"));
         assertEquals(2, count("driver_classifications"));
@@ -82,7 +82,7 @@ class DbSeederTest {
 
     @Test void missingAccountPreventsInsertingOrphanProfilesAndVehicles() throws Exception {
         currentSchema();
-        jdbc.execute("DROP TABLE parkings");
+        jdbc.execute("DROP TABLE tenants");
         jdbc.execute("DROP TABLE accounts CASCADE");
         seeder.run();
         assertEquals(0, count("profiles"));

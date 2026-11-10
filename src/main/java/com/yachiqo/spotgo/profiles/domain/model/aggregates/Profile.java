@@ -32,7 +32,7 @@ public class Profile extends AbstractDomainAggregateRoot<Profile>{
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", insertable = false, updatable = false,
             foreignKey = @ForeignKey(name = "fk_profile_account"))
-    private com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount account;
+    private com.yachiqo.spotgo.iam.domain.model.aggregates.Account account;
 
     //First name
     @Column(name = "first_name", nullable = false)

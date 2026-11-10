@@ -2,7 +2,7 @@ package com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.seeder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,9 +67,7 @@ public class DbSeeder implements CommandLineRunner {
         Map<String, Table> schema = inspectSchema();
         String passwordHash = encoder.encode(demoPassword);
 
-        // Temporary support for the old IAM/Parking APIs while those contexts are being adapted.
 
-        seedLegacyParkings(data, schema, passwordHash);
 
         int inserted = 0, compatible = 0, skippedRows = 0, existing = 0;
         var tables = data.fields();
@@ -156,9 +154,7 @@ public class DbSeeder implements CommandLineRunner {
             if (destination.equals("accounts") && (parent == null || !parent.columns.containsKey(key))) {
                 parent = null;
             }
-            if (destination.equals("tenants") && (parent == null || !parent.columns.containsKey(key))) {
-                parent = schema.get("parkings"); key = "id";
-            }
+
             if (parent == null || !parent.columns.containsKey(key) || !exists(parent, key, field.getValue())) {
                 log.info("SEED FILA OMITIDA: {}.{} necesita un registro disponible en {}", name, field.getKey(), destination);
                 return false;
@@ -198,7 +194,11 @@ public class DbSeeder implements CommandLineRunner {
         if (value == null || value.isNull()) { statement.setNull(index, column.sqlType); return; }
         String type = lower(column.typeName);
         if (type.equals("uuid")) statement.setObject(index, UUID.fromString(value.asText()));
-        else if (type.equals("jsonb") || type.equals("json")) statement.setObject(index, value.toString(), Types.OTHER);
+        else if (type.equals("jsonb") || type.equals("json")) {
+            if (statement.getConnection().getMetaData().getDatabaseProductName().equals("H2"))
+                statement.setBytes(index, value.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            else statement.setObject(index, value.toString(), Types.OTHER);
+        }
         else if (column.sqlType == Types.TIMESTAMP_WITH_TIMEZONE)
             statement.setObject(index, OffsetDateTime.ofInstant(Instant.parse(value.asText()), ZoneOffset.UTC));
         else if (column.sqlType == Types.TIMESTAMP) statement.setTimestamp(index, Timestamp.from(Instant.parse(value.asText())));
@@ -208,27 +208,6 @@ public class DbSeeder implements CommandLineRunner {
     }
 
 
-    private void seedLegacyParkings(JsonNode data, Map<String, Table> schema, String hash) {
-        if (schema.containsKey("tenants") || !schema.containsKey("parkings")) return;
-        Table parkings = schema.get("parkings");
-        for (JsonNode tenant : data.path("tenants")) {
-            String id = tenant.path("tenant_id").asText();
-            JsonNode admin = find(data.path("role_assignments"), "tenant_id", id);
-            if (admin == null) continue;
-
-            ObjectNode row = JSON.createObjectNode();
-            row.put("id", id).put("adminId", admin.path("account_id").asText()).put("name", tenant.path("name").asText())
-                .put("address", tenant.path("address").asText()).put("city", "Lima")
-                .put("totalSpaces", data.path("parking_spots").size());
-            insert(parkings, row, hash);
-        }
-        log.info("SEED COMPATIBILIDAD: estacionamiento demo en parkings para validar al administrador actual");
-    }
-
-    private static JsonNode find(JsonNode rows, String key, String value) {
-        for (JsonNode row : rows) if (row.path(key).asText().equals(value)) return row;
-        return null;
-    }
     private static JsonNode field(JsonNode row, String key) {
         var fields = row.fields();
         while (fields.hasNext()) { var entry = fields.next(); if (lower(entry.getKey()).equals(key)) return entry.getValue(); }

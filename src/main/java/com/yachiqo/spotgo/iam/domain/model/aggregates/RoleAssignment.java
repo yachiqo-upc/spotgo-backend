@@ -18,17 +18,20 @@ public class RoleAssignment {
     private UUID id;
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false, unique = true, updatable = false)
-    private UserAccount account;
+    private Account account;
     @Enumerated(EnumType.STRING) @Column(name = "role_type", nullable = false)
     private UserRole roleType;
-    // Parking still uses its previous schema; this becomes a physical FK when tenants is implemented.
+    // UUID scalar for the API; read-only association below enforces the tenant FK.
     @Column(name = "tenant_id") private UUID tenantId;
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="tenant_id",insertable=false,updatable=false,foreignKey=@ForeignKey(name="fk_role_tenant"))
+    private com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant tenant;
     @Column(name = "valid_from", nullable = false) private Instant validFrom;
     @Column(name = "valid_to") private Instant validTo;
     @Enumerated(EnumType.STRING) @Column(name = "status", nullable = false)
     private AssignmentStatus status;
     protected RoleAssignment() {}
-    public RoleAssignment(UserAccount account, UserRole role, UUID tenant, Instant from, Instant to, AssignmentStatus status) {
+    public RoleAssignment(Account account, UserRole role, UUID tenant, Instant from, Instant to, AssignmentStatus status) {
         this.account = Objects.requireNonNull(account); assign(role, tenant, from, to, status);
     }
     public void assign(UserRole role, UUID tenant, Instant from, Instant to, AssignmentStatus status) {

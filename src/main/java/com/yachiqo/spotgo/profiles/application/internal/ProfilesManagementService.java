@@ -1,10 +1,10 @@
 package com.yachiqo.spotgo.profiles.application.internal;
 
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
-import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.UserAccountRepository;
+import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.AccountRepository;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.RoleAssignmentRepository;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ParkingRepository;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.TenantRepository;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.*;
 import com.yachiqo.spotgo.profiles.domain.model.valueobjects.DriverProfileType;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.*;
@@ -17,19 +17,19 @@ import java.util.List;
 import java.util.UUID;
 import java.time.Clock;
 
-/** IAM uses native UUID accounts and role assignments. Parking still uses parkings. */
+/** IAM uses native UUID accounts and role assignments. Parking utiliza tenants con UUID. */
 @Service
 @Transactional(readOnly = true)
 public class ProfilesManagementService {
     private final ProfileRepository profiles;
     private final DriverClassificationRepository classifications;
-    private final UserAccountRepository accounts;
-    private final ParkingRepository parkings;
+    private final AccountRepository accounts;
+    private final TenantRepository parkings;
     private final RoleAssignmentRepository roles;
     private final Clock clock;
 
     public ProfilesManagementService(ProfileRepository profiles, DriverClassificationRepository classifications,
-                                     UserAccountRepository accounts, ParkingRepository parkings,
+                                     AccountRepository accounts, TenantRepository parkings,
                                      RoleAssignmentRepository roles, Clock clock) {
         this.profiles = profiles;
         this.classifications = classifications;
@@ -102,7 +102,7 @@ public class ProfilesManagementService {
         requireRole(actor, UserRole.PARKING_ADMIN);
         if (!tenantId.equals(actor.getTenantId()))
             throw new AccessDeniedException("No administras este estacionamiento");
-        if (!parkings.existsById(tenantId.toString()))
+        if (!parkings.existsById(tenantId))
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Estacionamiento inexistente");
     }
 

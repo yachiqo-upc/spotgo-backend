@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import java.util.TimeZone;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class)
 @EnableJpaAuditing
 public class SpotgoBackendApplication {
 

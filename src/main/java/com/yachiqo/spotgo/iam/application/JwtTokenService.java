@@ -26,7 +26,7 @@ public class JwtTokenService {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes; this.clock = clock;
     }
-    public String generateToken(UserAccount account, UserRole role, AccessSession session) {
+    public String generateToken(Account account, UserRole role, Session session) {
         Instant now = clock.instant();
         return Jwts.builder().subject(account.getId().toString())
             .claim("sid", session.getId().toString()).claim("role", role == null ? null : role.name())

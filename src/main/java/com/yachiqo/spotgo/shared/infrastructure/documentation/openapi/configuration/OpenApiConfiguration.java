@@ -24,7 +24,7 @@ public class OpenApiConfiguration {
 
     @Bean
     public GroupedOpenApi completeApi() {
-        return GroupedOpenApi.builder().group("03-backend-completo").pathsToMatch("/api/**").build();
+        return GroupedOpenApi.builder().group("04-backend-completo").pathsToMatch("/api/**").build();
     }
 
     @Bean
@@ -32,6 +32,13 @@ public class OpenApiConfiguration {
         return GroupedOpenApi.builder().group("02-iam-actualizado")
                 .pathsToMatch("/api/v1/authentication/**", "/api/v1/accounts/**", "/api/v1/sessions/**", "/api/v1/audit-entries/**")
                 .build();
+    }
+    @Bean
+    public GroupedOpenApi parkingApi() {
+        return GroupedOpenApi.builder().group("03-parking-actualizado")
+            .pathsToMatch("/api/v1/tenants/**", "/api/v1/parking-zones/**", "/api/v1/parking-spots/**", "/api/v1/floor-plans/**",
+                "/api/v1/digital-parking-maps/**", "/api/v1/reservations/**", "/api/v1/parking-sessions/**", "/api/v1/guest-parking-sessions/**", "/api/v1/authentication/**")
+            .build();
     }
     // Properties
     @Value("${spring.application.name}")

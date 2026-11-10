@@ -1,160 +1,48 @@
 package com.yachiqo.spotgo.parking.interfaces.rest;
-
-import com.yachiqo.spotgo.parking.domain.model.aggregates.Reservation;
-import com.yachiqo.spotgo.parking.domain.model.commands.ReserveSpotCommand;
-import com.yachiqo.spotgo.parking.domain.model.commands.UpdateReservationCommand;
-import com.yachiqo.spotgo.parking.domain.model.queries.GetReservationsByClientIdQuery;
-import com.yachiqo.spotgo.parking.domain.model.queries.GetReservationsByParkingIdQuery;
-import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
+import com.yachiqo.spotgo.parking.application.internal.commandservices.ParkingCommandServiceImpl;
+import com.yachiqo.spotgo.parking.application.internal.queryservices.ParkingQueryServiceImpl;
+import com.yachiqo.spotgo.parking.interfaces.rest.resources.ParkingResources.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
-import com.yachiqo.spotgo.parking.application.internal.commandservices.ParkingCommandService;
-import com.yachiqo.spotgo.parking.application.internal.queryservices.ParkingQueryService;
-import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
-import com.yachiqo.spotgo.parking.interfaces.rest.resources.CreateReservationResource;
-import com.yachiqo.spotgo.parking.interfaces.rest.resources.ReservationResource;
-import com.yachiqo.spotgo.parking.interfaces.rest.resources.UpdateReservationResource;
-import com.yachiqo.spotgo.shared.application.security.AuthorizationService;
-import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.List;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
+import io.swagger.v3.oas.annotations.responses.*;
+import io.swagger.v3.oas.annotations.media.Content;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import java.util.*;
+import java.time.Instant;
 
-@RestController
-@RequestMapping("/api/v1/reservations")
-@Tag(name = "Reservations", description = "Endpoints for managing parking spot reservations")
+@RestController @RequestMapping(value="/api/v1/reservations",produces="application/json")
+@PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN','SUPER_ADMIN')")
+@Tag(name="Reservations",description="Reservas por profile_id y vehicle_id. El backend calcula el importe y obtiene la identidad del token.")
+@ApiResponses({
+ @ApiResponse(responseCode="400",description="Datos, UUID, JSON, fechas o transicion invalidos",content=@Content),
+ @ApiResponse(responseCode="401",description="Access token o sesion invalidos",content=@Content),
+ @ApiResponse(responseCode="403",description="Rol insuficiente, otro tenant o recurso de otro conductor",content=@Content),
+ @ApiResponse(responseCode="404",description="Recurso inexistente",content=@Content),
+ @ApiResponse(responseCode="409",description="Duplicado, intervalo superpuesto, bloqueo vencido o estado incompatible",content=@Content)
+})
 public class ReservationsController {
+ private final ParkingCommandServiceImpl commands; private final ParkingQueryServiceImpl queries;
+ public ReservationsController(ParkingCommandServiceImpl commands,ParkingQueryServiceImpl queries){this.commands=commands;this.queries=queries;}
 
-    private static final ZoneId LIMA_ZONE = ZoneId.of("America/Lima");
+ @GetMapping @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Listar reservas de mi alcance",description="DRIVER: sus reservas; PARKING_ADMIN: las de su tenant.")
+ public List<ReservationView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor){return queries.reservations(actor).stream().map(ReservationView::of).toList();}
+ @GetMapping("/{reservationId}") @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Consultar reserva autorizada")
+ public ReservationView get(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID reservationId){return ReservationView.of(queries.reservation(actor,reservationId));}
+ @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('DRIVER')") @Operation(summary="Reservar espacio y bloquear temporalmente",description="Crea PENDING_PAYMENT con paymentId NULL. Valida vehiculo propio activo, espacio operativo e intervalos sin solapamiento. Importe base en PEN por CEILING; membresias pendientes de adaptar Billing.")
+ @ApiResponse(responseCode="201",description="Reserva pendiente de pago con bloqueo vigente")
+ public ReservationView create(@AuthenticationPrincipal SpotgoUserPrincipal actor,@Valid @RequestBody ReserveBody body){return ReservationView.of(commands.reserve(actor,body.spotId(),body.vehicleId(),body.startAt(),body.endAt()));}
+ @PostMapping("/{reservationId}/confirm-payment") @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')")
+ @Operation(summary="Confirmar pago de reserva",description="Verifica digital_payments: APPROVED, operacion RESERVATION, perfil e importe exactos y bloqueo vigente. No acepta la palabra del cliente sobre el estado del pago.")
+ @ApiResponse(responseCode="503",description="Billing todavia no dispone de digital_payments",content=@Content)
+ public ReservationView confirm(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID reservationId,@Valid @RequestBody PaymentBody body){return ReservationView.of(commands.confirm(actor,reservationId,body.paymentId()));}
+ @PostMapping("/{reservationId}/cancel") @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Cancelar reserva",description="Libera el bloqueo; no ejecuta automaticamente un reembolso de Billing.")
+ public ReservationView cancel(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID reservationId){return ReservationView.of(commands.cancel(actor,reservationId));}
+ @PostMapping("/{reservationId}/no-show") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Registrar ausencia",description="Solo al finalizar el intervalo de una reserva confirmada.")
+ public ReservationView noShow(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID reservationId){return ReservationView.of(commands.noShow(actor,reservationId));}
 
-    private final ParkingCommandService parkingCommandService;
-    private final ParkingQueryService parkingQueryService;
-    private final ReservationRepository reservationRepository;
-    private final AuthorizationService authorizationService;
-
-    public ReservationsController(ParkingCommandService parkingCommandService, ParkingQueryService parkingQueryService,
-                                  ReservationRepository reservationRepository, AuthorizationService authorizationService) {
-        this.parkingCommandService = parkingCommandService;
-        this.parkingQueryService = parkingQueryService;
-        this.reservationRepository = reservationRepository;
-        this.authorizationService = authorizationService;
-    }
-
-    @PostMapping
-    @PreAuthorize("hasRole('DRIVER')")
-    @Operation(summary = "Reserve a spot", description = "Creates a new parking spot reservation.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Reservation created successfully",
-                    content = @Content(schema = @Schema(implementation = ReservationResource.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
-    })
-    public ResponseEntity<ReservationResource> reserveSpot(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                                           @Valid @RequestBody CreateReservationResource resource) {
-        var command = new ReserveSpotCommand(
-                principal.getUserId(),
-                resource.parkingId(),
-                resource.spot(),
-                toLimaLocalDateTime(resource.startDate()),
-                toLimaLocalDateTime(resource.endDate()),
-                null,
-                null,
-                null
-        );
-        var reservationOptional = parkingCommandService.handle(command);
-        if (reservationOptional.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        var createdReservation = reservationOptional.get();
-        return new ResponseEntity<>(toResource(createdReservation), HttpStatus.CREATED);
-    }
-
-    @GetMapping
-    @PreAuthorize("hasAnyRole('PARKING_ADMIN','DRIVER')")
-    @Operation(summary = "Get all reservations", description = "Returns a list of reservations, optionally filtered by parking ID.")
-    @ApiResponse(responseCode = "200", description = "List of reservations returned",
-            content = @Content(schema = @Schema(implementation = ReservationResource.class)))
-    public ResponseEntity<List<ReservationResource>> getAllReservations(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                                                        @RequestParam(required = false) String parkingId,
-                                                                        @RequestParam(required = false) String clientId) {
-        List<Reservation> reservations;
-        if (authorizationService.isAdmin(principal)) {
-            var scopedParkingId = authorizationService.requireAdminParkingId(principal);
-            if (parkingId != null && !parkingId.equals(scopedParkingId)) {
-                throw new AccessDeniedException("Requested parking is outside authenticated scope");
-            }
-            reservations = parkingQueryService.handle(new GetReservationsByParkingIdQuery(scopedParkingId));
-        } else {
-            if (clientId != null && !clientId.equals(principal.getUserId())) {
-                throw new AccessDeniedException("Requested client is outside authenticated scope");
-            }
-            reservations = parkingQueryService.handle(new GetReservationsByClientIdQuery(principal.getUserId()));
-        }
-        var resources = reservations.stream()
-                .map(this::toResource)
-                .toList();
-        return ResponseEntity.ok(resources);
-    }
-
-    @PatchMapping("/{reservationId}")
-    @PreAuthorize("hasAnyRole('PARKING_ADMIN','DRIVER')")
-    public ResponseEntity<ReservationResource> updateReservation(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                                                 @PathVariable String reservationId,
-                                                                 @RequestBody UpdateReservationResource resource) {
-        var currentReservation = reservationRepository.findById(reservationId).orElse(null);
-        if (currentReservation == null) {
-            return ResponseEntity.notFound().build();
-        }
-        authorizationService.requireReservationAccess(principal, currentReservation);
-        if (authorizationService.isClient(principal) && (resource.amount() != null || resource.baseAmount() != null)) {
-            throw new AccessDeniedException("Clients cannot change reservation pricing");
-        }
-        ReservationStatus status = resource.status() == null ? null : ReservationStatus.fromDisplayName(resource.status());
-        var reservation = parkingCommandService.handle(new UpdateReservationCommand(
-                reservationId,
-                resource.endDate() == null ? null : toLimaLocalDateTime(resource.endDate()),
-                authorizationService.isAdmin(principal) ? resource.amount() : null,
-                authorizationService.isAdmin(principal) ? resource.baseAmount() : null,
-                resource.rating(),
-                status
-        ));
-        return reservation.map(value -> ResponseEntity.ok(toResource(value)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    private ReservationResource toResource(Reservation reservation) {
-        return new ReservationResource(
-                reservation.getId(),
-                reservation.getClientId(),
-                reservation.getParkingId(),
-                reservation.getCode(),
-                reservation.getSpot(),
-                toLimaOffsetDateTime(reservation.getStartDate()),
-                toLimaOffsetDateTime(reservation.getEndDate()),
-                reservation.getStatus().name().toLowerCase(),
-                reservation.getAmount(),
-                reservation.getBaseAmount(),
-                reservation.getRating()
-        );
-    }
-
-    private LocalDateTime toLimaLocalDateTime(OffsetDateTime value) {
-        return value.atZoneSameInstant(LIMA_ZONE).toLocalDateTime();
-    }
-
-    private OffsetDateTime toLimaOffsetDateTime(LocalDateTime value) {
-        return value.atZone(LIMA_ZONE).toOffsetDateTime();
-    }
 }

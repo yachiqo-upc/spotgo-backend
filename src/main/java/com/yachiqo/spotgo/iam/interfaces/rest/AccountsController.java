@@ -29,8 +29,8 @@ import java.util.UUID;
 })
 public class AccountsController {
     private final AccountAdministrationService administration;
-    private final UserAccountService authentication;
-    public AccountsController(AccountAdministrationService administration, UserAccountService authentication) {
+    private final AuthenticationService authentication;
+    public AccountsController(AccountAdministrationService administration, AuthenticationService authentication) {
         this.administration = administration; this.authentication = authentication;
     }
     public record ChangeStatusResource(@NotNull AccountStatus status) {}

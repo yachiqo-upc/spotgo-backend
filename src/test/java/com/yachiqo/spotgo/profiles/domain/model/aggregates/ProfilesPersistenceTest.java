@@ -13,8 +13,9 @@ class ProfilesPersistenceTest {
 
     @BeforeEach void setup() {
         factory = new Configuration().addAnnotatedClass(Profile.class).addAnnotatedClass(Vehicle.class)
-            .addAnnotatedClass(com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount.class)
+            .addAnnotatedClass(com.yachiqo.spotgo.iam.domain.model.aggregates.Account.class)
             .addAnnotatedClass(DriverClassification.class)
+            .addAnnotatedClass(com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant.class)
             .setProperty("hibernate.connection.driver_class", "org.h2.Driver")
             .setProperty("hibernate.connection.url", "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL")
             .setProperty("hibernate.hbm2ddl.auto", "create-drop")
@@ -23,9 +24,18 @@ class ProfilesPersistenceTest {
     }
     @AfterEach void close() { if (factory != null) factory.close(); }
 
+    private UUID tenant() {
+        UUID id=UUID.randomUUID();
+        factory.inTransaction(s -> s.doWork(c -> {
+            try(var q=c.prepareStatement("INSERT INTO tenants(tenant_id,name,status,address,coordinates,contact_data,rules,created_at,updated_at) VALUES (?,'Demo','ACTIVE','Demo','{}','{}','{}',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)")) {
+                q.setObject(1,id);q.executeUpdate();
+            }
+        }));
+        return id;
+    }
     private Profile profile(UUID accountId, String firstName, String lastName, String phone) {
         factory.inTransaction(session -> {
-            if (session.find(com.yachiqo.spotgo.iam.domain.model.aggregates.UserAccount.class, accountId) == null) {
+            if (session.find(com.yachiqo.spotgo.iam.domain.model.aggregates.Account.class, accountId) == null) {
                 session.doWork(connection -> {
                     try (var statement = connection.prepareStatement("INSERT INTO accounts(account_id,email,status,created_at,updated_at) VALUES (?,?,'ACTIVE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)")) {
                         statement.setObject(1, accountId);
@@ -85,13 +95,13 @@ class ProfilesPersistenceTest {
         var driver = profile(UUID.randomUUID(), "Juan", "Perez", "999");
         var other = profile(UUID.randomUUID(), "Luis", "Ruiz", "888");
         var admin = profile(UUID.randomUUID(), "Ana", "Ruiz", "777");
-        UUID tenant = UUID.randomUUID();
+        UUID tenant = tenant();
         var classification = new DriverClassification(driver, tenant, null, admin);
         factory.inTransaction(s -> {
             s.persist(driver); s.persist(other); s.persist(admin);
             s.persist(classification);
             s.persist(new DriverClassification(other, tenant, DriverProfileType.TAXI, admin));
-            s.persist(new DriverClassification(driver, UUID.randomUUID(), DriverProfileType.EMPLOYEE, admin));
+            s.persist(new DriverClassification(driver, tenant(), DriverProfileType.EMPLOYEE, admin));
         });
         assertEquals(DriverProfileType.PRIVATE, classification.getProfileType());
         assertEquals(admin.getId(), classification.getAssignedById());

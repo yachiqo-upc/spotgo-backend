@@ -4,6 +4,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;
 public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select v from Vehicle v where v.id=:id")
+    java.util.Optional<Vehicle> lock(@org.springframework.data.repository.query.Param("id") UUID id);
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "profile")
     java.util.Optional<Vehicle> findById(UUID id);
     @org.springframework.data.jpa.repository.Query("select v from Vehicle v where v.profile.id = :profileId")
