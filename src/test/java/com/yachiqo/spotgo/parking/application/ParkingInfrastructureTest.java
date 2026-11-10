@@ -67,7 +67,7 @@ class ParkingInfrastructureTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
 
-  for(String table:List.of("billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
+  for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","payment_tokens","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants")) jdbc.update("DELETE FROM "+table);
   superAuth=register("super");
   var sr=roles.findByAccountId(superAuth.accountId()).orElseThrow();sr.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(sr);
@@ -211,7 +211,7 @@ class ParkingInfrastructureTest {
  @Test void availabilityIsDerivedAndDoesNotClaimPhysicalOccupancy(){
   var r=reserve();var available=queries.availability(zone.getId(),r.getStartAt(),r.getEndAt());
   assertFalse(available.stream().filter(a->a.spotId().equals(spot.getId())).findFirst().orElseThrow().bookable());
-  assertEquals("UNKNOWN",available.get(0).physicalOccupancy());
+  assertEquals("UNAVAILABLE",available.get(0).physicalOccupancy());
   assertEquals(OperationalStatus.ACTIVE,commands.spot(spot.getId()).getOperationalStatus());
  }
  @Test void swaggerAndHttpActuallyEnforceRoles() throws Exception {

@@ -41,3 +41,6 @@ build/
 
 ### Docker ###
 docker-compose.override.yml
+
+# Private evidence photos uploaded at runtime
+/storage/

@@ -787,11 +787,11 @@
                                   "spot_id":  "00000000-0000-4000-8000-000000000041",
                                   "protocol":  "MQTT",
                                   "status":  "ACTIVE",
-                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
                                   "configuration":  {
                                                         "topic":  "demo/spotgo/sensors/1/occupancy"
                                                     },
-                                  "installed_at":  "2026-11-09T07:00:00Z"
+                                  "installed_at":  "2026-11-09T13:00:00Z"
                               },
                               {
                                   "sensor_id":  "00000000-0000-4000-8000-000000000242",
@@ -800,11 +800,11 @@
                                   "spot_id":  "00000000-0000-4000-8000-000000000042",
                                   "protocol":  "MQTT",
                                   "status":  "ACTIVE",
-                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
                                   "configuration":  {
                                                         "topic":  "demo/spotgo/sensors/2/occupancy"
                                                     },
-                                  "installed_at":  "2026-11-09T07:00:00Z"
+                                  "installed_at":  "2026-11-09T13:00:00Z"
                               },
                               {
                                   "sensor_id":  "00000000-0000-4000-8000-000000000243",
@@ -813,11 +813,11 @@
                                   "spot_id":  "00000000-0000-4000-8000-000000000043",
                                   "protocol":  "MQTT",
                                   "status":  "ACTIVE",
-                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
                                   "configuration":  {
                                                         "topic":  "demo/spotgo/sensors/3/occupancy"
                                                     },
-                                  "installed_at":  "2026-11-09T07:00:00Z"
+                                  "installed_at":  "2026-11-09T13:00:00Z"
                               },
                               {
                                   "sensor_id":  "00000000-0000-4000-8000-000000000244",
@@ -826,11 +826,11 @@
                                   "spot_id":  "00000000-0000-4000-8000-000000000044",
                                   "protocol":  "MQTT",
                                   "status":  "ACTIVE",
-                                  "last_seen_at":  "2026-11-09T07:55:00Z",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
                                   "configuration":  {
                                                         "topic":  "demo/spotgo/sensors/4/occupancy"
                                                     },
-                                  "installed_at":  "2026-11-09T07:00:00Z"
+                                  "installed_at":  "2026-11-09T13:00:00Z"
                               }
                           ],
     "occupancy_readings":  [
@@ -839,40 +839,40 @@
                                    "sensor_id":  "00000000-0000-4000-8000-000000000241",
                                    "spot_id":  "00000000-0000-4000-8000-000000000041",
                                    "occupancy_status":  "OCCUPIED",
-                                   "occurred_at":  "2026-11-09T07:55:00Z",
-                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
                                    "quality":  99,
-                                   "payload_hash":  "4444444444444444444444444444444444444444444444444444444444444444"
+                                   "payload_hash":  "05759cc0f6ed467d1241afd799aa52427e7777052bb1a34a23ff214f16fc121b"
                                },
                                {
                                    "reading_id":  "00000000-0000-4000-8000-000000000252",
                                    "sensor_id":  "00000000-0000-4000-8000-000000000242",
                                    "spot_id":  "00000000-0000-4000-8000-000000000042",
                                    "occupancy_status":  "AVAILABLE",
-                                   "occurred_at":  "2026-11-09T07:55:00Z",
-                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
                                    "quality":  99,
-                                   "payload_hash":  "5555555555555555555555555555555555555555555555555555555555555555"
+                                   "payload_hash":  "9dd5527bffbdc58b50518a78f8eae62a38dd7b00fe68459929d6c45eddf4fd09"
                                },
                                {
                                    "reading_id":  "00000000-0000-4000-8000-000000000253",
                                    "sensor_id":  "00000000-0000-4000-8000-000000000243",
                                    "spot_id":  "00000000-0000-4000-8000-000000000043",
                                    "occupancy_status":  "OCCUPIED",
-                                   "occurred_at":  "2026-11-09T07:55:00Z",
-                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
                                    "quality":  99,
-                                   "payload_hash":  "6666666666666666666666666666666666666666666666666666666666666666"
+                                   "payload_hash":  "818e9448e5179ba3efece7ef48a00693a5367d74637226ce61b965b1d2a6be3e"
                                },
                                {
                                    "reading_id":  "00000000-0000-4000-8000-000000000254",
                                    "sensor_id":  "00000000-0000-4000-8000-000000000244",
                                    "spot_id":  "00000000-0000-4000-8000-000000000044",
                                    "occupancy_status":  "AVAILABLE",
-                                   "occurred_at":  "2026-11-09T07:55:00Z",
-                                   "received_at":  "2026-11-09T07:55:01Z",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
                                    "quality":  99,
-                                   "payload_hash":  "7777777777777777777777777777777777777777777777777777777777777777"
+                                   "payload_hash":  "bb3116d1e0111b75ce33e9c84459393692dc90994e08f855928150e2d5841c10"
                                }
                            ],
     "sensor_health_events":  [
@@ -880,8 +880,8 @@
                                      "health_event_id":  "00000000-0000-4000-8000-000000000261",
                                      "sensor_id":  "00000000-0000-4000-8000-000000000242",
                                      "health":  "FAILED",
-                                     "reason":  "Sin comunicacion desde las 07:55; causa fisica no determinada",
-                                     "observed_at":  "2026-11-09T08:05:00Z",
+                                     "reason":  "COMMUNICATION_TIMEOUT: sin mensajes dentro del umbral",
+                                     "observed_at":  "2026-11-09T14:05:00Z",
                                      "recovered_at":  null
                                  }
                              ],
@@ -889,12 +889,12 @@
                                 {
                                     "conflict_id":  "00000000-0000-4000-8000-000000000271",
                                     "spot_id":  "00000000-0000-4000-8000-000000000041",
-                                    "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                                    "reservation_id":  null,
                                     "reading_id":  "00000000-0000-4000-8000-000000000251",
                                     "tenant_id":  "00000000-0000-4000-8000-000000000021",
                                     "conflict_type":  "UNEXPECTED_OCCUPANCY",
                                     "severity":  "HIGH",
-                                    "detected_at":  "2026-11-09T07:55:00Z",
+                                    "detected_at":  "2026-11-09T13:55:01Z",
                                     "status":  "OPEN"
                                 }
                             ],
@@ -907,8 +907,8 @@
                                  "spot_id":  "00000000-0000-4000-8000-000000000041",
                                  "alert_type":  "OCCUPANCY_CONFLICT",
                                  "severity":  "HIGH",
-                                 "evidence_ref":  "demo://readings/251",
-                                 "created_at":  "2026-11-09T07:56:00Z",
+                                 "evidence_ref":  null,
+                                 "created_at":  "2026-11-09T13:55:01Z",
                                  "acknowledged_at":  null,
                                  "closed_at":  null,
                                  "status":  "OPEN"
@@ -921,8 +921,8 @@
                                  "spot_id":  "00000000-0000-4000-8000-000000000042",
                                  "alert_type":  "SENSOR_FAILURE",
                                  "severity":  "HIGH",
-                                 "evidence_ref":  "demo://health-events/261",
-                                 "created_at":  "2026-11-09T08:05:00Z",
+                                 "evidence_ref":  null,
+                                 "created_at":  "2026-11-09T14:05:00Z",
                                  "acknowledged_at":  null,
                                  "closed_at":  null,
                                  "status":  "OPEN"
@@ -936,7 +936,7 @@
                                    "occupied_count":  1,
                                    "total_count":  2,
                                    "percentage":  50,
-                                   "observed_at":  "2026-11-09T07:55:00Z"
+                                   "observed_at":  "2026-11-09T13:55:01Z"
                                },
                                {
                                    "snapshot_id":  "00000000-0000-4000-8000-000000000292",
@@ -945,7 +945,7 @@
                                    "occupied_count":  1,
                                    "total_count":  2,
                                    "percentage":  50,
-                                   "observed_at":  "2026-11-09T07:55:00Z"
+                                   "observed_at":  "2026-11-09T13:55:01Z"
                                },
                                {
                                    "snapshot_id":  "00000000-0000-4000-8000-000000000293",
@@ -954,7 +954,7 @@
                                    "occupied_count":  2,
                                    "total_count":  4,
                                    "percentage":  50,
-                                   "observed_at":  "2026-11-09T07:55:00Z"
+                                   "observed_at":  "2026-11-09T13:55:01Z"
                                }
                            ],
     "occupancy_reports":  [
@@ -962,13 +962,15 @@
                                   "report_id":  "00000000-0000-4000-8000-000000000301",
                                   "tenant_id":  "00000000-0000-4000-8000-000000000021",
                                   "zone_id":  "00000000-0000-4000-8000-000000000031",
-                                  "interval_start":  "2026-11-09T07:00:00Z",
-                                  "interval_end":  "2026-11-09T13:00:00Z",
+                                  "interval_start":  "2026-11-09T13:00:00Z",
+                                  "interval_end":  "2026-11-09T15:00:00Z",
                                   "totals":  {
                                                  "peak_occupancy_percentage":  50,
+                                                 "average_sample_occupancy_percentage":  50,
+                                                 "snapshots_count":  1,
                                                  "alerts_count":  2
                                              },
-                                  "generated_at":  "2026-11-09T13:05:00Z",
+                                  "generated_at":  "2026-11-09T15:05:00Z",
                                   "status":  "GENERATED"
                               }
                           ]

@@ -60,7 +60,7 @@ class BillingIntegrationTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));outcome.set(PaymentStatus.APPROVED);
   when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-  for(String table:List.of("billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
+  for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
    "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","payment_tokens","vehicles","profiles","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","accounts","tenants"))jdbc.update("DELETE FROM "+table);
   when(plans.get("DRIVER_TEST")).thenReturn(driverPlan);when(plans.get("TENANT_TEST")).thenReturn(tenantPlan);when(plans.all()).thenReturn(List.of(driverPlan,tenantPlan));
@@ -337,7 +337,33 @@ class BillingIntegrationTest {
    });
    assertEquals(expected,actual,table+": columnas reales frente a db.json");
   }
-  assertEquals(24,implemented);
-  assertEquals(java.util.Set.of("occupancy_sensors","occupancy_readings","sensor_health_events","occupancy_conflicts","occupancy_alerts","capacity_snapshots","occupancy_reports"),missing);
+  assertEquals(31,implemented);
+  assertTrue(missing.isEmpty(),"Ninguna tabla del diseño debe quedar sin implementar");
+ }
+ @Test void everyDocumentedReferenceIsEnforcedByAnActualDatabaseForeignKey() throws Exception {
+  var targets=Map.ofEntries(Map.entry("account_id","accounts"),Map.entry("profile_id","profiles"),Map.entry("assigned_by","profiles"),
+   Map.entry("tenant_id","tenants"),Map.entry("zone_id","parking_zones"),Map.entry("spot_id","parking_spots"),
+   Map.entry("floor_plan_id","floor_plans"),Map.entry("reservation_id","reservations"),Map.entry("payment_id","digital_payments"),
+   Map.entry("token_id","payment_tokens"),Map.entry("charge_id","additional_charges"),Map.entry("sensor_id","occupancy_sensors"),
+   Map.entry("reading_id","occupancy_readings"),Map.entry("health_event_id","sensor_health_events"),Map.entry("conflict_id","occupancy_conflicts"));
+  com.fasterxml.jackson.databind.JsonNode fixtures;
+  try(var input=new org.springframework.core.io.ClassPathResource("db.json").getInputStream()){fixtures=new ObjectMapper().readTree(input);}
+  var names=fixtures.fieldNames();int checked=0;
+  while(names.hasNext()){
+   String table=names.next();String actual=jdbc.queryForObject("SELECT table_name FROM information_schema.tables WHERE LOWER(table_schema)='public' AND LOWER(table_name)=?",String.class,table);
+   var imported=jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<Map<String,String>>) connection->{
+    var result=new HashMap<String,String>();
+    try(var keys=connection.getMetaData().getImportedKeys(connection.getCatalog(),connection.getSchema(),actual)){
+     while(keys.next())result.put(keys.getString("FKCOLUMN_NAME").toLowerCase(Locale.ROOT),keys.getString("PKTABLE_NAME").toLowerCase(Locale.ROOT)+"."+keys.getString("PKCOLUMN_NAME").toLowerCase(Locale.ROOT));
+    }return result;
+   });
+   var fields=fixtures.get(table).get(0).fieldNames();
+   while(fields.hasNext()){
+    String field=fields.next();var target=targets.get(field);if(target==null||target.equals(table))continue;
+    String targetColumn=field.equals("assigned_by")?"profile_id":field;
+    assertEquals(target+"."+targetColumn,imported.get(field),table+"."+field+" necesita FK fisica");checked++;
+   }
+  }
+  assertTrue(checked>50,"Se deben verificar referencias de los cinco contextos");
  }
 }

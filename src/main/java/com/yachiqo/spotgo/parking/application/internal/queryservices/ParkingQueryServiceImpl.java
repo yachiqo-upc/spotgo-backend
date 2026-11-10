@@ -15,12 +15,13 @@ public class ParkingQueryServiceImpl {
  private final TenantRepository tenants; private final ParkingZoneRepository zones;private final ParkingSpotRepository spots;
  private final FloorPlanRepository plans;private final DigitalParkingMapRepository maps;private final ReservationRepository reservations;
  private final ParkingSessionRepository sessions;private final GuestParkingSessionRepository guests;
+ private final com.yachiqo.spotgo.parking.application.ParkingOccupancyGateway occupancy;
  private final ProfilesManagementService profiles;private final ParkingCommandServiceImpl commands;private final Clock clock;
  public ParkingQueryServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,FloorPlanRepository plans,
   DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,GuestParkingSessionRepository guests,
-  ProfilesManagementService profiles,ParkingCommandServiceImpl commands,Clock clock) {
+  ProfilesManagementService profiles,ParkingCommandServiceImpl commands,Clock clock,com.yachiqo.spotgo.parking.application.ParkingOccupancyGateway occupancy) {
   this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;
-  this.sessions=sessions;this.guests=guests;this.profiles=profiles;this.commands=commands;this.clock=clock;
+  this.sessions=sessions;this.guests=guests;this.profiles=profiles;this.commands=commands;this.clock=clock;this.occupancy=occupancy;
  }
  public List<Tenant> tenants(){return tenants.findAll();}
  public Tenant tenant(UUID id){return commands.tenant(id);}
@@ -51,7 +52,10 @@ public class ParkingQueryServiceImpl {
     && s.getZone().getTenant().getStatus()==com.yachiqo.spotgo.parking.domain.model.valueobjects.TenantStatus.ACTIVE;
    boolean blocked=reservations.overlappingSpot(s.getId(),start,end).stream().anyMatch(r->r.blocks(clock.instant()))
     || !sessions.openSpot(s.getId()).isEmpty() || !guests.openSpot(s.getId()).isEmpty();
-   return new Availability(s.getId(),operational&&!blocked,!operational?"NOT_OPERATIONAL":blocked?"RESERVATION_OR_OPEN_STAY":"NO_KNOWN_BLOCK","UNKNOWN");
+   String physical=occupancy.physicalOccupancy(s.getId());boolean immediate=!start.isAfter(clock.instant());
+   boolean observedBlock=immediate&&!physical.equals("AVAILABLE");
+   String reason=!operational?"NOT_OPERATIONAL":blocked?"RESERVATION_OR_OPEN_STAY":observedBlock?"PHYSICAL_"+physical:immediate?"AVAILABLE_NOW":"FUTURE_SLOT_NO_KNOWN_BLOCK";
+   return new Availability(s.getId(),operational&&!blocked&&!observedBlock,reason,physical);
   }).toList();
  }
 }

@@ -31,7 +31,7 @@ public class ParkingSpotsController {
 
  @GetMapping @Operation(summary="Listar espacios de una zona")
  public List<SpotView> list(@RequestParam UUID zoneId){return queries.spots(zoneId).stream().map(SpotView::of).toList();}
- @GetMapping("/availability") @Operation(summary="Consultar disponibilidad por intervalo",description="Proyeccion calculada de estado operativo, reservas, bloqueos y estadias abiertas. physicalOccupancy es UNKNOWN hasta integrar Monitoring; no se inventan lecturas de sensores.")
+ @GetMapping("/availability") @Operation(summary="Consultar disponibilidad por intervalo",description="Proyeccion calculada de estado operativo, reservas, bloqueos y estadias abiertas. physicalOccupancy procede de Monitoring: AVAILABLE, OCCUPIED o UNAVAILABLE. Para el momento actual se exige AVAILABLE; para intervalos futuros la observacion actual no garantiza la ocupacion futura.")
  public List<ParkingQueryServiceImpl.Availability> availability(@RequestParam UUID zoneId,@RequestParam Instant startAt,@RequestParam Instant endAt) {
   return queries.availability(zoneId,startAt,endAt);
  }

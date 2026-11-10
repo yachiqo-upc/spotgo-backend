@@ -29,12 +29,13 @@ public class ParkingCommandServiceImpl {
  private final VehicleRepository vehicles;
  private final ProfilesManagementService profiles;
  private final ParkingPaymentGateway payments;
+ private final ParkingOccupancyGateway occupancy;
  private final Clock clock;
  public ParkingCommandServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,
   FloorPlanRepository plans,DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,
-  GuestParkingSessionRepository guests,VehicleRepository vehicles,ProfilesManagementService profiles,ParkingPaymentGateway payments,Clock clock) {
+  GuestParkingSessionRepository guests,VehicleRepository vehicles,ProfilesManagementService profiles,ParkingPaymentGateway payments,Clock clock,ParkingOccupancyGateway occupancy) {
   this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;
-  this.sessions=sessions;this.guests=guests;this.vehicles=vehicles;this.profiles=profiles;this.payments=payments;this.clock=clock;
+  this.sessions=sessions;this.guests=guests;this.vehicles=vehicles;this.profiles=profiles;this.payments=payments;this.clock=clock;this.occupancy=occupancy;
  }
  public static ParkingException missing(String resource) {return new ParkingException(HttpStatus.NOT_FOUND,resource+" inexistente");}
  public static ParkingException conflict(String message) {return new ParkingException(HttpStatus.CONFLICT,message);}
@@ -131,6 +132,7 @@ public class ParkingCommandServiceImpl {
   profiles.requireOwner(actor,vehicle);
   if(vehicle.getStatus()!=VehicleStatus.ACTIVE) throw conflict("Vehiculo inactivo");
   var spot=lockSpot(spotId);operational(spot);var now=clock.instant();
+  if(!start.isAfter(now)&&!occupancy.physicalOccupancy(spotId).equals("AVAILABLE"))throw conflict("No hay confirmacion fisica confiable de espacio libre para reservar ahora");
   if(reservations.overlappingSpot(spotId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("El espacio ya tiene una reserva o bloqueo vigente");
   if(reservations.overlappingVehicle(vehicleId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("El vehiculo ya tiene una reserva superpuesta");
   if(!sessions.openSpot(spotId).isEmpty() || !guests.openSpot(spotId).isEmpty()) throw conflict("El espacio tiene una estadia abierta");

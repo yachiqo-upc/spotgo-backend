@@ -176,4 +176,75 @@ class DbSeederTest {
             assertTrue(document.path("tax_data").path("document_number").asText().matches("[0-9]{8}"));
         }
     }
+    private JsonNode fixture(String table, String key, JsonNode id) {
+        for (var row : fixtures.path(table)) if (row.path(key).equals(id)) return row;
+        throw new AssertionError("Referencia inexistente: " + table + "." + key + "=" + id);
+    }
+
+    @Test void fixtureRelationshipsPreserveOwnershipAndTenantAcrossAllContexts() {
+        var tables=fixtures.fields();
+        while(tables.hasNext()) {
+            var table=tables.next();var ids=new HashSet<String>();
+            String pk=table.getValue().get(0).fieldNames().next();
+            for(var row:table.getValue())assertTrue(ids.add(UUID.fromString(row.path(pk).asText()).toString()),"PK duplicada en "+table.getKey());
+        }
+        for(var payment:fixtures.path("digital_payments"))if(!payment.path("token_id").isNull()) {
+            var token=fixture("payment_tokens","token_id",payment.path("token_id"));
+            assertEquals(payment.path("profile_id"),token.path("profile_id"),"Token de otro pagador");
+        }
+        for(var reservation:fixtures.path("reservations")) {
+            var spot=fixture("parking_spots","spot_id",reservation.path("spot_id"));
+            var zone=fixture("parking_zones","zone_id",spot.path("zone_id"));
+            var vehicle=fixture("vehicles","vehicle_id",reservation.path("vehicle_id"));
+            assertEquals(spot.path("zone_id"),reservation.path("zone_id"));assertEquals(zone.path("tenant_id"),reservation.path("tenant_id"));
+            assertEquals(vehicle.path("profile_id"),reservation.path("profile_id"),"Vehiculo de otro perfil");
+            if(!reservation.path("payment_id").isNull()) {
+                var payment=fixture("digital_payments","payment_id",reservation.path("payment_id"));
+                assertEquals(reservation.path("profile_id"),payment.path("profile_id"));assertEquals("RESERVATION",payment.path("operation_type").asText());
+                assertEquals(0,reservation.path("amount").decimalValue().compareTo(payment.path("amount").decimalValue()));
+            }
+        }
+        for(var stay:fixtures.path("parking_sessions")) {
+            var reservation=fixture("reservations","reservation_id",stay.path("reservation_id"));
+            for(var column:java.util.List.of("profile_id","vehicle_id","spot_id"))assertEquals(reservation.path(column),stay.path(column),column);
+        }
+        for(var charge:fixtures.path("additional_charges"))if(!charge.path("payment_id").isNull()) {
+            var reservation=fixture("reservations","reservation_id",charge.path("reservation_id"));
+            var payment=fixture("digital_payments","payment_id",charge.path("payment_id"));
+            assertEquals(reservation.path("profile_id"),payment.path("profile_id"));assertEquals("ADDITIONAL_CHARGE",payment.path("operation_type").asText());
+            assertEquals(0,charge.path("amount").decimalValue().compareTo(payment.path("amount").decimalValue()));
+        }
+        for(var balance:fixtures.path("outstanding_balances")) {
+            var charge=fixture("additional_charges","charge_id",balance.path("charge_id"));
+            var reservation=fixture("reservations","reservation_id",charge.path("reservation_id"));
+            assertEquals(reservation.path("profile_id"),balance.path("profile_id"),"Deuda asignada a otro perfil");
+            if(balance.path("status").asText().equals("OPEN"))assertEquals(0,balance.path("amount").decimalValue().compareTo(charge.path("amount").decimalValue()));
+        }
+        for(var sensor:fixtures.path("occupancy_sensors")) {
+            var spot=fixture("parking_spots","spot_id",sensor.path("spot_id"));var zone=fixture("parking_zones","zone_id",spot.path("zone_id"));
+            assertEquals(spot.path("zone_id"),sensor.path("zone_id"));assertEquals(zone.path("tenant_id"),sensor.path("tenant_id"));
+        }
+        for(var reading:fixtures.path("occupancy_readings"))assertEquals(reading.path("spot_id"),fixture("occupancy_sensors","sensor_id",reading.path("sensor_id")).path("spot_id"));
+        for(var conflict:fixtures.path("occupancy_conflicts")) {
+            var reading=fixture("occupancy_readings","reading_id",conflict.path("reading_id"));
+            var sensor=fixture("occupancy_sensors","sensor_id",reading.path("sensor_id"));
+            assertEquals(reading.path("spot_id"),conflict.path("spot_id"));assertEquals(sensor.path("tenant_id"),conflict.path("tenant_id"));
+            if(!conflict.path("reservation_id").isNull())assertEquals(conflict.path("spot_id"),fixture("reservations","reservation_id",conflict.path("reservation_id")).path("spot_id"));
+        }
+        for(var alert:fixtures.path("occupancy_alerts")) {
+            JsonNode origin;
+            if(!alert.path("conflict_id").isNull())origin=fixture("occupancy_conflicts","conflict_id",alert.path("conflict_id"));
+            else {var event=fixture("sensor_health_events","health_event_id",alert.path("health_event_id"));origin=fixture("occupancy_sensors","sensor_id",event.path("sensor_id"));}
+            assertEquals(origin.path("tenant_id"),alert.path("tenant_id"));assertEquals(origin.path("spot_id"),alert.path("spot_id"));
+            assertTrue(alert.path("evidence_ref").isNull(),"Las alertas demo no deben inventar fotos");
+        }
+        for(var table:java.util.List.of("capacity_snapshots","occupancy_reports"))for(var row:fixtures.path(table))if(!row.path("zone_id").isNull()) {
+            assertEquals(row.path("tenant_id"),fixture("parking_zones","zone_id",row.path("zone_id")).path("tenant_id"));
+        }
+        for(var classification:fixtures.path("driver_classifications")) {
+            var admin=fixture("profiles","profile_id",classification.path("assigned_by"));
+            var role=fixture("role_assignments","account_id",admin.path("account_id"));
+            assertEquals("PARKING_ADMIN",role.path("role_type").asText());assertEquals(classification.path("tenant_id"),role.path("tenant_id"));
+        }
+    }
 }

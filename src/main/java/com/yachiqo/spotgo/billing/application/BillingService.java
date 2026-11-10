@@ -72,6 +72,12 @@ public class BillingService {
   if(balances.byProfile(profile).stream().anyMatch(b->b.getStatus()==OutstandingBalanceStatus.OPEN&&b.getAmount().signum()>0))
    throw conflict("Debes regularizar tus deudas antes de crear otra reserva; puedes consultar y pagar tus deudas");
  }
+ public int sensorLimit(UUID tenant){
+  var now=clock.instant();var active=subscriptions.byTenant(tenant).stream().filter(s->s.activeAt(now)&&now.isBefore(SubscriptionPlans.periodEnd(s))).toList();
+  if(active.size()!=1)return 0;
+  try{return Math.max(0,new BigDecimal(active.get(0).getPlan().get("included_sensors").toString()).intValueExact());}
+  catch(RuntimeException e){return 0;}
+ }
  public BigDecimal reservationPrice(UUID profile,BigDecimal base,Instant now) {
   var active=subscriptions.byProfile(profile).stream().filter(s->s.activeAt(now)&&now.isBefore(SubscriptionPlans.periodEnd(s))).toList();
   if(active.size()>1)throw conflict("Existe mas de una membresia vigente; revisa la configuracion del titular");

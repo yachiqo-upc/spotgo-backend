@@ -20,7 +20,7 @@ The project follows **Domain-Driven Design** with a **hexagonal (ports & adapter
 src/main/java/com/yachiqo/spotgo/
 ├── iam/            # Accounts, credentials, roles, sessions and audit
 ├── parking/        # Tenants, zones, spots, floor plans, maps, reservations and stays
-├── monitoring/     # Employees, occupancy by hour, weekly trends
+├── monitoring/     # Sensors, readings, health, conflicts, alerts, snapshots and reports
 ├── billing/        # Billing domain: receipts, subscriptions, client plans
 ├── profiles/       # Profiles, vehicles and driver classifications
 └── shared/         # Shared kernel: base entities, error handling, config
@@ -174,7 +174,7 @@ Las referencias internas y las de Profiles son FK físicas. IAM y driver_classif
 - La salida captura exit_at automáticamente. Si supera el fin más la tolerancia, la reserva queda OVERSTAYED. La generación de additional_charges corresponde a Billing y todavía está pendiente.
 - Invitado: no crea cuenta, perfil, vehículo ni pago digital. La salida calcula su importe; queda CLOSED si el administrador confirma pago físico o PENDING_REVIEW si no. Puede confirmar ese pago posteriormente.
 - Croquis y mapas: versión positiva y única dentro de su zona/croquis. Publicar un mapa exige croquis publicado y archiva los otros mapas del mismo croquis. El archivo debe existir previamente en su almacenamiento: este cambio no implementa carga de archivos ni conversión automática de croquis.
-- Disponibilidad es una proyección, sin tabla adicional. Combina habilitación administrativa, reservas y estadías abiertas. `physicalOccupancy = UNKNOWN` hasta integrar lecturas de Monitoring; no equipara reserva con ocupación física.
+- Disponibilidad es una proyección, sin tabla adicional. Combina habilitación administrativa, reservas y estadías abiertas. physicalOccupancy proviene de Monitoring (AVAILABLE, OCCUPIED o UNAVAILABLE). Una reserva inmediata exige lectura confiable libre; para una reserva futura se valida el intervalo sin prometer su estado físico futuro.
 
 #### Probar Parking en Swagger
 
@@ -189,7 +189,7 @@ Usa http://localhost:8080/swagger-ui/index.html. La vista predeterminada es **04
 
 El seeder ahora carga tenants, zonas, espacios, croquis, mapas e invitados en sus tablas reales. Con Billing implementado también carga los pagos demo y las reservas, sesiones, cargos y deudas que los referencian. Son registros ficticios de desarrollo; el seeder no realiza cobros.
 
-**Integración actual:** Billing verifica pagos, aplica descuentos de membresías vigentes, bloquea nuevas reservas con deudas y registra sobretiempo al finalizar una estadía. Las lecturas físicas y conflictos todavía requieren adaptar Monitoring. Solo Monitoring conserva sus modelos anteriores; IAM, Profiles, Parking y Billing ya tienen sus modelos actualizados. Sus consultas compartidas se ajustaron al nuevo Parking sin crear tablas antiguas de Parking.
+**Integración actual:** Billing verifica pagos, aplica descuentos de membresías vigentes, bloquea nuevas reservas con deudas y registra sobretiempo al finalizar una estadía. Monitoring integra lecturas, salud, conflictos y avisos con Parking, respetando el límite de sensores de la suscripción empresarial. Los cinco contextos utilizan el modelo actualizado.
 
 **Base de datos existente:** Hibernate update no migra automáticamente IDs antiguos ni elimina tablas. En particular, la antigua tabla reservations tiene columnas y clave primaria incompatibles con este modelo. Antes de usar este cambio con esa BD hay que migrar esa tabla o recrear una BD local de pruebas. Este cambio no ejecuta DROP ni migra datos de tu PostgreSQL.
 
@@ -260,7 +260,7 @@ Ejemplo de configuración de catálogo, con importes ficticios:
 ]
 ```
 
-Las contrataciones empresariales pertenecen al Tenant; el pago identifica además el perfil administrador pagador. Cambiar de administrador no cambia al titular de la empresa. La cantidad física y asignación de sensores corresponde al próximo contexto Monitoring.
+Las contrataciones empresariales pertenecen al Tenant; el pago identifica además el perfil administrador pagador. Cambiar de administrador no cambia al titular de la empresa. La cantidad física y asignación de sensores corresponde a Monitoring.
 
 #### Idempotencia, fallos y configuración
 
@@ -278,20 +278,52 @@ No hay proveedor financiero real configurado en este repositorio. La implementac
 
 Registrar datos de una boleta/factura no equivale a enviarla a SUNAT ni a recibir autorización tributaria. El emisor autorizado debe proporcionar serie, número y datos. Esta integración externa no se simula como si fuese real.
 
-Swagger en http://localhost:8080/swagger-ui/index.html muestra los cuatro contextos actualizados en **04-backend-completo**, y Billing también está en **payments-billing-actualizado**. No incluye Receipts, ClientPlans ni el Monitoring antiguo. Monitoring conserva su código pendiente de adaptar, pero no se mezcla en esta documentación actualizada.
+Swagger en http://localhost:8080/swagger-ui/index.html muestra los cinco contextos en 04-backend-completo. Monitoring también está en monitoring-actualizado. Se retiraron los endpoints antiguos de empleados, occupancyByHour, weeklyTrends y analytics, además de Receipts y ClientPlans.
 
 **BD existente:** subscriptions y reservations del backend anterior pueden ser incompatibles con este esquema. Hibernate update no convierte IDs ni borra tablas antiguas. No se ejecutó ninguna migración ni borrado en tu PostgreSQL.
 
 ### Monitoring
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/employees` | Create an employee, optionally with `assignedSpot` |
-| `GET` | `/api/v1/employees` | Get all employees |
-| `PUT` | `/api/v1/employees/{employeeId}` | Update an employee, including `assignedSpot`, shift, and `on-duty` / `off-duty` state |
-| `DELETE` | `/api/v1/employees/{employeeId}` | Delete an employee |
-| `GET` | `/api/v1/occupancyByHour` | Get occupancy by hour (optional `?parkingId=`) |
-| `GET` | `/api/v1/weeklyTrends` | Get weekly occupancy trends (optional `?parkingId=`) |
+Implementa occupancy_sensors, occupancy_readings, sensor_health_events, occupancy_conflicts, occupancy_alerts, capacity_snapshots y occupancy_reports. Las PK/FK son UUID nativos. No agrega columnas al diagrama ni una tabla de snapshots por reporte. Se retiraron Employee, OccupancyByHour, WeeklyTrend y sus servicios/controladores; no se borró ninguna tabla de tu PostgreSQL.
+
+| Método | Ruta | Función |
+| --- | --- | --- |
+| GET / POST | `/api/v1/occupancy-sensors` | Listar o registrar un sensor con primera lectura real. |
+| GET | `/api/v1/occupancy-sensors/{sensorId}` | Consultar dispositivo autorizado. |
+| POST | `/api/v1/occupancy-sensors/{sensorId}/deactivate` | Desactivar conservando historial; permite reemplazarlo. |
+| GET | `/api/v1/occupancy-sensors/spots/{spotId}/occupancy` | Consultar última ocupación física confiable. |
+| GET / POST | `/api/v1/occupancy-readings` | Historial por sensorId o recepción autenticada de lectura. |
+| GET / POST | `/api/v1/sensor-health-events` | Historial por sensorId o diagnóstico de salud. |
+| GET | `/api/v1/sensor-health-events/{healthEventId}` | Consultar episodio concreto. |
+| POST | `/api/v1/sensor-health-events/{healthEventId}/recover` | Registrar recuperación del episodio. |
+| GET | `/api/v1/occupancy-conflicts` | Listar incidentes del Tenant; SUPER_ADMIN puede consultar todos. |
+| GET | `/api/v1/occupancy-conflicts/{conflictId}` | Consultar incidente y su lectura de respaldo. |
+| POST | `/api/v1/occupancy-conflicts/{conflictId}/acknowledge` | Reconocer incidente. |
+| POST | `/api/v1/occupancy-conflicts/{conflictId}/resolve` | Resolver incidente y cerrar sus avisos. |
+| GET | `/api/v1/occupancy-alerts` | Consultar avisos del Tenant. |
+| POST | `/api/v1/occupancy-alerts/{alertId}/acknowledge` | Reconocer aviso. |
+| PUT | `/api/v1/occupancy-alerts/{alertId}/evidence` | Subir archivo JPEG/PNG en image (multipart/form-data). evidence_ref es NULL hasta la subida. |
+| POST | `/api/v1/occupancy-alerts/{alertId}/close` | Cerrar aviso de incidente resuelto o recuperado. |
+| GET / POST | `/api/v1/capacity-snapshots` | Consultar o calcular resumen confiable de zona o Tenant. |
+| GET / POST | `/api/v1/occupancy-reports` | Consultar o generar reporte de zona en [inicio,fin). |
+
+Los listados admiten tenantId opcional: PARKING_ADMIN solo puede usar el suyo; SUPER_ADMIN puede consultar todos. Lecturas y eventos de salud requieren sensorId para consultar historial. DRIVER no administra sensores, diagnósticos ni alertas; consulta disponibilidad mediante Parking. Modificar Monitoring exige PARKING_ADMIN del Tenant.
+
+Registro de sensor: enviar spotId, protocol, configuration, installedAt y firstReading con occupancyStatus, occurredAt y quality. El servidor deriva tenant_id y zone_id desde el spot, captura last_seen_at/received_at y calcula payload_hash. No se registra un primer contacto ficticio. MQTT exige configuration.topic; la ingesta es HTTP autenticada y un broker externo puede adaptarla a esa ruta. No hay broker MQTT ni claves de dispositivo inventados.
+
+La suscripción empresarial pagada y vigente define plan.included_sensors. Se cuenta solo sensores ACTIVE y se impide registrar dos activos para el mismo espacio. Sin licencia vigente, la ocupación consultada pasa a UNAVAILABLE; no se inventa una lectura libre ni se pierde el historial físico.
+
+Política configurable: quality 0..100 con dos decimales, mínimo 80 y frescura de 300 segundos. Configurar MONITORING_MINIMUM_QUALITY y MONITORING_FRESHNESS_SECONDS si el hardware requiere otros valores. La tarea de salud se ejecuta cada 60 segundos. Una falta de comunicación genera un episodio de salud y su aviso; no genera conflicto. Un mensaje repetido no crea otra lectura ni mantiene vivo un sensor; los mensajes tardíos no reemplazan los recientes.
+
+Conflictos automáticos: UNEXPECTED_OCCUPANCY sin operación válida, SPACE_NOT_AVAILABLE si afecta una reserva confirmada sin estadía registrada, EXPECTED_OCCUPANCY_MISSING si una estadía válida aparece libre y OVERSTAY si sigue ocupada después del fin reservado y su tolerancia. Una estadía válida de invitado no se confunde con ocupación indebida. El incidente no identifica por sí solo al conductor que físicamente ocupó el espacio ni genera una multa automática. Billing calcula sobretiempo al cerrar la estadía.
+
+Las alertas usan exactamente uno de health_event_id o conflict_id; la BD exige esa exclusión. evidence_ref guarda una referencia interna a la foto subida al backend y admite NULL hasta adjuntarla. La foto se almacena como archivo privado, no en el JSON del episodio. Reconocer un aviso captura acknowledged_at. Cerrar un aviso exige que el origen esté resuelto o recuperado y captura closed_at.
+
+Los snapshots cuentan espacios operativos con última lectura confiable. Si alguno es UNAVAILABLE, la petición responde 409 y no guarda porcentajes parciales. Con cero espacios guarda 0.00 sin dividir por cero. Se intenta capturar zona y Tenant al recibir lecturas confiables. Los reportes requieren zona e intervalo [inicio,fin), como máximo 366 días, sin futuro, y al menos una muestra. totals guarda máximo, media simple de muestras, cantidad de snapshots y alertas creadas; no es una media ponderada por tiempo.
+
+Prueba manual: iniciar sesión como Parking Admin, obtener accessToken y autorizar Swagger; tener un periodo empresarial pagado; registrar sensores con lecturas actuales; enviar una lectura distinta con occurredAt posterior; consultar conflictos y alertas; reconocerlos, enviar lectura recuperada o registrar recuperación de salud; calcular snapshot cuando todos los espacios estén cubiertos y luego generar reporte. Los datos demo fechados conservan historia: no se interpretan como lectura actual cuando ya vencieron.
+
+El procesamiento financiero real sigue requiriendo PaymentProvider. Las pruebas automatizadas usan un proveedor controlado exclusivamente en H2; el backend no aprueba cobros reales sin una pasarela configurada.
 
 ## Prerequisites
 
@@ -331,4 +363,29 @@ Los JWT de la implementación anterior ya no sirven: vuelve a iniciar sesión. H
 En producción se usan las variables indicadas en `application-production.properties`, incluida `SPRING_DATASOURCE_PASSWORD`. Las cuentas demo son para desarrollo; el seeder actual está limitado a los perfiles locales habilitados.
 El pago de un plan se solicita con POST /api/v1/digital-payments/subscriptions (planCode, tokenId, idempotencyKey) y se procesa por su paymentId. No existe POST /api/v1/subscriptions para crear filas sin pago. result_reference conserva temporalmente el plan seleccionado y el titular (máximo 8192 caracteres), y después identifica la suscripción creada. No se añade subscription_id a digital_payments.
 
-Estado verificado del seeder: 31 tablas definidas en db.json, 24 implementadas y 7 de Monitoring pendientes. El seeder inserta filas compatibles que no existan; no actualiza filas ya guardadas ni elimina tablas antiguas. Para ver una corrección del JSON sobre una fila demo ya insertada hace falta una actualización explícita de esa fila. No se ejecutó una limpieza ni actualización de tu PostgreSQL.
+Estado verificado del seeder: las 31 tablas de db.json están implementadas. Inserta filas compatibles que no existan; no actualiza filas ya guardadas ni elimina tablas antiguas. No se ejecutó una limpieza ni actualización de tu PostgreSQL.
+
+Producción: ddl-auto=update conserva las tablas existentes y app.seeder.enabled=false desactiva los datos demo. No convierte esquemas antiguos incompatibles ni elimina tablas retiradas. Activar el perfil production mediante SPRING_PROFILES_ACTIVE=production.
+
+Validación de esta adaptación: 145 pruebas sin fallos en H2, incluidas 30 de Monitoring, permisos HTTP, deduplicación, concurrencia, salud/alertas, snapshots/reportes y el flujo entre los cinco contextos. Se verificaron las columnas y tipos UUID de las 31 tablas del JSON. Ejecutado con JDK 21 mediante override local de Maven, sin cambiar la versión Java 26 del pom. No se ejecutó contra PostgreSQL ni contra hardware o proveedores financieros reales.
+
+Evidencia de alertas: PUT /api/v1/occupancy-alerts/{alertId}/evidence recibe multipart/form-data con campo image (archivo), no un JSON con evidenceRef. JPEG o PNG real, máximo 5 MB y 20 millones de píxeles. El servidor guarda la foto y genera la referencia; no consulta ninguna API externa. GET /api/v1/occupancy-alerts/{alertId}/evidence devuelve los bytes de la foto y exige JWT del administrador del Tenant o SUPER_ADMIN.
+
+Si occupancy_alerts ya existe en PostgreSQL con evidence_ref NOT NULL, el cambio requiere permitir NULL en esa columna. No se ejecutó este SQL contra tu BD:
+
+```sql
+ALTER TABLE occupancy_alerts ALTER COLUMN evidence_ref DROP NOT NULL;
+-- Retirar solo las rutas JSON generadas por la implementación anterior, conservando URLs de fotos.
+UPDATE occupancy_alerts
+SET evidence_ref = NULL
+WHERE evidence_ref LIKE '/api/v1/occupancy-conflicts/%'
+   OR evidence_ref LIKE '/api/v1/sensor-health-events/%';
+```
+
+Cambiar db.json no reemplaza los registros que el seeder ya insertó. Las URLs de imagen existentes se conservan.
+
+Subir una foto desde Swagger: iniciar sesión y Authorize; abrir PUT /api/v1/occupancy-alerts/{alertId}/evidence; pulsar Try it out; indicar alertId; seleccionar el archivo en image; ejecutar. Consultar GET /api/v1/occupancy-alerts/{alertId}/evidence para ver o descargar la foto. Una petición JSON antigua responde 415. Archivo vacío responde 400; formato no admitido 415; tamaño excesivo 413; almacenamiento no disponible 503. No se inventa una referencia si falla la subida.
+
+Los bytes se guardan en storage/evidence (ignorado por Git); app.monitoring.evidence-directory se configura con EVIDENCE_STORAGE_DIRECTORY. En producción debe apuntar a un disco persistente que conserve archivos entre despliegues. No usar almacenamiento temporal del contenedor para fotos que deban conservarse. No se han subido fotos ni configurado un disco en tu servidor de producción desde esta sesión.
+
+La consulta de la foto solo pide alertId. El backend busca evidence_ref en esa alerta y devuelve el archivo actual; no se introduce fileName. evidence_ref conserva la referencia interna del archivo para localizarlo y reemplazarlo, no es una URL que el usuario tenga que escribir. Si todavía no hay foto, la consulta responde 404.
