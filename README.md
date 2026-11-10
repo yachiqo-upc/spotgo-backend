@@ -372,6 +372,16 @@ Producción: ddl-auto=update conserva las tablas existentes y app.seeder.enabled
 
 Validación de esta adaptación: 155 pruebas sin fallos en H2, incluidas 34 de integración de Monitoring y 4 de almacenamiento de imágenes, permisos HTTP, deduplicación, concurrencia, salud/alertas, snapshots/reportes y el flujo entre los cinco contextos. Se verificaron las columnas y tipos UUID de las 31 tablas del JSON. Ejecutado con JDK 21 mediante override local de Maven, sin cambiar la versión Java 26 del pom. No se ejecutó contra PostgreSQL ni contra hardware o proveedores financieros reales.
 
+Cinco escenarios integrales principales por HTTP (controladores, JWT, servicios y persistencia reales en H2):
+
+1. Registro de conductor, perfil y vehiculo: completeHttpRegistrationProfileAndVehicleJourneyKeepsOwnership (BillingIntegrationTest). Comprueba identidad y rechazo de modificaciones de otro conductor.
+2. Reserva, pago y estadia puntual: completeHttpReservationPaymentAndOnTimeStayHasNoDebt (BillingIntegrationTest). Impide entrar sin pagar, conserva vinculos, no duplica cobros y no genera deuda por salida puntual.
+3. Sobretiempo, deuda y regularizacion: completeHttpJourneyFromRegistrationToOverstayDebtAndRegularization (BillingIntegrationTest). Recorre desde el registro hasta pagar la deuda y poder reservar nuevamente.
+4. Cancelacion y devolucion: completeHttpCancellationJourneyRefundsOnceAndRejectsAnotherDriver (BillingIntegrationTest). Comprueba permisos y devolucion sin duplicados.
+5. Suscripcion empresarial, sensor, lectura y alerta: completeHttpCompanySubscriptionSensorReadingAndAlertJourney (MonitoringIntegrationTest). Impide registrar sensores sin licencia, valida el pago empresarial y relaciona lectura, conflicto y alerta con su Tenant.
+
+Solo los proveedores externos, el reloj y el catalogo de planes estan controlados en estas pruebas. Ultima validacion: 77 pruebas aprobadas en las suites afectadas (42 de Billing y 35 de Monitoring), incluidas las cinco integrales descritas. No conectan a PostgreSQL ni realizan cobros reales. Ejecutar las suites con ./mvnw "-Dtest=BillingIntegrationTest,MonitoringIntegrationTest" test.
+
 Evidencia de alertas: PUT /api/v1/occupancy-alerts/{alertId}/evidence recibe multipart/form-data con campo image (archivo), no un JSON con evidenceRef. JPEG o PNG real, máximo 5 MB y 20 millones de píxeles. El servidor guarda la foto y genera la referencia; no consulta ninguna API externa. GET /api/v1/occupancy-alerts/{alertId}/evidence devuelve los bytes de la foto y exige JWT del administrador del Tenant o SUPER_ADMIN.
 
 Si occupancy_alerts ya existe en PostgreSQL con evidence_ref NOT NULL, el cambio requiere permitir NULL en esa columna. No se ejecutó este SQL contra tu BD:

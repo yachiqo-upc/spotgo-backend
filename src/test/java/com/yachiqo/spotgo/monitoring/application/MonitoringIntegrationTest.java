@@ -272,6 +272,35 @@ class MonitoringIntegrationTest {
   assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM occupancy_alerts a JOIN sensor_health_events h ON a.health_event_id=h.health_event_id JOIN occupancy_sensors s ON h.sensor_id=s.sensor_id WHERE a.tenant_id=s.tenant_id AND a.spot_id=s.spot_id",Integer.class));
  }
 
+ com.fasterxml.jackson.databind.JsonNode journeyJson(String method,String path,Object body,String token,int expected) throws Exception {
+  var response=request(method,path,body,token);
+  assertEquals(expected,response.statusCode(),method+" "+path+": "+response.body());
+  return new ObjectMapper().readTree(response.body());
+ }
+ @Test void completeHttpCompanySubscriptionSensorReadingAndAlertJourney() throws Exception {
+  String access=adminAuth.accessToken();
+  var sensorBody=Map.of("spotId",spot.getId(),"protocol","HTTP","configuration",Map.of(),"installedAt",now.get().minusSeconds(60).toString(),"firstReading",Map.of("occupancyStatus","AVAILABLE","occurredAt",now.get().toString(),"quality",99));
+  assertEquals(409,request("POST","/api/v1/occupancy-sensors",sensorBody,access).statusCode());
+  var card=journeyJson("POST","/api/v1/payment-tokens",Map.of("providerTokenRef","company-journey-card"),access,201);
+  var payment=journeyJson("POST","/api/v1/digital-payments/subscriptions",Map.of("planCode","TENANT_TEST","tokenId",card.path("tokenId").asText(),"idempotencyKey","company-journey"),access,201);
+  assertTrue(journeyJson("GET","/api/v1/subscriptions",null,access,200).isEmpty());
+  journeyJson("POST","/api/v1/digital-payments/"+payment.path("paymentId").asText()+"/process",null,access,200);
+  var subscription=journeyJson("GET","/api/v1/subscriptions",null,access,200).get(0);
+  assertEquals("ACTIVE",subscription.path("status").asText());assertEquals(tenant.getId().toString(),subscription.path("tenantId").asText());
+  assertTrue(subscription.path("profileId").isNull());assertEquals(payment.path("paymentId"),subscription.path("paymentId"));
+  var sensor=journeyJson("POST","/api/v1/occupancy-sensors",sensorBody,access,201);
+  assertEquals(spot.getId().toString(),sensor.path("spotId").asText());assertEquals(tenant.getId().toString(),sensor.path("tenantId").asText());
+  advance(1);
+  var reading=journeyJson("POST","/api/v1/occupancy-readings",Map.of("sensorId",sensor.path("sensorId").asText(),"occupancyStatus","OCCUPIED","occurredAt",now.get().toString(),"quality",99),access,201);
+  var conflicts=journeyJson("GET","/api/v1/occupancy-conflicts",null,access,200);assertEquals(1,conflicts.size());
+  var conflict=conflicts.get(0);assertEquals(reading.path("readingId"),conflict.path("readingId"));assertTrue(conflict.path("reservationId").isNull());
+  var alerts=journeyJson("GET","/api/v1/occupancy-alerts",null,access,200);assertEquals(1,alerts.size());var alert=alerts.get(0);
+  assertEquals(conflict.path("conflictId"),alert.path("conflictId"));assertTrue(alert.path("healthEventId").isNull());assertTrue(alert.path("evidenceRef").isNull());
+  assertEquals(spot.getId().toString(),alert.path("spotId").asText());assertEquals(tenant.getId().toString(),alert.path("tenantId").asText());
+  assertEquals(403,request("GET","/api/v1/occupancy-alerts",null,driverAuth.accessToken()).statusCode());
+  journeyJson("POST","/api/v1/occupancy-alerts/"+alert.path("alertId").asText()+"/acknowledge",null,access,200);
+  assertEquals("ACKNOWLEDGED",journeyJson("GET","/api/v1/occupancy-alerts",null,access,200).get(0).path("status").asText());
+ }
  @Test void authenticatedHttpFlowReadsAllSevenResourcesWithoutLazySerializationErrors() throws Exception {
   companySubscription();
   var sensorResponse=request("POST","/api/v1/occupancy-sensors",Map.of("spotId",spot.getId(),"protocol","HTTP","configuration",Map.of(),"installedAt",now.get().minusSeconds(60).toString(),"firstReading",Map.of("occupancyStatus","AVAILABLE","occurredAt",now.get().toString(),"quality",99)),adminAuth.accessToken());

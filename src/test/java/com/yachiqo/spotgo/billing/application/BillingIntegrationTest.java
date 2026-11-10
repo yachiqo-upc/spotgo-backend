@@ -89,6 +89,108 @@ class BillingIntegrationTest {
   builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(new ObjectMapper().findAndRegisterModules().writeValueAsString(body)));
   try(var client=HttpClient.newHttpClient()){return client.send(builder.build(),HttpResponse.BodyHandlers.ofString());}
  }
+ // HTTP journeys: real controllers, JWT/session checks, services and persistence.
+ // Only the external payment provider and the clock are controlled by the test.
+ com.fasterxml.jackson.databind.JsonNode httpJson(String method,String path,Object body,String access,int expected) throws Exception {
+  var response=request(method,path,body,access);
+  assertEquals(expected,response.statusCode(),method+" "+path+": "+response.body());
+  return new ObjectMapper().readTree(response.body());
+ }
+ @Test void completeHttpRegistrationProfileAndVehicleJourneyKeepsOwnership() throws Exception {
+  var auth=httpJson("POST","/api/v1/authentication/sign-up",Map.of("email","registration-journey@example.com","password","Password123!"),null,201);
+  String access=auth.path("accessToken").asText();
+  assertEquals("DRIVER",auth.path("role").asText());
+  assertEquals(404,request("GET","/api/v1/profiles/me",null,access).statusCode());
+  var profile=httpJson("POST","/api/v1/profiles",Map.of("firstName","Luis","lastName","Demo","phone","900000004"),access,201);
+  assertEquals(auth.path("accountId"),profile.path("accountId"));
+  var car=httpJson("POST","/api/v1/vehicles",Map.of("plate","REG-01","make","Toyota","model","Yaris","color","Azul"),access,201);
+  assertEquals(profile.path("id"),car.path("profileId"));
+  assertEquals(profile.path("id"),httpJson("GET","/api/v1/profiles/me",null,access,200).path("id"));
+  var list=httpJson("GET","/api/v1/vehicles",null,access,200);
+  assertEquals(1,list.size());assertEquals(car.path("id"),list.get(0).path("id"));
+  assertEquals(403,request("PATCH","/api/v1/vehicles/"+car.path("id").asText(),Map.of("color","Negro"),otherAuth.accessToken()).statusCode());
+  assertEquals("Azul",httpJson("GET","/api/v1/vehicles",null,access,200).get(0).path("color").asText());
+ }
+ @Test void completeHttpReservationPaymentAndOnTimeStayHasNoDebt() throws Exception {
+  Instant start=now.get().plusSeconds(60),end=start.plusSeconds(3600);
+  var reservation=httpJson("POST","/api/v1/reservations",Map.of("spotId",spot.getId(),"vehicleId",vehicle.getId(),"startAt",start.toString(),"endAt",end.toString()),driverAuth.accessToken(),201);
+  String id=reservation.path("reservationId").asText();
+  assertEquals("PENDING_PAYMENT",reservation.path("status").asText());assertTrue(reservation.path("paymentId").isNull());
+  assertEquals(409,request("POST","/api/v1/parking-sessions",Map.of("reservationId",id),adminAuth.accessToken()).statusCode());
+  var card=httpJson("POST","/api/v1/payment-tokens",Map.of("providerTokenRef","on-time-card"),driverAuth.accessToken(),201);
+  var payment=httpJson("POST","/api/v1/digital-payments/reservations/"+id,Map.of("tokenId",card.path("tokenId").asText(),"idempotencyKey","on-time-reservation"),driverAuth.accessToken(),201);
+  String process="/api/v1/digital-payments/"+payment.path("paymentId").asText()+"/process";
+  assertEquals("APPROVED",httpJson("POST",process,null,driverAuth.accessToken(),200).path("status").asText());
+  httpJson("POST",process,null,driverAuth.accessToken(),200);
+  assertEquals("RESERVED",httpJson("GET","/api/v1/reservations/"+id,null,driverAuth.accessToken(),200).path("status").asText());
+  now.set(start);
+  var stay=httpJson("POST","/api/v1/parking-sessions",Map.of("reservationId",id),adminAuth.accessToken(),201);
+  assertEquals(reservation.path("profileId"),stay.path("profileId"));assertEquals(reservation.path("vehicleId"),stay.path("vehicleId"));
+  now.set(end);adminAuth=iam.refresh(adminAuth.refreshToken(),"TEST");driverAuth=iam.refresh(driverAuth.refreshToken(),"TEST");
+  var exited=httpJson("POST","/api/v1/parking-sessions/"+stay.path("sessionId").asText()+"/exit",null,adminAuth.accessToken(),200);
+  assertFalse(exited.path("exitAt").isNull());
+  assertEquals("COMPLETED",httpJson("GET","/api/v1/reservations/"+id,null,driverAuth.accessToken(),200).path("status").asText());
+  assertTrue(httpJson("GET","/api/v1/additional-charges",null,driverAuth.accessToken(),200).isEmpty());
+  assertTrue(httpJson("GET","/api/v1/outstanding-balances",null,driverAuth.accessToken(),200).isEmpty());
+  assertEquals(1,httpJson("GET","/api/v1/parking-sessions",null,driverAuth.accessToken(),200).size());
+  verify(provider,times(1)).charge(any(),anyInt(),anyString(),any(),anyString());
+ }
+ @Test void completeHttpJourneyFromRegistrationToOverstayDebtAndRegularization() throws Exception {
+  var auth=httpJson("POST","/api/v1/authentication/sign-up",Map.of("email","journey@example.com","password","Password123!"),null,201);
+  String access=auth.path("accessToken").asText();
+  var profile=httpJson("POST","/api/v1/profiles",Map.of("firstName","Luis","lastName","Demo","phone","900000004"),access,201);
+  var car=httpJson("POST","/api/v1/vehicles",Map.of("plate","FLOW-01","make","Toyota","model","Yaris","color","Azul"),access,201);
+  assertEquals(profile.path("id").asText(),car.path("profileId").asText());
+  Instant start=now.get().plusSeconds(60),end=start.plusSeconds(3600);
+  var body=Map.of("spotId",spot.getId(),"vehicleId",car.path("id").asText(),"startAt",start.toString(),"endAt",end.toString());
+  var reservation=httpJson("POST","/api/v1/reservations",body,access,201);
+  String reservationId=reservation.path("reservationId").asText();
+  assertEquals("PENDING_PAYMENT",reservation.path("status").asText());
+  assertEquals(profile.path("id").asText(),reservation.path("profileId").asText());
+  assertEquals(403,request("GET","/api/v1/reservations/"+reservationId,null,otherAuth.accessToken()).statusCode());
+  var card=httpJson("POST","/api/v1/payment-tokens",Map.of("providerTokenRef","journey-card"),access,201);
+  var payment=httpJson("POST","/api/v1/digital-payments/reservations/"+reservationId,Map.of("tokenId",card.path("tokenId").asText(),"idempotencyKey","journey-reservation"),access,201);
+  httpJson("POST","/api/v1/digital-payments/"+payment.path("paymentId").asText()+"/process",null,access,200);
+  assertEquals("RESERVED",httpJson("GET","/api/v1/reservations/"+reservationId,null,access,200).path("status").asText());
+  now.set(start);
+  var stay=httpJson("POST","/api/v1/parking-sessions",Map.of("reservationId",reservationId),adminAuth.accessToken(),201);
+  now.set(end.plusSeconds(301));
+  access=httpJson("POST","/api/v1/authentication/refresh",Map.of("refreshToken",auth.path("refreshToken").asText()),null,200).path("accessToken").asText();
+  adminAuth=iam.refresh(adminAuth.refreshToken(),"TEST");
+  httpJson("POST","/api/v1/parking-sessions/"+stay.path("sessionId").asText()+"/exit",null,adminAuth.accessToken(),200);
+  var debt=httpJson("GET","/api/v1/outstanding-balances",null,access,200);
+  assertEquals(1,debt.size());assertEquals("OPEN",debt.get(0).path("status").asText());
+  assertEquals(profile.path("id").asText(),debt.get(0).path("profileId").asText());
+  var next=Map.of("spotId",spot.getId(),"vehicleId",car.path("id").asText(),"startAt",now.get().plusSeconds(60).toString(),"endAt",now.get().plusSeconds(3660).toString());
+  assertEquals(409,request("POST","/api/v1/reservations",next,access).statusCode());
+  var chargePayment=httpJson("POST","/api/v1/digital-payments/additional-charges/"+debt.get(0).path("chargeId").asText(),Map.of("tokenId",card.path("tokenId").asText(),"idempotencyKey","journey-debt"),access,201);
+  httpJson("POST","/api/v1/digital-payments/"+chargePayment.path("paymentId").asText()+"/process",null,access,200);
+  var settled=httpJson("GET","/api/v1/outstanding-balances",null,access,200).get(0);
+  assertEquals(debt.get(0).path("balanceId"),settled.path("balanceId"));
+  assertEquals("REGULARIZED",settled.path("status").asText());assertEquals(0,settled.path("amount").decimalValue().signum());
+  assertFalse(settled.path("regularizedAt").isNull());
+  httpJson("POST","/api/v1/reservations",next,access,201);
+ }
+ @Test void completeHttpCancellationJourneyRefundsOnceAndRejectsAnotherDriver() throws Exception {
+  var reservation=httpJson("POST","/api/v1/reservations",Map.of("spotId",spot.getId(),"vehicleId",vehicle.getId(),"startAt",now.get().plusSeconds(60).toString(),"endAt",now.get().plusSeconds(3660).toString()),driverAuth.accessToken(),201);
+  String id=reservation.path("reservationId").asText();
+  var card=httpJson("POST","/api/v1/payment-tokens",Map.of("providerTokenRef","cancel-journey-card"),driverAuth.accessToken(),201);
+  var payment=httpJson("POST","/api/v1/digital-payments/reservations/"+id,Map.of("tokenId",card.path("tokenId").asText(),"idempotencyKey","cancel-journey"),driverAuth.accessToken(),201);
+  String paymentId=payment.path("paymentId").asText();
+  httpJson("POST","/api/v1/digital-payments/"+paymentId+"/process",null,driverAuth.accessToken(),200);
+  assertEquals(403,request("POST","/api/v1/reservations/"+id+"/cancel",null,otherAuth.accessToken()).statusCode());
+  assertEquals("RESERVED",httpJson("GET","/api/v1/reservations/"+id,null,driverAuth.accessToken(),200).path("status").asText());
+  assertEquals("CANCELLED",httpJson("POST","/api/v1/reservations/"+id+"/cancel",null,driverAuth.accessToken(),200).path("status").asText());
+  var list=httpJson("GET","/api/v1/refunds?paymentId="+paymentId,null,adminAuth.accessToken(),200);
+  assertEquals(1,list.size());assertEquals(0,payment.path("amount").decimalValue().compareTo(list.get(0).path("amount").decimalValue()));
+  String process="/api/v1/refunds/"+list.get(0).path("refundId").asText()+"/process";
+  assertEquals(403,request("POST",process,null,driverAuth.accessToken()).statusCode());
+  assertEquals("COMPLETED",httpJson("POST",process,null,adminAuth.accessToken(),200).path("status").asText());
+  httpJson("POST",process,null,adminAuth.accessToken(),200);
+  assertEquals(1,httpJson("GET","/api/v1/refunds?paymentId="+paymentId,null,adminAuth.accessToken(),200).size());
+  verify(provider,times(1)).refund(any(),anyString(),any(),anyString());
+  assertTrue(httpJson("GET","/api/v1/parking-sessions",null,driverAuth.accessToken(),200).isEmpty());
+ }
  @Test void tokenMetadataComesFromProviderAndNeverStoresPanOrCvv() throws Exception {
   var t=token(driver);assertEquals(driverProfile.getId(),t.getProfileId());assertEquals("4242",t.getLastFour());
   var response=request("GET","/api/v1/payment-tokens",null,driverAuth.accessToken());assertEquals(200,response.statusCode());assertFalse(response.body().contains("providerTokenRef"));
