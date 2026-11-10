@@ -1,137 +1,98 @@
 package com.yachiqo.spotgo.profiles.interfaces.rest;
 
+import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.profiles.application.ProfilesCommandService;
 import com.yachiqo.spotgo.profiles.application.ProfilesQueryService;
-import com.yachiqo.spotgo.profiles.domain.model.aggregates.Vehicle;
-import com.yachiqo.spotgo.profiles.domain.model.commands.CreateVehicleCommand;
-import com.yachiqo.spotgo.profiles.domain.model.commands.DeleteVehicleCommand;
-import com.yachiqo.spotgo.profiles.domain.model.commands.UpdateVehicleCommand;
-import com.yachiqo.spotgo.profiles.domain.model.queries.GetAllVehiclesQuery;
-import com.yachiqo.spotgo.profiles.domain.model.queries.GetVehiclesByClientIdQuery;
-import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
+import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
+import com.yachiqo.spotgo.profiles.domain.model.commands.*;
+import com.yachiqo.spotgo.profiles.domain.model.queries.GetVehiclesByProfileIdQuery;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.VehicleRepository;
-import com.yachiqo.spotgo.profiles.interfaces.rest.resources.CreateVehicleResource;
-import com.yachiqo.spotgo.profiles.interfaces.rest.resources.UpdateVehicleResource;
-import com.yachiqo.spotgo.profiles.interfaces.rest.resources.VehicleResource;
-import com.yachiqo.spotgo.shared.application.security.AuthorizationService;
+import com.yachiqo.spotgo.profiles.interfaces.rest.resources.*;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import java.util.List;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
+import io.swagger.v3.oas.annotations.responses.*;
+import io.swagger.v3.oas.annotations.media.Content;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/vehicles")
-@Tag(name = "Vehicles", description = "Endpoints for managing client vehicles")
+@RequestMapping(value = "/api/v1/vehicles", produces = "application/json")
+@Tag(name = "Vehicles", description = "Vehiculos del conductor autenticado. El rol del IAM actual se llama DRIVER. Un perfil puede tener varios vehiculos.")
+@ApiResponses({
+    @ApiResponse(responseCode = "401", description = "Requiere accessToken valido y sesion habilitada.", content = @Content),
+    @ApiResponse(responseCode = "400", description = "UUID, JSON o estado invalido; marca, modelo o color vacios.", content = @Content),
+    @ApiResponse(responseCode = "403", description = "Rol distinto de DRIVER o vehiculo de otra cuenta.", content = @Content),
+    @ApiResponse(responseCode = "404", description = "No existe el vehiculo o todavia no creaste tu perfil.", content = @Content),
+    @ApiResponse(responseCode = "409", description = "Placa duplicada o conflicto de integridad.", content = @Content),
+    @ApiResponse(responseCode = "500", description = "Error inesperado del backend. Revisar la consola del servidor.", content = @Content)
+})
 public class VehiclesController {
-
-    private final ProfilesCommandService profilesCommandService;
-    private final ProfilesQueryService profilesQueryService;
-    private final VehicleRepository vehicleRepository;
-    private final AuthorizationService authorizationService;
-
-    public VehiclesController(ProfilesCommandService profilesCommandService, ProfilesQueryService profilesQueryService,
-                              VehicleRepository vehicleRepository, AuthorizationService authorizationService) {
-        this.profilesCommandService = profilesCommandService;
-        this.profilesQueryService = profilesQueryService;
-        this.vehicleRepository = vehicleRepository;
-        this.authorizationService = authorizationService;
+    private final ProfilesCommandService commands;
+    private final ProfilesQueryService queries;
+    private final VehicleRepository vehicles;
+    private final ProfilesManagementService profiles;
+    public VehiclesController(ProfilesCommandService commands, ProfilesQueryService queries,
+                              VehicleRepository vehicles, ProfilesManagementService profiles) {
+        this.commands = commands;
+        this.queries = queries;
+        this.vehicles = vehicles;
+        this.profiles = profiles;
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
-    @Operation(summary = "Get vehicles", description = "Returns all vehicles, optionally filtered by client identifier.")
-    @ApiResponse(responseCode = "200", description = "Vehicles returned successfully",
-            content = @Content(schema = @Schema(implementation = VehicleResource.class)))
-    public ResponseEntity<List<VehicleResource>> getVehicles(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                                              @RequestParam(required = false) String clientId) {
-        if (authorizationService.isAdmin(principal)) {
-            var vehicles = clientId == null || clientId.isBlank()
-                    ? profilesQueryService.handle(new GetAllVehiclesQuery())
-                    : profilesQueryService.handle(new GetVehiclesByClientIdQuery(clientId));
-            return ResponseEntity.ok(vehicles.stream().map(this::toResource).toList());
-        }
-        if (clientId != null && !clientId.equals(principal.getUserId())) {
-            throw new AccessDeniedException("Requested client is outside authenticated scope");
-        }
-        var vehicles = profilesQueryService.handle(new GetVehiclesByClientIdQuery(principal.getUserId()));
-        return ResponseEntity.ok(vehicles.stream().map(this::toResource).toList());
+    @Operation(summary = "Listar mis vehiculos", description = "Devuelve solo los vehiculos del perfil autenticado, incluidos los INACTIVE. No recibe clientId ni profileId.")
+    @ApiResponse(responseCode = "200", description = "Lista propia; puede estar vacia.")
+    @PreAuthorize("hasRole('DRIVER')")
+    public List<VehicleResource> mine(@AuthenticationPrincipal SpotgoUserPrincipal actor) {
+        var profile = profiles.driver(actor);
+        return queries.handle(new GetVehiclesByProfileIdQuery(profile.getId())).stream()
+            .map(VehicleResource::from).toList();
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('CLIENT')")
-    @Operation(summary = "Create vehicle", description = "Creates a new vehicle for a client.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Vehicle created successfully",
-                    content = @Content(schema = @Schema(implementation = VehicleResource.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
-    })
-    public ResponseEntity<VehicleResource> createVehicle(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                                          @Valid @RequestBody CreateVehicleResource resource) {
-        if (!vehicleRepository.findAllByClientId(principal.getUserId()).isEmpty()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
-        var vehicle = profilesCommandService.handle(new CreateVehicleCommand(
-                principal.getUserId(), resource.licensePlate(), resource.vehicleType(), resource.brand(), resource.model()));
-        return vehicle.map(value -> ResponseEntity.status(HttpStatus.CREATED).body(toResource(value)))
-                .orElseGet(() -> ResponseEntity.badRequest().build());
+    @Operation(summary = "Agregar un vehiculo", description = "Asocia el vehiculo al perfil del token y genera su UUID y fechas. La placa se normaliza a mayusculas; puede omitirse. No envies profileId.")
+    @ApiResponse(responseCode = "201", description = "Vehiculo creado con estado ACTIVE.")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<VehicleResource> create(@AuthenticationPrincipal SpotgoUserPrincipal actor,
+                                                 @Valid @RequestBody CreateVehicleResource resource) {
+        var profile = profiles.driver(actor);
+        var vehicle = commands.handle(new CreateVehicleCommand(profile.getId(), resource.plate(),
+            resource.make(), resource.model(), resource.color())).orElseThrow();
+        return ResponseEntity.status(HttpStatus.CREATED).body(VehicleResource.from(vehicle));
     }
 
     @PatchMapping("/{vehicleId}")
-    @PreAuthorize("hasRole('CLIENT')")
-    @Operation(summary = "Update vehicle", description = "Updates mutable vehicle fields.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Vehicle updated successfully",
-                    content = @Content(schema = @Schema(implementation = VehicleResource.class))),
-            @ApiResponse(responseCode = "404", description = "Vehicle not found", content = @Content)
-    })
-    public ResponseEntity<VehicleResource> updateVehicle(
-            @AuthenticationPrincipal SpotgoUserPrincipal principal,
-            @PathVariable @Parameter(description = "Vehicle identifier") String vehicleId,
-            @Valid @RequestBody UpdateVehicleResource resource) {
-        var currentVehicle = vehicleRepository.findById(vehicleId).orElse(null);
-        if (currentVehicle == null) {
-            return ResponseEntity.notFound().build();
-        }
-        authorizationService.requireVehicleOwner(principal, currentVehicle);
-        var vehicle = profilesCommandService.handle(new UpdateVehicleCommand(
-                vehicleId, resource.licensePlate(), resource.vehicleType(), resource.brand(), resource.model()));
-        return vehicle.map(value -> ResponseEntity.ok(toResource(value)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @Operation(summary = "Actualizar mi vehiculo", description = "Envia solo los campos que deseas cambiar. Los omitidos se conservan. plate vacio elimina la placa. status admite ACTIVE o INACTIVE.")
+    @ApiResponse(responseCode = "200", description = "Vehiculo propio actualizado.")
+    @PreAuthorize("hasRole('DRIVER')")
+    public VehicleResource update(@AuthenticationPrincipal SpotgoUserPrincipal actor,
+                                   @Parameter(description = "UUID del vehiculo, no del perfil", example = "00000000-0000-4000-8000-000000000051") @PathVariable UUID vehicleId,
+                                   @Valid @RequestBody UpdateVehicleResource resource) {
+        var current = vehicles.findById(vehicleId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehiculo inexistente"));
+        profiles.requireOwner(actor, current);
+        return VehicleResource.from(commands.handle(new UpdateVehicleCommand(vehicleId, resource.plate(),
+            resource.make(), resource.model(), resource.color(), resource.status())).orElseThrow());
     }
 
     @DeleteMapping("/{vehicleId}")
-    @PreAuthorize("hasRole('CLIENT')")
-    @Operation(summary = "Delete vehicle", description = "Deletes a vehicle by identifier.")
-    @ApiResponse(responseCode = "204", description = "Vehicle deleted successfully")
-    public ResponseEntity<Void> deleteVehicle(@AuthenticationPrincipal SpotgoUserPrincipal principal,
-                                              @PathVariable String vehicleId) {
-        var currentVehicle = vehicleRepository.findById(vehicleId)
-                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found"));
-        authorizationService.requireVehicleOwner(principal, currentVehicle);
-        profilesCommandService.handle(new DeleteVehicleCommand(vehicleId));
-        return ResponseEntity.noContent().build();
-    }
-
-    private VehicleResource toResource(Vehicle vehicle) {
-        return new VehicleResource(vehicle.getId(), vehicle.getClientId(), vehicle.getLicensePlate(), vehicle.getVehicleType(), vehicle.getBrand(), vehicle.getModel());
+    @Operation(summary = "Desactivar mi vehiculo", description = "Cambia status a INACTIVE; no elimina la fila. Una respuesta 204 es exitosa y no tiene cuerpo.")
+    @ApiResponse(responseCode = "204", description = "Vehiculo desactivado; respuesta sin contenido.", content = @Content)
+    @PreAuthorize("hasRole('DRIVER')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal SpotgoUserPrincipal actor,
+                       @Parameter(description = "UUID del vehiculo propio", example = "00000000-0000-4000-8000-000000000051") @PathVariable UUID vehicleId) {
+        var current = vehicles.findById(vehicleId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehiculo inexistente"));
+        profiles.requireOwner(actor, current);
+        // Preserve the vehicle for reservations that will reference it after Parking migration.
+        commands.handle(new DeleteVehicleCommand(vehicleId));
     }
 }

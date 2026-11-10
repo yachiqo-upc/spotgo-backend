@@ -119,6 +119,24 @@ public class GlobalExceptionHandler {
      * @param ex the unhandled runtime exception
      * @return error response with INTERNAL_SERVER_ERROR status
      */
+    @ExceptionHandler({org.springframework.web.servlet.resource.NoResourceFoundException.class,
+            org.springframework.web.servlet.NoHandlerFoundException.class})
+    public ResponseEntity<?> handleMissingRoute(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(java.util.Map.of("message", "Ruta no encontrada"));
+    }
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<?> handleUploadTooLarge(Exception ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(java.util.Map.of("message", "La imagen no puede superar 5 MB"));
+    }
+    @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+            org.springframework.web.multipart.MultipartException.class})
+    public ResponseEntity<?> handleInvalidMultipart(Exception ex) {
+        return ResponseEntity.badRequest().body(java.util.Map.of("message", "Selecciona la imagen en el campo image de multipart/form-data"));
+    }
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<?> handleUnsupportedMedia(Exception ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(java.util.Map.of("message", "El formato de la solicitud no es compatible con esta operacion"));
+    }
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntimeException(RuntimeException ex) {
         var traceId = UUID.randomUUID().toString();

@@ -1,131 +1,43 @@
 package com.yachiqo.spotgo.billing.domain.model.aggregates;
-
-import com.yachiqo.spotgo.billing.domain.model.commands.CreateSubscriptionCommand;
-import com.yachiqo.spotgo.billing.domain.model.commands.PatchSubscriptionSavingsCommand;
-import com.yachiqo.spotgo.billing.domain.model.commands.UpdateSubscriptionCommand;
-import com.yachiqo.spotgo.billing.domain.model.valueobjects.SubscriptionStatus;
-import com.yachiqo.spotgo.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
+import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.Setter;
+import org.hibernate.annotations.Check;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.yachiqo.spotgo.billing.domain.model.valueobjects.*;
+import com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile;
+import com.yachiqo.spotgo.parking.domain.model.aggregates.Reservation;
+import com.yachiqo.spotgo.parking.domain.model.aggregates.Tenant;
+import java.util.*;
+import java.time.Instant;
+import java.math.BigDecimal;
+import static com.yachiqo.spotgo.billing.domain.model.valueobjects.BillingValues.*;
 
-public class Subscription extends AbstractDomainAggregateRoot<Subscription> {
+@Entity @Table(name="subscriptions") @Getter
+@Check(constraints="((profile_id is not null and tenant_id is null) or (profile_id is null and tenant_id is not null)) and (end_at is null or end_at >= start_at)")
+public class Subscription {
+ @Id @GeneratedValue(strategy=GenerationType.UUID) @Column(name="subscription_id",nullable=false,updatable=false) private UUID id;
+ @ManyToOne(fetch=FetchType.LAZY,optional=true) @JoinColumn(name="profile_id",nullable=true,updatable=false) private Profile profile;
+ @ManyToOne(fetch=FetchType.LAZY,optional=true) @JoinColumn(name="tenant_id",nullable=true,updatable=false) private Tenant tenant;
 
-    @Getter
-    @Setter
-    private String id;
+ @OneToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="payment_id",nullable=false,unique=true,updatable=false) private DigitalPayment payment;
+ @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition="jsonb",nullable=false,updatable=false) private Map<String,Object> plan;
+ @Column(name="start_at",nullable=false,updatable=false) private Instant startAt;
+ @Column(name="end_at") private Instant endAt;
+  @Enumerated(EnumType.STRING) @Column(nullable=false) private SubscriptionStatus status;
 
-    @Getter
-    private String clientId;
+ protected Subscription() {}
+ public Subscription(Profile profile,Tenant tenant,Map<String,Object> plan,DigitalPayment payment,Instant now) {
+  if((profile==null)==(tenant==null))throw new IllegalArgumentException("La suscripcion requiere exactamente un titular");
+  if(payment==null||payment.getStatus()!=PaymentStatus.APPROVED||payment.getOperationType()!=PaymentOperationType.SUBSCRIPTION)throw new IllegalArgumentException("La suscripcion requiere un pago de suscripcion aprobado");this.payment=payment;this.profile=profile;this.tenant=tenant;this.plan=new LinkedHashMap<>(plan);startAt=now;status=SubscriptionStatus.ACTIVE;
+ }
+ public UUID getProfileId(){return profile==null?null:profile.getId();}
+ public UUID getTenantId(){return tenant==null?null:tenant.getId();}
+ public UUID getPaymentId(){return payment==null?null:payment.getId();}
+ public void pause(){if(endAt!=null)throw new IllegalArgumentException("Contratacion cerrada");status=SubscriptionStatus.PAUSED;}
+ public void pastDue(){if(endAt!=null)throw new IllegalArgumentException("Contratacion cerrada");status=SubscriptionStatus.PAST_DUE;}
+ public void close(Instant now){if(now.isBefore(startAt))throw new IllegalArgumentException("Cierre anterior al inicio");endAt=now;status=SubscriptionStatus.CANCELLED;}
+ public void expire(Instant now){if(now.isBefore(startAt))throw new IllegalArgumentException("Cierre anterior al inicio");endAt=now;status=SubscriptionStatus.EXPIRED;}
+ public boolean activeAt(Instant now){return status==SubscriptionStatus.ACTIVE && !now.isBefore(startAt) && (endAt==null||now.isBefore(endAt));}
 
-    @Getter
-    @Setter
-    private String planId;
-
-    @Getter
-    @Setter
-    private SubscriptionStatus status;
-
-    @Getter
-    @Setter
-    private String renewsOn;
-
-    @Getter
-    @Setter
-    private Double pricePerMonth;
-
-    @Getter
-    @Setter
-    private Integer sessions;
-
-    @Getter
-    @Setter
-    private Double savedThisMonth;
-
-    @Getter
-    @Setter
-    private String savingsMonth;
-
-    @Getter
-    private String memberSince;
-
-    @Getter
-    @Setter
-    private Boolean autoRenewal;
-
-    @Getter
-    @Setter
-    private String paymentMethodLastFour;
-
-    @Getter
-    @Setter
-    private String paymentMethodExpiry;
-
-    public Subscription(String id, String clientId, String planId, SubscriptionStatus status,
-                        String renewsOn, Double pricePerMonth, Integer sessions,
-                        Double savedThisMonth, String savingsMonth, String memberSince,
-                        Boolean autoRenewal, String paymentMethodLastFour, String paymentMethodExpiry) {
-        this.id = id;
-        this.clientId = clientId;
-        this.planId = planId;
-        this.status = status;
-        this.renewsOn = renewsOn;
-        this.pricePerMonth = pricePerMonth;
-        this.sessions = sessions;
-        this.savedThisMonth = savedThisMonth;
-        this.savingsMonth = savingsMonth;
-        this.memberSince = memberSince;
-        this.autoRenewal = autoRenewal;
-        this.paymentMethodLastFour = paymentMethodLastFour;
-        this.paymentMethodExpiry = paymentMethodExpiry;
-    }
-
-    public Subscription(String clientId, String planId, SubscriptionStatus status,
-                        String renewsOn, Double pricePerMonth, Integer sessions,
-                        Double savedThisMonth, String savingsMonth, String memberSince,
-                        Boolean autoRenewal, String paymentMethodLastFour, String paymentMethodExpiry) {
-        this(null, clientId, planId, status, renewsOn, pricePerMonth, sessions,
-                savedThisMonth, savingsMonth, memberSince, autoRenewal, paymentMethodLastFour, paymentMethodExpiry);
-    }
-
-    public Subscription(CreateSubscriptionCommand command) {
-        this(command.clientId(), command.planId(), SubscriptionStatus.ACTIVE,
-                "", 0.0, 0,
-                0.0, "", "", command.autoRenewal(),
-                command.paymentMethodLastFour(), command.paymentMethodExpiry());
-    }
-
-    public void applyPlan(String planId, Double pricePerMonth, String renewsOn) {
-        this.planId = planId;
-        this.pricePerMonth = pricePerMonth;
-        this.renewsOn = renewsOn;
-        this.status = SubscriptionStatus.ACTIVE;
-    }
-
-    public void update(UpdateSubscriptionCommand command, Double pricePerMonth, String renewsOn) {
-        this.planId = command.planId();
-        this.status = SubscriptionStatus.ACTIVE;
-        this.renewsOn = renewsOn;
-        this.pricePerMonth = pricePerMonth;
-        this.autoRenewal = command.autoRenewal();
-        this.paymentMethodLastFour = command.paymentMethodLastFour();
-        this.paymentMethodExpiry = command.paymentMethodExpiry();
-    }
-
-    public void registerReservation(String currentMonth, double savingsAmount) {
-        if (currentMonth == null || currentMonth.isBlank()) {
-            throw new IllegalArgumentException("Savings month is required");
-        }
-        if (!currentMonth.equals(this.savingsMonth)) {
-            this.savingsMonth = currentMonth;
-            this.savedThisMonth = 0.0;
-            this.sessions = 0;
-        }
-        this.sessions = this.sessions == null ? 1 : this.sessions + 1;
-        this.savedThisMonth = (this.savedThisMonth == null ? 0.0 : this.savedThisMonth) + Math.max(0.0, savingsAmount);
-    }
-
-    public void patchSavings(PatchSubscriptionSavingsCommand command) {
-        this.savedThisMonth = command.savedThisMonth();
-        this.savingsMonth = command.savingsMonth();
-    }
 }
