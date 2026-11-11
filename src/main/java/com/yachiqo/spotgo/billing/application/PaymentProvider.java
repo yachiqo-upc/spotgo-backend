@@ -5,7 +5,7 @@ import com.yachiqo.spotgo.billing.domain.model.valueobjects.*;
 /**
  * Payment processor contract; no raw PAN or CVV.
  * charge MUST be idempotent by (paymentId, attemptNumber); refund by refundId.
- * reconcile only queries an existing operation and MUST NOT create another debit.
+ * Reconciliation methods only query existing operations and MUST NOT create another debit or refund.
  */
 public interface PaymentProvider {
  record TokenDetails(String reference,String brand,String lastFour,int expirationMonth,int expirationYear) {}
@@ -15,4 +15,5 @@ public interface PaymentProvider {
  PaymentResult charge(UUID paymentId,int attemptNumber,String providerTokenReference,BigDecimal amount,String currency);
  PaymentResult reconcile(UUID paymentId,int attemptNumber,String operationReference);
  RefundResult refund(UUID refundId,String originalOperationReference,BigDecimal amount,String currency);
+ RefundResult reconcileRefund(UUID refundId,String operationReference);
 }

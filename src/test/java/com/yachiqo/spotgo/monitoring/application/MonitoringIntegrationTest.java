@@ -51,7 +51,7 @@ class MonitoringIntegrationTest {
  @Autowired MonitoringService monitoring;@Autowired MonitoringOccupancyService occupancy;
  @Autowired OccupancySensorRepository sensorRepository;@Autowired OccupancyReadingRepository readingRepository;
  @Autowired SensorHealthEventRepository healthRepository;@Autowired OccupancyConflictRepository conflictRepository;
- @Autowired OccupancyAlertRepository alertRepository;@Autowired CapacitySnapshotRepository snapshotRepository;@Autowired OccupancyReportRepository reportRepository;
+ @Autowired OccupancyAlertRepository alertRepository;@Autowired CapacitySnapshotRepository snapshotRepository;@Autowired CapacityAlertRepository capacityAlertRepository;@Autowired OccupancyReportRepository reportRepository;
  @Autowired ParkingQueryServiceImpl parkingQueries;
  @Autowired BillingService billing;@Autowired BillingQueryService queries;@Autowired ParkingCommandServiceImpl parking;
  @Autowired AuthenticationService iam;@Autowired JwtTokenService jwt;@Autowired SessionAuthenticationService authentication;
@@ -74,7 +74,7 @@ class MonitoringIntegrationTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));outcome.set(PaymentStatus.APPROVED);
   when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-  for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
+  for(String table:List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
    "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts"))jdbc.update("DELETE FROM "+table);
   when(plans.get("DRIVER_TEST")).thenReturn(driverPlan);when(plans.get("TENANT_TEST")).thenReturn(tenantPlan);when(plans.all()).thenReturn(List.of(driverPlan,tenantPlan));
@@ -158,7 +158,9 @@ class MonitoringIntegrationTest {
  @Test void sameIncidentUsesOneOpenConflictAndRecoversWithNewReliableReading(){
   companySubscription();var s=sensor(spot);advance(1);reading(s,OccupancyStatus.OCCUPIED);advance(1);reading(s,OccupancyStatus.OCCUPIED);
   assertEquals(1,conflictRepository.count());advance(1);reading(s,OccupancyStatus.AVAILABLE);
-  assertEquals(ConflictStatus.RESOLVED,conflictRepository.findAll().get(0).getStatus());assertEquals(AlertStatus.CLOSED,alertRepository.findAll().get(0).getStatus());
+  assertEquals(ConflictStatus.RESOLVED,conflictRepository.findAll().get(0).getStatus());var alert=alertRepository.findAll().get(0);assertEquals(AlertStatus.OPEN,alert.getStatus());
+  monitoring.closeAlert(admin,alert.getId(),AlertResolutionClassification.UNAUTHORIZED_OCCUPANCY,"A trusted sensor reading confirmed the parking spot was available.");
+  alert=alertRepository.findById(alert.getId()).orElseThrow();assertEquals(AlertStatus.CLOSED,alert.getStatus());assertEquals(AlertResolutionClassification.UNAUTHORIZED_OCCUPANCY,alert.getResolutionClassification());assertEquals("A trusted sensor reading confirmed the parking spot was available.",alert.getResolutionAction());
  }
  @Test void differentPayloadAtSameSensorInstantIsRejected(){
   companySubscription();var s=sensor(spot);assertThrows(MonitoringException.class,()->reading(s,OccupancyStatus.OCCUPIED));assertEquals(1,readingRepository.count());
@@ -176,10 +178,12 @@ class MonitoringIntegrationTest {
   companySubscription();var s=sensor(spot);var event=monitoring.recordHealth(admin,s.getId(),SensorHealth.FAILED,"Hardware diagnostic");
   var alert=alertRepository.findAll().get(0);assertEquals(event.getId(),alert.getHealthEventId());assertNull(alert.getConflictId());assertEquals(0,conflictRepository.count());
   assertEquals("UNAVAILABLE",occupancy.physicalOccupancy(spot.getId()));assertNull(event.getRecoveredAt());
-  assertThrows(MonitoringException.class,()->monitoring.updateAlert(admin,alert.getId(),true));
-  var ack=monitoring.updateAlert(admin,alert.getId(),false);assertNotNull(ack.getAcknowledgedAt());
+  assertThrows(MonitoringException.class,()->monitoring.closeAlert(admin,alert.getId(),AlertResolutionClassification.SENSOR_RECOVERED,"Recovered."));
+  var ack=monitoring.acknowledgeAlert(admin,alert.getId());assertNotNull(ack.getAcknowledgedAt());
   monitoring.recoverHealth(admin,event.getId());assertNotNull(healthRepository.findById(event.getId()).orElseThrow().getRecoveredAt());
-  assertEquals(AlertStatus.CLOSED,alertRepository.findById(alert.getId()).orElseThrow().getStatus());
+  var pending=alertRepository.findById(alert.getId()).orElseThrow();assertEquals(AlertStatus.ACKNOWLEDGED,pending.getStatus());
+  var closed=monitoring.closeAlert(admin,alert.getId(),AlertResolutionClassification.SENSOR_RECOVERED,"The failed sensor was recovered and its current reading was verified.");
+  assertEquals(AlertStatus.CLOSED,closed.getStatus());assertNotNull(closed.getClosedAt());assertNotNull(closed.getResolutionClassification());assertNotNull(closed.getResolutionAction());
  }
  @Test void timeoutIsDeduplicatedAndFreshCommunicationRecoversEpisode(){
   companySubscription();var s=sensor(spot);advance(301);monitoring.checkHealth();monitoring.checkHealth();
@@ -216,11 +220,25 @@ class MonitoringIntegrationTest {
   var payment=billing.chargePayment(driver,charge.getId(),token(driver).getId(),"overstay-debt");billing.process(driver,payment.getId(),false);
   assertEquals(OutstandingBalanceStatus.REGULARIZED,balances.byCharge(charge.getId()).orElseThrow().getStatus());assertNotNull(reserve().getId());
  }
+ @Test void overstayConflictReassignsTheNextCompatibleConfirmedReservation(){
+  companySubscription();var sourceSensor=sensor(spot);var alternativeSensor=sensor(second);
+  var firstStart=now.get().plusSeconds(60);var firstEnd=now.get().plusSeconds(3600);
+  var nextStart=firstEnd.plusSeconds(300);var nextEnd=nextStart.plusSeconds(3600);
+  var current=parking.reserve(driver,spot.getId(),vehicle.getId(),firstStart,firstEnd);payReservation(current);
+  var next=parking.reserve(driver,spot.getId(),vehicle.getId(),nextStart,nextEnd);payReservation(next);
+  now.set(firstStart);var session=parking.enter(admin,current.getId());
+  now.set(nextStart.minusSeconds(1));reading(alternativeSensor,OccupancyStatus.AVAILABLE);
+  now.set(nextStart.plusSeconds(1));reading(sourceSensor,OccupancyStatus.OCCUPIED);
+  var reassigned=reservations.findById(next.getId()).orElseThrow();
+  assertEquals(second.getId(),reassigned.getSpotId());assertEquals(second.getZoneId(),reassigned.getZoneId());
+  assertEquals(next.getAmount(),reassigned.getAmount());assertEquals(ReservationStatus.RESERVED,reassigned.getStatus());
+  assertNull(session.getExitAt());
+ }
  @Test void availabilityUsesSensorStateAndDistinguishesFutureSlots(){
   companySubscription();var s=sensor(spot);
-  assertTrue(parkingQueries.availability(spot.getZoneId(),now.get(),now.get().plusSeconds(60)).stream().filter(a->a.spotId().equals(spot.getId())).findFirst().orElseThrow().bookable());
+  assertTrue(parkingQueries.availability(driver,spot.getZoneId(),now.get(),now.get().plusSeconds(60)).stream().filter(a->a.spotId().equals(spot.getId())).findFirst().orElseThrow().bookable());
   advance(1);reading(s,OccupancyStatus.OCCUPIED);
-  var current=parkingQueries.availability(spot.getZoneId(),now.get(),now.get().plusSeconds(60)).stream().filter(a->a.spotId().equals(spot.getId())).findFirst().orElseThrow();
+  var current=parkingQueries.availability(driver,spot.getZoneId(),now.get(),now.get().plusSeconds(60)).stream().filter(a->a.spotId().equals(spot.getId())).findFirst().orElseThrow();
   assertFalse(current.bookable());assertEquals("OCCUPIED",current.physicalOccupancy());
   assertThrows(com.yachiqo.spotgo.parking.application.ParkingException.class,()->parking.reserve(driver,spot.getId(),vehicle.getId(),now.get(),now.get().plusSeconds(60)));
   assertNotNull(reserve().getId());
@@ -229,6 +247,21 @@ class MonitoringIntegrationTest {
   companySubscription();var a=sensor(spot);sensor(second);advance(1);reading(a,OccupancyStatus.OCCUPIED);
   var snap=monitoring.snapshot(admin,tenant.getId(),spot.getZoneId());assertEquals(1,snap.getOccupiedCount());assertEquals(2,snap.getTotalCount());assertEquals(new BigDecimal("50.00"),snap.getPercentage());
   var global=monitoring.snapshot(admin,tenant.getId(),null);assertNull(global.getZoneId());assertEquals(2,global.getTotalCount());
+ }
+ @Test void occupancyAboveNinetyFivePercentOpensCriticalAlertsAndResolvesAtTheThreshold() throws Exception {
+  companySubscription();var all=new ArrayList<ParkingSpot>();all.add(spot);all.add(second);
+  for(int i=3;i<=20;i++)all.add(parking.createSpot(admin,spot.getZoneId(),"A-"+i,"STANDARD",Map.of()));
+  var sensors=new ArrayList<OccupancySensor>();
+  for(var selected:all){sensors.add(sensor(selected));advance(1);}
+  for(var registered:sensors){advance(1);reading(registered,OccupancyStatus.OCCUPIED);}
+  var opened=capacityAlertRepository.byTenant(tenant.getId());assertEquals(2,opened.size());
+  var zoneAlert=opened.stream().filter(alert->spot.getZoneId().equals(alert.getZoneId())).findFirst().orElseThrow();
+  assertEquals(new BigDecimal("95.00"),zoneAlert.getThresholdPercentage());assertEquals(new BigDecimal("100.00"),zoneAlert.getOccupancyPercentage());
+  assertEquals(Severity.CRITICAL,zoneAlert.getSeverity());assertEquals(AlertStatus.OPEN,zoneAlert.getStatus());
+  assertEquals(2,monitoring.capacityAlerts(admin,tenant.getId()).size());
+  assertEquals(200,request("POST","/api/v1/capacity-alerts/"+zoneAlert.getId()+"/acknowledge",null,adminAuth.accessToken()).statusCode());
+  advance(1);reading(sensors.getFirst(),OccupancyStatus.AVAILABLE);
+  assertTrue(capacityAlertRepository.byTenant(tenant.getId()).stream().allMatch(alert->alert.getStatus()==AlertStatus.CLOSED&&alert.getResolvedAt()!=null));
  }
  @Test void unknownSpotDoesNotCountAsFreeAndDoesNotCreatePartialSnapshot(){
   companySubscription();sensor(spot);long before=snapshotRepository.count();
@@ -264,12 +297,13 @@ class MonitoringIntegrationTest {
  }
  @Test void swaggerContainsAllSevenCurrentMonitoringResourcesAndNoOldEndpoints() throws Exception {
   var response=request("GET","/v3/api-docs/06-complete-backend",null,null);assertEquals(200,response.statusCode());var paths=new ObjectMapper().readTree(response.body()).get("paths");
-  for(var path:List.of("occupancy-sensors","occupancy-readings","sensor-health-events","occupancy-conflicts","occupancy-alerts","capacity-snapshots","occupancy-reports"))assertTrue(paths.has("/api/v1/"+path),path);
+  for(var path:List.of("occupancy-sensors","occupancy-readings","sensor-health-events","occupancy-conflicts","occupancy-alerts","capacity-snapshots","capacity-alerts","occupancy-reports","notifications/devices"))assertTrue(paths.has("/api/v1/"+path),path);
   for(var path:List.of("employees","occupancyByHour","weeklyTrends","analytics","receipts","clientPlans"))assertFalse(paths.has("/api/v1/"+path),path);
  }
  @Test void seederLoadsAllThirtyOneTablesAndTheirMonitoringRelationships() throws Exception {
   new com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.seeder.DbSeeder(jdbc,new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()).run();
   for(String table:List.of("occupancy_sensors","occupancy_readings","sensor_health_events","occupancy_conflicts","occupancy_alerts","capacity_snapshots","occupancy_reports"))assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class)>0,table);
+  assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM capacity_alerts",Integer.class));
   assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM occupancy_alerts a JOIN sensor_health_events h ON a.health_event_id=h.health_event_id JOIN occupancy_sensors s ON h.sensor_id=s.sensor_id WHERE a.tenant_id=s.tenant_id AND a.spot_id=s.spot_id",Integer.class));
  }
 
@@ -301,6 +335,17 @@ class MonitoringIntegrationTest {
   assertEquals(403,request("GET","/api/v1/occupancy-alerts",null,driverAuth.accessToken()).statusCode());
   journeyJson("POST","/api/v1/occupancy-alerts/"+alert.path("alertId").asText()+"/acknowledge",null,access,200);
   assertEquals("ACKNOWLEDGED",journeyJson("GET","/api/v1/occupancy-alerts",null,access,200).get(0).path("status").asText());
+ }
+ @Test void parkingAdminMustRecordResolutionBeforeClosingAnAlert() throws Exception {
+  companySubscription();var sensor=sensor(spot);advance(1);reading(sensor,OccupancyStatus.OCCUPIED);
+  var alert=alertRepository.findAll().get(0);String path="/api/v1/occupancy-alerts/"+alert.getId()+"/close";
+  var resolution=Map.of("resolutionClassification","UNAUTHORIZED_OCCUPANCY","resolutionAction","Verified the spot was available after a trusted sensor reading.");
+  assertEquals(409,request("POST",path,resolution,adminAuth.accessToken()).statusCode());
+  advance(1);reading(sensor,OccupancyStatus.AVAILABLE);
+  var closed=journeyJson("POST",path,resolution,adminAuth.accessToken(),200);
+  assertEquals("CLOSED",closed.path("status").asText());assertEquals("UNAUTHORIZED_OCCUPANCY",closed.path("resolutionClassification").asText());
+  assertEquals(resolution.get("resolutionAction"),closed.path("resolutionAction").asText());assertTrue(closed.hasNonNull("closedAt"));
+  assertEquals(400,request("POST",path,Map.of("resolutionClassification","OTHER","resolutionAction"," "),adminAuth.accessToken()).statusCode());
  }
  @Test void authenticatedHttpFlowReadsAllSevenResourcesWithoutLazySerializationErrors() throws Exception {
   companySubscription();

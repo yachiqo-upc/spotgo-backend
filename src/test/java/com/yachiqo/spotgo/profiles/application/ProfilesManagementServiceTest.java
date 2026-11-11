@@ -13,6 +13,7 @@ import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementServic
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.*;
 import com.yachiqo.spotgo.profiles.domain.model.valueobjects.DriverProfileType;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.*;
+import com.yachiqo.spotgo.shared.application.events.SpotgoDomainEventPublisher;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -33,17 +34,22 @@ class ProfilesManagementServiceTest {
     @Mock AccountRepository accounts;
     @Mock TenantRepository parkings;
     @Mock RoleAssignmentRepository roles;
+    @Mock SpotgoDomainEventPublisher domainEvents;
     ProfilesManagementService service;
     UUID accountId = UUID.randomUUID();
     UUID tenantId = UUID.randomUUID();
-    @BeforeEach void setup() { service = new ProfilesManagementService(profiles, classifications, accounts, parkings, roles, Clock.systemUTC()); }
+    @BeforeEach void setup() { service = new ProfilesManagementService(profiles, classifications, accounts, parkings, roles, Clock.systemUTC(), domainEvents); }
     SpotgoUserPrincipal actor(UserRole role) {
         return new SpotgoUserPrincipal(accountId, "test@example.com", role, role == UserRole.PARKING_ADMIN ? tenantId : null, null);
     }
 
     @Test void createsOnlyForAuthenticatedAccountAndRejectsDuplicates() {
         when(accounts.existsById(accountId)).thenReturn(true);
-        when(profiles.saveAndFlush(any(Profile.class))).thenAnswer(i -> i.getArgument(0));
+        when(profiles.saveAndFlush(any(Profile.class))).thenAnswer(i -> {
+            var profile = (Profile) i.getArgument(0);
+            ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
+            return profile;
+        });
         assertEquals(accountId, service.create(actor(UserRole.DRIVER), "Juan", "Perez", "999").getAccountId());
         when(profiles.existsByAccountId(accountId)).thenReturn(true);
         assertEquals(409, assertThrows(ResponseStatusException.class, () ->
@@ -88,7 +94,11 @@ class ProfilesManagementServiceTest {
         when(accounts.findById(driver.getAccountId())).thenReturn(Optional.of(account));
         when(roles.findByAccountId(account.getId())).thenReturn(Optional.of(new RoleAssignment(
             account, UserRole.DRIVER, null, Instant.EPOCH, null, AssignmentStatus.ACTIVE)));
-        when(classifications.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+        when(classifications.saveAndFlush(any())).thenAnswer(i -> {
+            var classification = (DriverClassification) i.getArgument(0);
+            ReflectionTestUtils.setField(classification, "id", UUID.randomUUID());
+            return classification;
+        });
         var result = service.assign(actor(UserRole.PARKING_ADMIN), tenant, driverId, null);
         assertEquals(DriverProfileType.PRIVATE, result.getProfileType());
         assertEquals(adminProfileId, result.getAssignedById());

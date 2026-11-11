@@ -23,7 +23,7 @@ public class CapacitySnapshot {
  protected CapacitySnapshot(){}
  
  public CapacitySnapshot(Tenant tenant,ParkingZone zone,int occupied,int total,Instant now){
-  if(occupied<0||total<0||occupied>total||(zone!=null&&!zone.getTenantId().equals(tenant.getId())))throw new IllegalArgumentException("Resumen incoherente");
+  if(occupied<0||total<0||occupied>total||(zone!=null&&!zone.getTenantId().equals(tenant.getId())))throw new IllegalArgumentException("Inconsistent capacity snapshot.");
   this.tenant=tenant;this.zone=zone;occupiedCount=occupied;totalCount=total;
   percentage=total==0?BigDecimal.ZERO.setScale(2):BigDecimal.valueOf(occupied).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(total),2,RoundingMode.HALF_UP);observedAt=instant(now);
  }

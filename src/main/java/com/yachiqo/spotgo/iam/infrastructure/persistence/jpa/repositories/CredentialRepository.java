@@ -9,6 +9,8 @@ public interface CredentialRepository extends JpaRepository<Credential, UUID> {
     @Query("select c from Credential c where c.account.id = :accountId and c.authenticationMethod = :method and c.status = :status order by c.id")
     List<Credential> findAllByAccountIdAndAuthenticationMethodAndStatus(@Param("accountId") UUID accountId,
         @Param("method") AuthenticationMethod method, @Param("status") CredentialStatus status);
+    @Query("select c from Credential c where c.authenticationMethod = com.yachiqo.spotgo.iam.domain.model.valueobjects.AuthenticationMethod.GOOGLE and c.externalSubject = :subject")
+    Optional<Credential> findGoogleByExternalSubject(@Param("subject") String subject);
     @Query("select c from Credential c where c.account.id = :accountId")
     List<Credential> findAllByAccountId(@Param("accountId") UUID accountId);
 }

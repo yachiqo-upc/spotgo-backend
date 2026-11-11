@@ -9,6 +9,7 @@ import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.*;
 import com.yachiqo.spotgo.parking.application.ParkingTariffs;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
+import com.yachiqo.spotgo.shared.application.events.SpotgoDomainEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,16 +27,18 @@ public class MonitoringService {
  private final OccupancySensorRepository sensors;private final OccupancyReadingRepository readings;
  private final SensorHealthEventRepository health;private final OccupancyConflictRepository conflicts;
  private final OccupancyAlertRepository alerts;private final CapacitySnapshotRepository snapshots;private final OccupancyReportRepository reports;
+ private final CapacityAlertRepository capacityAlerts;
  private final TenantRepository tenants;private final ParkingZoneRepository zones;private final ParkingSpotRepository spots;
  private final ReservationRepository reservations;private final ParkingSessionRepository sessions;private final GuestParkingSessionRepository guests;
  private final EvidenceImageStorage evidenceStorage;
+ private final SpotgoDomainEventPublisher domainEvents;
  private final MonitoringOccupancyService occupancy;private final MonitoringSubscriptionGateway subscriptions;private final MonitoringPolicy policy;private final Clock clock;
  public MonitoringService(OccupancySensorRepository sensors,OccupancyReadingRepository readings,SensorHealthEventRepository health,
-  OccupancyConflictRepository conflicts,OccupancyAlertRepository alerts,CapacitySnapshotRepository snapshots,OccupancyReportRepository reports,
+  OccupancyConflictRepository conflicts,OccupancyAlertRepository alerts,CapacitySnapshotRepository snapshots,OccupancyReportRepository reports,CapacityAlertRepository capacityAlerts,
   TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,ReservationRepository reservations,
-  ParkingSessionRepository sessions,GuestParkingSessionRepository guests,MonitoringOccupancyService occupancy,MonitoringSubscriptionGateway subscriptions,MonitoringPolicy policy,Clock clock,EvidenceImageStorage evidenceStorage){
+  ParkingSessionRepository sessions,GuestParkingSessionRepository guests,MonitoringOccupancyService occupancy,MonitoringSubscriptionGateway subscriptions,MonitoringPolicy policy,Clock clock,EvidenceImageStorage evidenceStorage,SpotgoDomainEventPublisher domainEvents){
   this.sensors=sensors;this.readings=readings;this.health=health;this.conflicts=conflicts;this.alerts=alerts;this.snapshots=snapshots;this.reports=reports;
-  this.tenants=tenants;this.zones=zones;this.spots=spots;this.reservations=reservations;this.sessions=sessions;this.guests=guests;this.occupancy=occupancy;this.subscriptions=subscriptions;this.policy=policy;this.clock=clock;this.evidenceStorage=evidenceStorage;
+  this.tenants=tenants;this.zones=zones;this.spots=spots;this.reservations=reservations;this.sessions=sessions;this.guests=guests;this.occupancy=occupancy;this.subscriptions=subscriptions;this.policy=policy;this.clock=clock;this.evidenceStorage=evidenceStorage;this.domainEvents=domainEvents;this.capacityAlerts=capacityAlerts;
  }
  private static MonitoringException missing(String name){return new MonitoringException(HttpStatus.NOT_FOUND,name+" not found");}
  private static MonitoringException conflict(String message){return new MonitoringException(HttpStatus.CONFLICT,message);}
@@ -68,6 +71,7 @@ public class MonitoringService {
  public List<OccupancyConflict> conflicts(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?conflicts.findAll():conflicts.byTenant(id);}
  public OccupancyConflict conflict(SpotgoUserPrincipal actor,UUID id){var c=conflicts.findById(id).orElseThrow(()->missing("Conflict"));readAccess(actor,c.getTenantId());return c;}
  public List<OccupancyAlert> alerts(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?alerts.findAll():alerts.byTenant(id);}
+ public List<CapacityAlert> capacityAlerts(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?capacityAlerts.findAll():capacityAlerts.byTenant(id);}
  public List<CapacitySnapshot> snapshots(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?snapshots.findAll():snapshots.byTenant(id);}
  public List<OccupancyReport> reports(SpotgoUserPrincipal actor,UUID tenant){var id=scope(actor,tenant);return id==null?reports.findAll():reports.byTenant(id);}
  public MonitoringOccupancyService.Observation observation(SpotgoUserPrincipal actor,UUID spot){readAccess(actor,spot(spot).getTenantId());return occupancy.observation(spot);}
@@ -83,7 +87,7 @@ public class MonitoringService {
   if(!sensors.activeSpot(spotId).isEmpty())throw conflict("This parking spot already has an ACTIVE sensor.");
   validateReadingTime(occurred,now);if(installed==null||installed.isAfter(occurred)||!policy.fresh(occurred,now))throw new IllegalArgumentException("The first reading must be real, recent, and later than the installation time.");
   if(configuration==null)throw new IllegalArgumentException("configuration is required.");
-  try{if(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(configuration).length()>8192)throw new IllegalArgumentException("configuration excede 8192 caracteres");}
+  try{if(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(configuration).length()>8192)throw new IllegalArgumentException("configuration exceeds 8192 characters.");}
   catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalArgumentException("Invalid configuration.");}
   if(protocol==SensorProtocol.MQTT)text(Objects.toString(configuration.get("topic"),""));
   var sensor=sensors.saveAndFlush(new OccupancySensor(spot,protocol,configuration,installed,now));
@@ -94,7 +98,7 @@ public class MonitoringService {
  private void validateReadingTime(Instant occurred,Instant received){if(occurred==null||occurred.isAfter(received))throw new IllegalArgumentException("occurred_at must be a valid timestamp that is not in the future.");}
  @Transactional
  public OccupancyReading receive(SpotgoUserPrincipal actor,UUID id,OccupancyStatus status,Instant occurred,BigDecimal quality){
-  var s=lockSensor(actor,id);if(s.getStatus()!=SensorStatus.ACTIVE)throw conflict("Sensor inactivo");return receive(s,status,occurred,quality,clock.instant());
+  var s=lockSensor(actor,id);if(s.getStatus()!=SensorStatus.ACTIVE)throw conflict("Sensor is inactive.");return receive(s,status,occurred,quality,clock.instant());
  }
  private OccupancyReading receive(OccupancySensor sensor,OccupancyStatus status,Instant occurred,BigDecimal quality,Instant received){
   validateReadingTime(occurred,received);if(occurred.isBefore(sensor.getInstalledAt()))throw new IllegalArgumentException("Reading occurred before installation.");
@@ -108,32 +112,34 @@ public class MonitoringService {
   var latest=readings.bySensor(sensor.getId()).get(0);
   if(latest.getId().equals(reading.getId())&&policy.fresh(occurred,received)){
    if(policy.reliable(quality)){
-    for(var event:health.bySensor(sensor.getId()))if(event.getRecoveredAt()==null&&(event.getReason().startsWith("COMMUNICATION_TIMEOUT")||event.getReason().startsWith("LOW_QUALITY")||event.getReason().startsWith("STALE_MEASUREMENT"))){event.recover(received);closeHealthAlerts(event);}
+    for(var event:health.bySensor(sensor.getId()))if(event.getRecoveredAt()==null&&(event.getReason().startsWith("COMMUNICATION_TIMEOUT")||event.getReason().startsWith("LOW_QUALITY")||event.getReason().startsWith("STALE_MEASUREMENT"))){event.recover(received);}
     evaluate(reading);
     captureIfReliable(sensor.getTenant(),sensor.getZone(),received);captureIfReliable(sensor.getTenant(),null,received);
    }else problem(sensor,SensorHealth.DEGRADED,"LOW_QUALITY: reading is below the configured threshold.",received);
   }
   return reading;
  }
- private void closeHealthAlerts(SensorHealthEvent event){for(var alert:alerts.byHealthEvent(event.getId()))alert.close(clock.instant());}
  private SensorHealthEvent problem(OccupancySensor sensor,SensorHealth state,String reason,Instant now){
   var replay=health.bySensor(sensor.getId()).stream().filter(e->e.getRecoveredAt()==null&&e.getHealth()==state&&e.getReason().equals(reason)).findFirst();
   if(replay.isPresent())return replay.get();
-  var event=health.saveAndFlush(new SensorHealthEvent(sensor,state,reason,now));alerts.saveAndFlush(new OccupancyAlert(event,null,now));return event;
+  var event=health.saveAndFlush(new SensorHealthEvent(sensor,state,reason,now));
+  var alert=alerts.saveAndFlush(new OccupancyAlert(event,null,now));
+  publishAlertOpened(alert,event.getId(),null,null,sensor.getTenantId(),sensor.getSpotId());
+  return event;
  }
  @Transactional
  public SensorHealthEvent recordHealth(SpotgoUserPrincipal actor,UUID sensorId,SensorHealth state,String reason){
-  var s=lockSensor(actor,sensorId);if(s.getStatus()!=SensorStatus.ACTIVE)throw conflict("Sensor inactivo");var now=clock.instant();
+  var s=lockSensor(actor,sensorId);if(s.getStatus()!=SensorStatus.ACTIVE)throw conflict("Sensor is inactive.");var now=clock.instant();
   if(state==null)throw new IllegalArgumentException("health is required.");reason=text(reason);
   if(state==SensorHealth.HEALTHY){
-   for(var event:health.bySensor(sensorId))if(event.getRecoveredAt()==null){event.recover(now);closeHealthAlerts(event);}
+   for(var event:health.bySensor(sensorId))if(event.getRecoveredAt()==null){event.recover(now);}
    return health.saveAndFlush(new SensorHealthEvent(s,state,reason,now));
   }
   return problem(s,state,reason,now);
  }
  @Transactional
  public SensorHealthEvent recoverHealth(SpotgoUserPrincipal actor,UUID id){
-  var e=healthEvent(actor,id);lockSensor(actor,e.getSensorId());e.recover(clock.instant());closeHealthAlerts(e);return health.saveAndFlush(e);
+  var e=healthEvent(actor,id);lockSensor(actor,e.getSensorId());e.recover(clock.instant());return health.saveAndFlush(e);
  }
 
  private void evaluate(OccupancyReading reading){
@@ -153,32 +159,42 @@ public class MonitoringService {
   var open=conflicts.openSpot(spot.getId());boolean exists=false;
   for(var c:open){
    if(c.getConflictType()==type&&Objects.equals(c.getReservationId(),reservation==null?null:reservation.getId()))exists=true;
-   else {c.resolve();for(var a:alerts.byConflict(c.getId()))a.close(clock.instant());}
+   else c.resolve();
   }
-  if(type!=null&&!exists){var c=conflicts.saveAndFlush(new OccupancyConflict(reading,reservation,type,clock.instant()));alerts.saveAndFlush(new OccupancyAlert(null,c,clock.instant()));}
+  if(type!=null&&!exists){var c=conflicts.saveAndFlush(new OccupancyConflict(reading,reservation,type,clock.instant()));var alert=alerts.saveAndFlush(new OccupancyAlert(null,c,clock.instant()));publishAlertOpened(alert,null,c.getId(),type,spot.getTenantId(),spot.getId());}
+ }
+ private void publishAlertOpened(OccupancyAlert alert,UUID healthEventId,UUID conflictId,ConflictType conflictType,UUID tenantId,UUID spotId){
+  var data=new LinkedHashMap<String,String>();data.put("alert_id",alert.getId().toString());data.put("spot_id",spotId.toString());
+  if(healthEventId!=null)data.put("health_event_id",healthEventId.toString());
+  if(conflictId!=null){data.put("conflict_id",conflictId.toString());data.put("conflict_type",conflictType.name());}
+  domainEvents.publish("monitoring.alert.opened","Occupancy & Monitoring","OccupancyAlert",alert.getId(),tenantId,List.of(),data);
  }
  @Transactional
  public OccupancyConflict updateConflict(SpotgoUserPrincipal actor,UUID id,boolean resolve){
   var c=conflict(actor,id);writeAccess(actor,c.getTenantId());tenants.lock(c.getTenantId()).orElseThrow(()->missing("Tenant"));spots.lock(c.getSpotId()).orElseThrow(()->missing("Parking spot"));
   c=conflicts.lock(id).orElseThrow(()->missing("Conflict"));entityManager.refresh(c,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-  if(resolve){c.resolve();for(var a:alerts.byConflict(id))a.close(clock.instant());}else c.acknowledge();
+  if(resolve)c.resolve();else c.acknowledge();
   return conflicts.saveAndFlush(c);
  }
  @Transactional
- public OccupancyAlert updateAlert(SpotgoUserPrincipal actor,UUID id,boolean close){
-  var a=alerts.findById(id).orElseThrow(()->missing("Alerta"));writeAccess(actor,a.getTenantId());tenants.lock(a.getTenantId()).orElseThrow(()->missing("Tenant"));
-  a=alerts.lock(id).orElseThrow(()->missing("Alerta"));entityManager.refresh(a,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-  if(close){
-   if(a.getConflict()!=null&&a.getConflict().getStatus()!=ConflictStatus.RESOLVED||a.getHealthEvent()!=null&&a.getHealthEvent().getRecoveredAt()==null)throw conflict("Resolve the incident that created this alert first.");
-   a.close(clock.instant());
-  }else {a.acknowledge(clock.instant());if(a.getConflict()!=null)a.getConflict().acknowledge();}
+ public OccupancyAlert acknowledgeAlert(SpotgoUserPrincipal actor,UUID id){
+  var a=alerts.findById(id).orElseThrow(()->missing("Alert"));writeAccess(actor,a.getTenantId());tenants.lock(a.getTenantId()).orElseThrow(()->missing("Tenant"));
+  a=alerts.lock(id).orElseThrow(()->missing("Alert"));entityManager.refresh(a,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+  a.acknowledge(clock.instant());if(a.getConflict()!=null)a.getConflict().acknowledge();
   return alerts.saveAndFlush(a);
  }
  @Transactional
+ public OccupancyAlert closeAlert(SpotgoUserPrincipal actor,UUID id,AlertResolutionClassification classification,String action){
+  var a=alerts.findById(id).orElseThrow(()->missing("Alert"));writeAccess(actor,a.getTenantId());tenants.lock(a.getTenantId()).orElseThrow(()->missing("Tenant"));
+  a=alerts.lock(id).orElseThrow(()->missing("Alert"));entityManager.refresh(a,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+  if(a.getConflict()!=null&&a.getConflict().getStatus()!=ConflictStatus.RESOLVED||a.getHealthEvent()!=null&&a.getHealthEvent().getRecoveredAt()==null)throw conflict("Resolve the incident that created this alert before recording its resolution.");
+  a.close(clock.instant(),classification,action);return alerts.saveAndFlush(a);
+ }
+ @Transactional
  public OccupancyAlert uploadEvidence(SpotgoUserPrincipal actor,UUID id,byte[] image){
-  var alert=alerts.findById(id).orElseThrow(()->missing("Alerta"));writeAccess(actor,alert.getTenantId());
+  var alert=alerts.findById(id).orElseThrow(()->missing("Alert"));writeAccess(actor,alert.getTenantId());
   tenants.lock(alert.getTenantId()).orElseThrow(()->missing("Tenant"));
-  alert=alerts.lock(id).orElseThrow(()->missing("Alerta"));entityManager.refresh(alert,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+  alert=alerts.lock(id).orElseThrow(()->missing("Alert"));entityManager.refresh(alert,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
   String previous=alert.evidenceFileName();String stored=evidenceStorage.store(image);
   org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){
    @Override public void afterCompletion(int status){
@@ -190,8 +206,8 @@ public class MonitoringService {
  }
  @Transactional
  public EvidenceImageStorage.StoredImage evidence(SpotgoUserPrincipal actor,UUID id){
-  var alert=alerts.findById(id).orElseThrow(()->missing("Alerta"));readAccess(actor,alert.getTenantId());
-  alert=alerts.lock(id).orElseThrow(()->missing("Alerta"));entityManager.refresh(alert,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+  var alert=alerts.findById(id).orElseThrow(()->missing("Alert"));readAccess(actor,alert.getTenantId());
+  alert=alerts.lock(id).orElseThrow(()->missing("Alert"));entityManager.refresh(alert,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
   String fileName=alert.evidenceFileName();
   if(fileName==null)throw missing("Evidence image");
   return evidenceStorage.read(fileName);
@@ -203,7 +219,27 @@ public class MonitoringService {
  private CapacitySnapshot captureIfReliable(Tenant tenant,ParkingZone zone,Instant now){
   var selected=operationalSpots(tenant,zone);int occupied=0;
   for(var spot:selected){String state=occupancy.physicalOccupancy(spot.getId());if(state.equals("UNAVAILABLE"))return null;if(state.equals("OCCUPIED"))occupied++;}
-  return snapshots.saveAndFlush(new CapacitySnapshot(tenant,zone,occupied,selected.size(),now));
+  var snapshot=snapshots.saveAndFlush(new CapacitySnapshot(tenant,zone,occupied,selected.size(),now));
+  updateCapacityAlert(snapshot,now);
+  return snapshot;
+ }
+ private void updateCapacityAlert(CapacitySnapshot snapshot,Instant now){
+  var active=capacityAlerts.activeForScope(snapshot.getTenantId(),snapshot.getZoneId(),AlertStatus.CLOSED);
+  if(snapshot.getPercentage().compareTo(BigDecimal.valueOf(95))>0){
+   if(active.isEmpty()){
+    var alert=capacityAlerts.saveAndFlush(new CapacityAlert(snapshot,BigDecimal.valueOf(95),now));
+    var data=new LinkedHashMap<String,String>();data.put("capacity_alert_id",alert.getId().toString());data.put("snapshot_id",snapshot.getId().toString());data.put("percentage",snapshot.getPercentage().toPlainString());
+    if(snapshot.getZoneId()!=null)data.put("zone_id",snapshot.getZoneId().toString());
+    domainEvents.publish("monitoring.capacity.high","Occupancy & Monitoring","CapacityAlert",alert.getId(),snapshot.getTenantId(),List.of(),data);
+   }
+  }else active.forEach(alert->alert.resolve(now));
+ }
+ @Transactional
+ public CapacityAlert acknowledgeCapacityAlert(SpotgoUserPrincipal actor,UUID id){
+  var current=capacityAlerts.findById(id).orElseThrow(()->missing("Capacity alert"));writeAccess(actor,current.getTenantId());
+  tenants.lock(current.getTenantId()).orElseThrow(()->missing("Tenant"));
+  var alert=capacityAlerts.lock(id).orElseThrow(()->missing("Capacity alert"));entityManager.refresh(alert,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+  alert.acknowledge(clock.instant());return capacityAlerts.saveAndFlush(alert);
  }
  @Transactional
  public CapacitySnapshot snapshot(SpotgoUserPrincipal actor,UUID tenantId,UUID zoneId){

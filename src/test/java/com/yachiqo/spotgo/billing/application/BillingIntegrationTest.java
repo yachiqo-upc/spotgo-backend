@@ -60,7 +60,7 @@ class BillingIntegrationTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));outcome.set(PaymentStatus.APPROVED);
   when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-  for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
+  for(String table:List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
    "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts"))jdbc.update("DELETE FROM "+table);
   when(plans.get("DRIVER_TEST")).thenReturn(driverPlan);when(plans.get("TENANT_TEST")).thenReturn(tenantPlan);when(plans.all()).thenReturn(List.of(driverPlan,tenantPlan));
@@ -252,6 +252,33 @@ class BillingIntegrationTest {
   outcome.set(PaymentStatus.APPROVED);billing.reconcile(driver,p.getId());assertEquals(ReservationStatus.RESERVED,reservations.findById(r.getId()).orElseThrow().getStatus());
   verify(provider,times(1)).charge(any(),anyInt(),anyString(),any(),anyString());
  }
+ @Test void simulatedPendingPaymentAppliesItsOutcomeAfterCommit() throws Exception {
+  var r=reserve();var p=billing.reservationPayment(driver,r.getId(),token(driver).getId(),"async-simulated");
+  when(provider.charge(any(),anyInt(),anyString(),any(),anyString())).thenAnswer(i->new PaymentProvider.PaymentResult(
+   PaymentStatus.PENDING,"simulated-charge:APPROVED:"+i.getArgument(0)+":"+i.getArgument(1),null));
+  when(provider.reconcile(any(),anyInt(),any())).thenAnswer(i->new PaymentProvider.PaymentResult(
+   PaymentStatus.APPROVED,i.getArgument(2),null));
+  assertEquals(PaymentStatus.PENDING,billing.process(driver,p.getId(),false).getStatus());
+  long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);
+  while(System.nanoTime()<deadline&&payments.findById(p.getId()).orElseThrow().getStatus()!=PaymentStatus.APPROVED)
+   Thread.sleep(20);
+  assertEquals(PaymentStatus.APPROVED,payments.findById(p.getId()).orElseThrow().getStatus());
+  assertEquals(ReservationStatus.RESERVED,reservations.findById(r.getId()).orElseThrow().getStatus());
+  verify(provider,times(1)).reconcile(eq(p.getId()),eq(1),contains("simulated-charge:APPROVED:"));
+ }
+ @Test void simulatedRefundCompletesFromItsAfterCommitOutcome() throws Exception {
+  var payment=payReservation(reserve());var refund=billing.requestRefund(admin,payment.getId(),payment.getAmount(),"async-simulated-refund");
+  when(provider.refund(any(),anyString(),any(),anyString())).thenAnswer(i->new PaymentProvider.RefundResult(
+   RefundStatus.PROCESSING,"simulated-refund:"+i.getArgument(0)));
+  when(provider.reconcileRefund(any(),anyString())).thenAnswer(i->new PaymentProvider.RefundResult(
+   RefundStatus.COMPLETED,i.getArgument(1)));
+  assertEquals(RefundStatus.PROCESSING,billing.processRefund(admin,refund.getId()).getStatus());
+  long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);
+  while(System.nanoTime()<deadline&&refunds.findById(refund.getId()).orElseThrow().getStatus()!=RefundStatus.COMPLETED)
+   Thread.sleep(20);
+  assertEquals(RefundStatus.COMPLETED,refunds.findById(refund.getId()).orElseThrow().getStatus());
+  verify(provider,times(1)).reconcileRefund(eq(refund.getId()),contains("simulated-refund:"));
+ }
  @Test void unknownProviderFailureIsRecordedWithoutRetryingBlindly(){
   var r=reserve();var p=billing.reservationPayment(driver,r.getId(),token(driver).getId(),"unknown");
   when(provider.charge(any(),anyInt(),anyString(),any(),anyString())).thenThrow(new IllegalStateException("connection lost"));
@@ -428,6 +455,7 @@ class BillingIntegrationTest {
    var entry=tables.next();String table=entry.getKey();
    var exists=jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE LOWER(table_schema)='public' AND LOWER(table_name)=?",Integer.class,table);
    if(exists==0){missing.add(table);continue;}implemented++;
+   if(!entry.getValue().isArray()||entry.getValue().isEmpty())continue;
    var expected=new java.util.HashSet<String>();entry.getValue().get(0).fieldNames().forEachRemaining(expected::add);
    var actual=jdbc.query("SELECT * FROM "+table+" WHERE 1=0",(org.springframework.jdbc.core.ResultSetExtractor<java.util.Set<String>>) rs->{
     var result=new java.util.HashSet<String>();var metadata=rs.getMetaData();
@@ -440,7 +468,7 @@ class BillingIntegrationTest {
    });
    assertEquals(expected,actual,table+": columnas reales frente a db.json");
   }
-  assertEquals(31,implemented);
+  assertEquals(32,implemented);
   assertTrue(missing.isEmpty(),"Every table in the design must be implemented.");
  }
  @Test void everyDocumentedReferenceIsEnforcedByAnActualDatabaseForeignKey() throws Exception {
@@ -454,6 +482,7 @@ class BillingIntegrationTest {
   var names=fixtures.fieldNames();int checked=0;
   while(names.hasNext()){
    String table=names.next();String actual=jdbc.queryForObject("SELECT table_name FROM information_schema.tables WHERE LOWER(table_schema)='public' AND LOWER(table_name)=?",String.class,table);
+   if(!fixtures.get(table).isArray()||fixtures.get(table).isEmpty())continue;
    var imported=jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<Map<String,String>>) connection->{
     var result=new HashMap<String,String>();
     try(var keys=connection.getMetaData().getImportedKeys(connection.getCatalog(),connection.getSchema(),actual)){

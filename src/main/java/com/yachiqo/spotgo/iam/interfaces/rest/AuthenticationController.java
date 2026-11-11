@@ -2,6 +2,7 @@ package com.yachiqo.spotgo.iam.interfaces.rest;
 
 import com.yachiqo.spotgo.iam.application.AuthenticationService;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
+import com.yachiqo.spotgo.iam.infrastructure.security.GoogleIdentityVerifier;
 import com.yachiqo.spotgo.iam.interfaces.rest.resources.*;
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,17 +17,22 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(value = "/api/v1/authentication", produces = "application/json")
-@Tag(name = "Authentication", description = "Accounts, PASSWORD credentials, and UUID-based sessions. Swagger Authorize uses accessToken; refreshToken is sent only to /refresh.")
+@Tag(name = "Authentication", description = "Accounts, PASSWORD and verified GOOGLE credentials, and UUID-based sessions. Swagger Authorize uses accessToken; refreshToken is sent only to /refresh.")
 @ApiResponses({
     @ApiResponse(responseCode = "400", description = "Invalid JSON or password. Passwords must contain at least 8 characters, including an uppercase letter, a lowercase letter, a number, and a symbol.", content = @Content),
     @ApiResponse(responseCode = "401", description = "Credentials, token, or session are invalid, expired, or revoked, or the account is disabled.", content = @Content),
     @ApiResponse(responseCode = "409", description = "Duplicate email address or integrity conflict.", content = @Content),
     @ApiResponse(responseCode = "429", description = "Too many attempts. Wait for Retry-After before trying again.", content = @Content),
+    @ApiResponse(responseCode = "503", description = "Google sign-in or the email provider is not configured or temporarily unavailable.", content = @Content),
     @ApiResponse(responseCode = "500", description = "Unexpected server error.", content = @Content)
 })
 public class AuthenticationController {
     private final AuthenticationService service;
-    public AuthenticationController(AuthenticationService service) { this.service = service; }
+    private final GoogleIdentityVerifier googleIdentityVerifier;
+    public AuthenticationController(AuthenticationService service, GoogleIdentityVerifier googleIdentityVerifier) {
+        this.service = service;
+        this.googleIdentityVerifier = googleIdentityVerifier;
+    }
 
     @PostMapping("/sign-in")
     @SecurityRequirements
@@ -34,6 +40,25 @@ public class AuthenticationController {
     @ApiResponse(responseCode = "200", description = "Session created. Store both tokens and their expiration times.")
     public AuthenticatedUserResource signIn(@Valid @RequestBody SignInResource body, HttpServletRequest request) {
         return service.signIn(body.email(), body.password(), request.getRemoteAddr());
+    }
+
+    @PostMapping("/google")
+    @SecurityRequirements
+    @Operation(summary = "Sign in or register with Google", description = "Accepts a Google ID token over HTTPS and verifies its signature, issuer, audience, expiry, and verified email. A new external identity creates only a DRIVER account. If the email already belongs to an account without this Google subject, the request returns 409; sign in to that account and use the authenticated linking endpoint instead. The backend never accepts a plain Google user ID.")
+    @ApiResponse(responseCode = "200", description = "A SpotGo session was issued for the verified Google identity; this may also create its DRIVER account on first use.")
+    public AuthenticatedUserResource signInWithGoogle(@Valid @RequestBody GoogleIdTokenResource body, HttpServletRequest request) {
+        var identity = googleIdentityVerifier.verify(body.idToken());
+        return service.signInWithGoogle(identity, request.getRemoteAddr());
+    }
+
+    @PostMapping("/google/link")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Link Google to my account", description = "Requires an authenticated SpotGo session. Verifies the Google ID token and links its subject to the current account without merging accounts by email. The Google email cannot belong to a different SpotGo account.")
+    @ApiResponse(responseCode = "204", description = "Google sign-in linked to the authenticated account; no response body.", content = @Content)
+    public void linkGoogle(@AuthenticationPrincipal SpotgoUserPrincipal actor,
+                           @Valid @RequestBody GoogleIdTokenResource body, HttpServletRequest request) {
+        var identity = googleIdentityVerifier.verify(body.idToken());
+        service.linkGoogle(actor, identity, request.getRemoteAddr());
     }
 
     @PostMapping("/sign-up")
@@ -74,7 +99,7 @@ public class AuthenticationController {
     @PostMapping("/password-reset/confirm")
     @SecurityRequirements
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Confirm sensor recovery", description = "Validates the code, expiration, attempt limit, and one-time use. Updates the password hash and revokes every session for the account.")
+    @Operation(summary = "Confirm password reset", description = "Validates the code, expiration, attempt limit, and one-time use. Updates the password hash and revokes every session for the account.")
     @ApiResponse(responseCode = "204", description = "Password changed. Sign in again.", content = @Content)
     public void confirmReset(@Valid @RequestBody PasswordResetConfirmResource body, HttpServletRequest request) {
         service.confirmPasswordReset(body.email(), body.code(), body.newPassword(), request.getRemoteAddr());

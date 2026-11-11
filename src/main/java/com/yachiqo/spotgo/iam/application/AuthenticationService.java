@@ -4,6 +4,7 @@ import com.yachiqo.spotgo.iam.domain.model.aggregates.*;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.*;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
+import com.yachiqo.spotgo.shared.application.events.SpotgoDomainEventPublisher;
 import com.yachiqo.spotgo.iam.interfaces.rest.resources.AuthenticatedUserResource;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -31,6 +32,7 @@ public class AuthenticationService {
     private final PasswordResetNotificationService notifications;
     private final SessionAuthenticationService authentication;
     private final Clock clock;
+    private final SpotgoDomainEventPublisher domainEvents;
     private final int resetMinutes;
     private final int maxResetAttempts;
     private final int refreshDays;
@@ -38,14 +40,14 @@ public class AuthenticationService {
     public AuthenticationService(AccountRepository accounts, CredentialRepository credentials, RoleAssignmentRepository roles,
             SessionRepository sessions, AuditEntryRepository audits, PasswordResetCodeRepository resets,
             PasswordEncoder encoder, JwtTokenService tokens, PasswordResetNotificationService notifications,
-            SessionAuthenticationService authentication, Clock clock,
+            SessionAuthenticationService authentication, Clock clock, SpotgoDomainEventPublisher domainEvents,
             @Value("${app.password-reset.code-expiration-minutes:15}") int resetMinutes,
             @Value("${app.password-reset.max-attempts:5}") int maxResetAttempts,
             @Value("${authorization.jwt.refresh-expiration-days:7}") int refreshDays) {
         if (resetMinutes <= 0 || maxResetAttempts <= 0 || refreshDays <= 0) throw new IllegalArgumentException("Invalid IAM token durations.");
         this.accounts = accounts; this.credentials = credentials; this.roles = roles; this.sessions = sessions;
         this.audits = audits; this.resets = resets; this.encoder = encoder; this.tokens = tokens;
-        this.notifications = notifications; this.authentication = authentication; this.clock = clock;
+        this.notifications = notifications; this.authentication = authentication; this.clock = clock; this.domainEvents = domainEvents;
         this.resetMinutes = resetMinutes; this.maxResetAttempts = maxResetAttempts; this.refreshDays = refreshDays;
     }
 
@@ -59,6 +61,8 @@ public class AuthenticationService {
         var account = accounts.saveAndFlush(new Account(normalized));
         credentials.save(Credential.password(account, encoder.encode(password)));
         roles.save(new RoleAssignment(account, UserRole.DRIVER, null, clock.instant(), null, AssignmentStatus.ACTIVE));
+        domainEvents.publish("identity.account.registered", "Identity & Access Management", "Account", account.getId(),
+                null, List.of(), Map.of("account_id", account.getId().toString()));
         var result = issueSession(account);
         audit(account, "SIGN_UP", "SUCCESS", source);
         return result;
@@ -77,6 +81,95 @@ public class AuthenticationService {
         var result = issueSession(account);
         audit(account, "SIGN_IN", "SUCCESS", source);
         return result;
+    }
+
+    public Account provisionParkingAdminAccount(String email, UUID tenantId, String source) {
+        String normalized = Account.normalizeEmail(email);
+        if (normalized == null || normalized.isBlank())
+            throw new IamException(HttpStatus.BAD_REQUEST, "Email is required.");
+        if (accounts.existsByEmail(normalized))
+            throw new IamException(HttpStatus.CONFLICT, "Email is already registered.");
+
+        var account = accounts.saveAndFlush(new Account(normalized));
+        byte[] temporarySecret = new byte[48];
+        RANDOM.nextBytes(temporarySecret);
+        String unusableTemporaryPassword = "Aa1!" + Base64.getUrlEncoder().withoutPadding().encodeToString(temporarySecret);
+        credentials.saveAndFlush(Credential.password(account, encoder.encode(unusableTemporaryPassword)));
+        var assignment = roles.saveAndFlush(new RoleAssignment(account, UserRole.PARKING_ADMIN, tenantId,
+                clock.instant(), null, AssignmentStatus.ACTIVE));
+
+        domainEvents.publish("identity.account.registered", "Identity & Access Management", "Account", account.getId(),
+                tenantId, List.of(account.getId()), Map.of("account_id", account.getId().toString(),
+                        "authentication_method", "PASSWORD", "role", UserRole.PARKING_ADMIN.name()));
+        domainEvents.publish("identity.role.assigned", "Identity & Access Management", "RoleAssignment", assignment.getId(),
+                tenantId, List.of(account.getId()), Map.of("account_id", account.getId().toString(),
+                        "role", UserRole.PARKING_ADMIN.name()));
+
+        issueAccountInvitation(account);
+        audit(account, "PARKING_ADMIN_INVITATION", "SUCCESS", source);
+        return account;
+    }
+
+    public AuthenticatedUserResource signInWithGoogle(GoogleIdentity identity, String source) {
+        var credential = credentials.findGoogleByExternalSubject(identity.subject()).orElse(null);
+        if (credential != null) {
+            var account = credential.getAccount();
+            if (credential.getStatus() != CredentialStatus.ACTIVE || !account.isActive()) {
+                audit(account, "GOOGLE_SIGN_IN", "FAILURE", source);
+                throw invalidCredentials();
+            }
+            credential.usedAt(clock.instant());
+            credentials.save(credential);
+            var result = issueSession(account);
+            audit(account, "GOOGLE_SIGN_IN", "SUCCESS", source);
+            return result;
+        }
+
+        String email = Account.normalizeEmail(identity.email());
+        var existing = accounts.findByEmail(email).orElse(null);
+        if (existing != null) {
+            audit(existing, "GOOGLE_SIGN_UP", "FAILURE", source);
+            throw new IamException(HttpStatus.CONFLICT,
+                    "An account already uses this email. Sign in to that account and link Google from its authenticated session.");
+        }
+
+        var account = accounts.saveAndFlush(new Account(email));
+        credentials.saveAndFlush(Credential.google(account, identity.subject()));
+        roles.saveAndFlush(new RoleAssignment(account, UserRole.DRIVER, null, clock.instant(), null, AssignmentStatus.ACTIVE));
+        domainEvents.publish("identity.account.registered", "Identity & Access Management", "Account", account.getId(),
+                null, List.of(), Map.of("account_id", account.getId().toString(), "authentication_method", "GOOGLE"));
+        var result = issueSession(account);
+        audit(account, "GOOGLE_SIGN_UP", "SUCCESS", source);
+        return result;
+    }
+
+    public void linkGoogle(SpotgoUserPrincipal actor, GoogleIdentity identity, String source) {
+        if (actor == null) throw new IamException(HttpStatus.UNAUTHORIZED, "A valid SpotGo session is required to link Google.");
+        var account = accounts.findByIdForUpdate(actor.getAccountId())
+                .orElseThrow(() -> new IamException(HttpStatus.UNAUTHORIZED, "The account is no longer available."));
+        if (!account.isActive()) throw new IamException(HttpStatus.UNAUTHORIZED, "The account is disabled.");
+
+        var owner = accounts.findByEmail(Account.normalizeEmail(identity.email())).orElse(null);
+        if (owner != null && !owner.getId().equals(account.getId())) {
+            audit(account, "GOOGLE_LINK", "FAILURE", source);
+            throw new IamException(HttpStatus.CONFLICT, "The verified Google email belongs to another SpotGo account.");
+        }
+
+        var existing = credentials.findGoogleByExternalSubject(identity.subject()).orElse(null);
+        if (existing != null) {
+            if (!existing.getAccountId().equals(account.getId())) {
+                audit(account, "GOOGLE_LINK", "FAILURE", source);
+                throw new IamException(HttpStatus.CONFLICT, "This Google identity is linked to another SpotGo account.");
+            }
+            if (existing.getStatus() == CredentialStatus.ACTIVE) return;
+            audit(account, "GOOGLE_LINK", "FAILURE", source);
+            throw new IamException(HttpStatus.CONFLICT, "This Google credential was revoked and cannot be linked again.");
+        }
+
+        credentials.saveAndFlush(Credential.google(account, identity.subject()));
+        domainEvents.publish("identity.google.linked", "Identity & Access Management", "Account", account.getId(),
+                null, List.of(account.getId()), Map.of("account_id", account.getId().toString()));
+        audit(account, "GOOGLE_LINK", "SUCCESS", source);
     }
 
     public AuthenticatedUserResource refresh(String refreshToken, String source) {
@@ -143,6 +236,22 @@ public class AuthenticationService {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Email service is unavailable. Check the Resend configuration.", ex);
         }
         audit(account, "PASSWORD_RESET_REQUEST", "SUCCESS", source);
+    }
+
+    private void issueAccountInvitation(Account account) {
+        String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
+        Instant now = clock.instant();
+        String codeHash = encoder.encode(code);
+        var reset = resets.findByEmail(account.getEmail()).orElseGet(() ->
+                new PasswordResetCode(account.getEmail(), codeHash, now.plusSeconds(resetMinutes * 60L), now));
+        reset.renew(codeHash, now.plusSeconds(resetMinutes * 60L), now);
+        resets.saveAndFlush(reset);
+        try {
+            notifications.sendAccountInvitationCode(account.getEmail(), code);
+        } catch (RuntimeException ex) {
+            throw new IamException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Account invitation could not be sent. Check the Resend configuration.");
+        }
     }
 
     public void confirmPasswordReset(String email, String code, String newPassword, String source) {

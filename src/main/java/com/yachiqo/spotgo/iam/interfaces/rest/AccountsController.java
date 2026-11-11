@@ -4,12 +4,15 @@ import com.yachiqo.spotgo.iam.application.*;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.iam.interfaces.rest.resources.*;
+import com.yachiqo.spotgo.profiles.interfaces.rest.resources.ProfileResource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.media.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Page;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,6 +42,10 @@ public class AccountsController {
         @Schema(description = "Omit the field to use the current timestamp.") Instant validFrom,
         @Schema(description = "NULL means there is no end date; it does not mean the status is ACTIVE.") Instant validTo,
         AssignmentStatus status) {}
+    public record ProvisionParkingAdminResource(@NotNull UUID tenantId, @NotBlank @Email String email,
+            @NotBlank String firstName, @NotBlank String lastName, @NotBlank String phone) {}
+    public record ProvisionedParkingAdminResource(AccountResource account, RoleAssignmentResource roleAssignment,
+                                                   ProfileResource profile) {}
 
     @GetMapping("/me")
     @Operation(tags = "Accounts", summary = "View my account", description = "Returns the account associated with the access token, including its email and status. Retrieve the personal profile from /profiles/me.")
@@ -89,6 +96,20 @@ public class AccountsController {
             @Valid @RequestBody AssignRoleResource body, HttpServletRequest request) {
         return RoleAssignmentResource.from(administration.assign(actor, accountId, body.roleType(), body.tenantId(),
             body.validFrom(), body.validTo(), body.status(), request.getRemoteAddr()), administration.now());
+    }
+    @PostMapping("/parking-admin")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(tags = "Accounts", summary = "Provision a Parking Admin", description = "Available to SUPER_ADMIN only. Creates a PASSWORD account, one PARKING_ADMIN assignment scoped to an active tenant, and a personal profile. Sends a one-time account setup code by email; RESEND_API_KEY and APP_PASSWORD_RESET_FROM_EMAIL must be configured. The temporary password is never returned.")
+    @ApiResponse(responseCode = "201", description = "Parking Admin account, role assignment, profile, and invitation created.")
+    @ApiResponse(responseCode = "503", description = "The invitation email could not be sent; the account creation is rolled back.", content = @Content)
+    public ProvisionedParkingAdminResource provisionParkingAdmin(@AuthenticationPrincipal SpotgoUserPrincipal actor,
+            @Valid @RequestBody ProvisionParkingAdminResource body, HttpServletRequest request) {
+        var created = administration.provisionParkingAdmin(actor, body.tenantId(), body.email(), body.firstName(),
+                body.lastName(), body.phone(), request.getRemoteAddr());
+        return new ProvisionedParkingAdminResource(AccountResource.from(created.account()),
+                RoleAssignmentResource.from(created.roleAssignment(), administration.now()),
+                ProfileResource.from(created.profile()));
     }
     @PatchMapping("/me/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)

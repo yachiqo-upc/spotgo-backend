@@ -29,11 +29,11 @@ public class ParkingSpotsController {
  private final ParkingCommandServiceImpl commands; private final ParkingQueryServiceImpl queries;
  public ParkingSpotsController(ParkingCommandServiceImpl commands,ParkingQueryServiceImpl queries){this.commands=commands;this.queries=queries;}
 
- @GetMapping @Operation(summary="List parking spots in a zone", description = "Returns parking spots registered in the zone identified by zoneId.")
- public List<SpotView> list(@RequestParam UUID zoneId){return queries.spots(zoneId).stream().map(SpotView::of).toList();}
- @GetMapping("/availability") @Operation(summary="Check availability for a time interval",description="Calculates availability from operational status, reservations, holds, and open parking sessions. physicalOccupancy comes from Monitoring and can be AVAILABLE, OCCUPIED, or UNAVAILABLE. The current time requires AVAILABLE; a current observation does not guarantee future availability.")
- public List<ParkingQueryServiceImpl.Availability> availability(@RequestParam UUID zoneId,@RequestParam Instant startAt,@RequestParam Instant endAt) {
-  return queries.availability(zoneId,startAt,endAt);
+ @GetMapping @Operation(summary="List parking spots in an accessible zone", description = "Returns spots for the requested zone. Drivers can access only zones allowed for their tenant-specific profile type.")
+ public List<SpotView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam UUID zoneId){return queries.spots(actor,zoneId).stream().map(SpotView::of).toList();}
+ @GetMapping("/availability") @Operation(summary="Check availability for a time interval",description="Calculates availability from operational status, reservations, holds, and open parking sessions in a zone accessible to the caller. Drivers can query only zones allowed for their tenant-specific profile type. physicalOccupancy comes from Monitoring and can be AVAILABLE, OCCUPIED, or UNAVAILABLE. The current time requires AVAILABLE; a current observation does not guarantee future availability.")
+ public List<ParkingQueryServiceImpl.Availability> availability(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam UUID zoneId,@RequestParam Instant startAt,@RequestParam Instant endAt) {
+  return queries.availability(actor,zoneId,startAt,endAt);
  }
  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Create a parking spot",description="code must be unique within its zone. The default category is STANDARD; features is a JSON object containing spot attributes.")
  @ApiResponse(responseCode="201",description="Parking spot created.")

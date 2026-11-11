@@ -99,7 +99,7 @@ class DbSeederTest {
     }
 
     @Test void fixtureTablesContainConsistentRowsAndColumns() {
-        assertEquals(31, fixtures.size());
+        assertEquals(32, fixtures.size());
         var tables = fixtures.fields();
         while (tables.hasNext()) {
             var table = tables.next();
@@ -180,7 +180,9 @@ class DbSeederTest {
         var tables=fixtures.fields();
         while(tables.hasNext()) {
             var table=tables.next();var ids=new HashSet<String>();
-            String pk=table.getValue().get(0).fieldNames().next();
+            var firstRow=table.getValue().get(0);
+            if(firstRow==null)continue;
+            String pk=firstRow.fieldNames().next();
             for(var row:table.getValue())assertTrue(ids.add(UUID.fromString(row.path(pk).asText()).toString()),"Duplicate primary key in "+table.getKey());
         }
         for(var payment:fixtures.path("digital_payments"))if(!payment.path("token_id").isNull()) {
