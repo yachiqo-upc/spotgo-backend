@@ -13,8 +13,8 @@ import static com.yachiqo.spotgo.parking.domain.model.valueobjects.ParkingValues
 public class Reservation {
  @Id @GeneratedValue(strategy=GenerationType.UUID) @Column(name="reservation_id", nullable=false, updatable=false) private UUID id;
  @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="tenant_id",nullable=false,updatable=false) private Tenant tenant;
- @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="zone_id",nullable=false,updatable=false) private ParkingZone zone;
- @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="spot_id",nullable=false,updatable=false) private ParkingSpot spot;
+ @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="zone_id",nullable=false) private ParkingZone zone;
+ @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="spot_id",nullable=false) private ParkingSpot spot;
 
  @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="profile_id",nullable=false,updatable=false)
  private com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile profile;
@@ -72,5 +72,11 @@ public class Reservation {
  public void start() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("The reservation must be confirmed.");status=ReservationStatus.ACTIVE; }
  public void complete(boolean overstay) { status=overstay?ReservationStatus.OVERSTAYED:ReservationStatus.COMPLETED; }
  public void noShow() { if(status!=ReservationStatus.RESERVED) throw new IllegalArgumentException("Incompatible state.");status=ReservationStatus.NO_SHOW; }
+ public void reassignSpot(ParkingSpot newSpot) {
+  Objects.requireNonNull(newSpot);
+  if(status!=ReservationStatus.RESERVED || !tenant.getId().equals(newSpot.getTenantId()))
+   throw new IllegalArgumentException("Only a confirmed reservation can move to a spot in the same tenant.");
+  zone=newSpot.getZone();spot=newSpot;
+ }
 
 }

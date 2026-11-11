@@ -8,6 +8,9 @@ import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
 import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.VehicleRepository;
 import com.yachiqo.spotgo.profiles.domain.model.valueobjects.VehicleStatus;
+import com.yachiqo.spotgo.profiles.domain.model.valueobjects.DriverProfileType;
+import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.DriverClassificationRepository;
+import com.yachiqo.spotgo.shared.application.events.SpotgoDomainEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
@@ -29,14 +32,16 @@ public class ParkingCommandServiceImpl {
  private final GuestParkingSessionRepository guests;
  private final VehicleRepository vehicles;
  private final ProfilesManagementService profiles;
+ private final DriverClassificationRepository classifications;
  private final ParkingPaymentGateway payments;
  private final ParkingOccupancyGateway occupancy;
+ private final SpotgoDomainEventPublisher domainEvents;
  private final Clock clock;
  public ParkingCommandServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,
   FloorPlanRepository plans,DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,
-  GuestParkingSessionRepository guests,VehicleRepository vehicles,ProfilesManagementService profiles,ParkingPaymentGateway payments,Clock clock,ParkingOccupancyGateway occupancy) {
+  GuestParkingSessionRepository guests,VehicleRepository vehicles,ProfilesManagementService profiles,DriverClassificationRepository classifications,ParkingPaymentGateway payments,Clock clock,ParkingOccupancyGateway occupancy,SpotgoDomainEventPublisher domainEvents) {
   this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;
-  this.sessions=sessions;this.guests=guests;this.vehicles=vehicles;this.profiles=profiles;this.payments=payments;this.clock=clock;this.occupancy=occupancy;
+  this.sessions=sessions;this.guests=guests;this.vehicles=vehicles;this.profiles=profiles;this.classifications=classifications;this.payments=payments;this.clock=clock;this.occupancy=occupancy;this.domainEvents=domainEvents;
  }
  public static ParkingException missing(String resource) {return new ParkingException(HttpStatus.NOT_FOUND,resource+" not found");}
  public static ParkingException conflict(String message) {return new ParkingException(HttpStatus.CONFLICT,message);}
@@ -47,7 +52,7 @@ public class ParkingCommandServiceImpl {
  public Tenant tenant(UUID id) {return tenants.findById(id).orElseThrow(()->missing("Tenant"));}
  public ParkingZone zone(UUID id) {return zones.findById(id).orElseThrow(()->missing("Zone"));}
  public ParkingSpot spot(UUID id) {return spots.findById(id).orElseThrow(()->missing("Parking spot"));}
- public FloorPlan plan(UUID id) {return plans.findById(id).orElseThrow(()->missing("Croquis"));}
+ public FloorPlan plan(UUID id) {return plans.findById(id).orElseThrow(()->missing("Floor plan"));}
  private void operational(ParkingSpot spot) {
   if(spot.getOperationalStatus()!=OperationalStatus.ACTIVE || spot.getZone().getStatus()!=ZoneStatus.ACTIVE ||
    spot.getZone().getTenant().getStatus()!=TenantStatus.ACTIVE) throw conflict("The tenant, zone, and parking spot must be enabled.");
@@ -76,11 +81,21 @@ public class ParkingCommandServiceImpl {
  }
  @Transactional
  public ParkingZone createZone(SpotgoUserPrincipal actor,UUID tenant,String name,Map<String,Object> location,String color) {
-  admin(actor,tenant);return zones.saveAndFlush(new ParkingZone(tenant(tenant),name,location,color));
+  return createZone(actor,tenant,name,location,color,null);
+ }
+ @Transactional
+ public ParkingZone createZone(SpotgoUserPrincipal actor,UUID tenant,String name,Map<String,Object> location,String color,Set<DriverProfileType> allowedProfileTypes) {
+  admin(actor,tenant);var zone=zones.saveAndFlush(new ParkingZone(tenant(tenant),name,location,color,allowedProfileTypes));
+  domainEvents.publish("parking.zone.created","Parking Infrastructure","ParkingZone",zone.getId(),tenant,List.of(),Map.of("zone_id",zone.getId().toString()));
+  return zone;
  }
  @Transactional
  public ParkingZone updateZone(SpotgoUserPrincipal actor,UUID id,String name,Map<String,Object> location,String color,ZoneStatus status) {
-  var z=zones.lock(id).orElseThrow(()->missing("Zone"));admin(actor,z.getTenantId());z.update(name,location,color,status);return zones.saveAndFlush(z);
+  return updateZone(actor,id,name,location,color,status,null);
+ }
+ @Transactional
+ public ParkingZone updateZone(SpotgoUserPrincipal actor,UUID id,String name,Map<String,Object> location,String color,ZoneStatus status,Set<DriverProfileType> allowedProfileTypes) {
+  var z=zones.lock(id).orElseThrow(()->missing("Zone"));admin(actor,z.getTenantId());z.update(name,location,color,status,allowedProfileTypes);return zones.saveAndFlush(z);
  }
  @Transactional
  public ParkingSpot createSpot(SpotgoUserPrincipal actor,UUID zoneId,String code,String type,Map<String,Object> features) {
@@ -92,7 +107,9 @@ public class ParkingCommandServiceImpl {
   payments.lockProfile(profiles.current(actor).getId());
   payments.prepareSpotAddition(actor,z.getTenantId());
   var spot=spots.saveAndFlush(new ParkingSpot(z,code,type,features));
-  return new SpotRegistration(spot,payments.billSpotAddition(actor,spot));
+  var billing=payments.billSpotAddition(actor,spot);
+  domainEvents.publish("parking.spot.created","Parking Infrastructure","ParkingSpot",spot.getId(),spot.getTenantId(),List.of(),Map.of("spot_id",spot.getId().toString(),"zone_id",spot.getZoneId().toString()));
+  return new SpotRegistration(spot,billing);
  }
  @Transactional
  public ParkingSpot updateSpot(SpotgoUserPrincipal actor,UUID id,String code,String type,Map<String,Object> features,OperationalStatus status) {
@@ -109,13 +126,13 @@ public class ParkingCommandServiceImpl {
  }
  @Transactional
  public FloorPlan publishPlan(SpotgoUserPrincipal actor,UUID id,boolean archive) {
-  var p=plans.lock(id).orElseThrow(()->missing("Croquis"));admin(actor,p.getZone().getTenantId());
+  var p=plans.lock(id).orElseThrow(()->missing("Floor plan"));admin(actor,p.getZone().getTenantId());
   if(archive) {p.archive();maps.byPlan(id).forEach(DigitalParkingMap::archive);} else p.publish(clock.instant());
   return plans.saveAndFlush(p);
  }
  @Transactional
  public DigitalParkingMap createMap(SpotgoUserPrincipal actor,UUID plan,int version,List<Map<String,Object>> elements) {
-  var p=plans.lock(plan).orElseThrow(()->missing("Croquis"));admin(actor,p.getZone().getTenantId());
+  var p=plans.lock(plan).orElseThrow(()->missing("Floor plan"));admin(actor,p.getZone().getTenantId());
   if(maps.byPlan(plan).stream().anyMatch(m->m.getVersion()==version)) throw conflict("This map version already exists.");
   // Validate spot references in the documented SPOT elements; positions remain renderer data.
   for(var e:elements) if("SPOT".equals(e.get("type"))) {
@@ -127,8 +144,8 @@ public class ParkingCommandServiceImpl {
  }
  @Transactional
  public DigitalParkingMap publishMap(SpotgoUserPrincipal actor,UUID id,boolean archive) {
-  var selected=maps.findById(id).orElseThrow(()->missing("Mapa"));
-  var p=plans.lock(selected.getFloorPlanId()).orElseThrow(()->missing("Croquis"));admin(actor,p.getZone().getTenantId());
+  var selected=maps.findById(id).orElseThrow(()->missing("Digital map"));
+  var p=plans.lock(selected.getFloorPlanId()).orElseThrow(()->missing("Floor plan"));admin(actor,p.getZone().getTenantId());
   if(archive) selected.archive();
   else {
    if(p.getStatus()!=PublicationStatus.PUBLISHED) throw conflict("Publish the floor plan first.");
@@ -144,12 +161,19 @@ public class ParkingCommandServiceImpl {
   profiles.requireOwner(actor,vehicle);
   if(vehicle.getStatus()!=VehicleStatus.ACTIVE) throw conflict("Vehicle is inactive.");
   var spot=lockSpot(spotId);operational(spot);var now=clock.instant();
+  var driverType=classifications.findByProfileIdAndTenantId(profile.getId(),spot.getTenantId())
+   .map(com.yachiqo.spotgo.profiles.domain.model.aggregates.DriverClassification::getProfileType)
+   .orElse(DriverProfileType.PRIVATE);
+  if(!spot.getZone().getAllowedProfileTypes().contains(driverType))
+   throw new AccessDeniedException("The driver's profile type is not allowed in this parking zone.");
   if(!start.isAfter(now)&&!occupancy.physicalOccupancy(spotId).equals("AVAILABLE"))throw conflict("There is no reliable physical confirmation that the parking spot is free now.");
   if(reservations.overlappingSpot(spotId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("The parking spot already has an active reservation or hold.");
   if(reservations.overlappingVehicle(vehicleId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("The vehicle already has an overlapping reservation.");
   if(!sessions.openSpot(spotId).isEmpty() || !guests.openSpot(spotId).isEmpty()) throw conflict("The parking spot has an open session.");
   var rules=spot.getZone().getTenant().getRules();
-  return reservations.saveAndFlush(new Reservation(spot,profile,vehicle,start,end,payments.reservationPrice(profile.getId(),ParkingTariffs.price(rules,start,end),now),now,ParkingTariffs.lockMinutes(rules)));
+  var reservation=reservations.saveAndFlush(new Reservation(spot,profile,vehicle,start,end,payments.reservationPrice(profile.getId(),ParkingTariffs.price(rules,start,end),now),now,ParkingTariffs.lockMinutes(rules)));
+  domainEvents.publish("parking.reservation.created","Parking Infrastructure","Reservation",reservation.getId(),reservation.getTenantId(),List.of(profile.getAccountId()),Map.of("reservation_id",reservation.getId().toString(),"status",reservation.getStatus().name()));
+  return reservation;
  }
  public void reservationAccess(SpotgoUserPrincipal actor,Reservation r) {
   if(actor!=null && actor.getRole()==UserRole.DRIVER && actor.getAccountId().equals(r.getProfile().getAccountId())) return;
@@ -159,7 +183,9 @@ public class ParkingCommandServiceImpl {
  public Reservation cancel(SpotgoUserPrincipal actor,UUID id) {
   var current=reservations.findById(id).orElseThrow(()->missing("Reservation"));reservationAccess(actor,current);payments.lockProfile(current.getProfileId());
   var r=reservations.lock(id).orElseThrow(()->missing("Reservation"));reservationAccess(actor,r);
-  r.expire(clock.instant());if(r.getStatus()!=ReservationStatus.CANCELLED)r.cancel();payments.cancelled(r);return reservations.saveAndFlush(r);
+  r.expire(clock.instant());if(r.getStatus()!=ReservationStatus.CANCELLED)r.cancel();payments.cancelled(r);var saved=reservations.saveAndFlush(r);
+  domainEvents.publish("parking.reservation.cancelled","Parking Infrastructure","Reservation",r.getId(),r.getTenantId(),List.of(r.getProfile().getAccountId()),Map.of("reservation_id",r.getId().toString()));
+  return saved;
  }
  @Transactional
  public Reservation confirm(SpotgoUserPrincipal actor,UUID id,UUID payment) {
@@ -168,13 +194,17 @@ public class ParkingCommandServiceImpl {
   if(r.getStatus()==ReservationStatus.RESERVED && payment.equals(r.getPaymentId()))return r;
   if(!r.blocks(clock.instant()) || r.getStatus()!=ReservationStatus.PENDING_PAYMENT) throw conflict("The hold has expired or the reservation is not pending.");
   if(!payment.equals(r.getPaymentId())) throw conflict("This payment is not the operation associated with this reservation.");
-  payments.requireApproved(payment,r.getProfileId(),r.getAmount());r.confirm(payment,clock.instant());return reservations.saveAndFlush(r);
+  payments.requireApproved(payment,r.getProfileId(),r.getAmount());r.confirm(payment,clock.instant());var saved=reservations.saveAndFlush(r);
+  domainEvents.publish("parking.reservation.confirmed","Parking Infrastructure","Reservation",r.getId(),r.getTenantId(),List.of(r.getProfile().getAccountId()),Map.of("reservation_id",r.getId().toString()));
+  return saved;
  }
  @Transactional
  public Reservation noShow(SpotgoUserPrincipal actor,UUID id) {
   var r=reservations.lock(id).orElseThrow(()->missing("Reservation"));admin(actor,r.getTenantId());
   if(clock.instant().isBefore(r.getEndAt())) throw conflict("Wait until the reservation interval ends before recording NO_SHOW.");
-  r.noShow();return reservations.saveAndFlush(r);
+  r.noShow();var saved=reservations.saveAndFlush(r);
+  domainEvents.publish("parking.reservation.no_show","Parking Infrastructure","Reservation",r.getId(),r.getTenantId(),List.of(r.getProfile().getAccountId()),Map.of("reservation_id",r.getId().toString()));
+  return saved;
  }
  @Transactional
  public ParkingSession enter(SpotgoUserPrincipal actor,UUID reservation) {
@@ -187,7 +217,9 @@ public class ParkingCommandServiceImpl {
   if(now.isBefore(r.getStartAt()) || !now.isBefore(r.getEndAt())) throw conflict("Entry is outside the reserved interval.");
   if(sessions.byReservation(reservation).isPresent() || !sessions.openVehicle(r.getVehicleId()).isEmpty() ||
     !sessions.openSpot(r.getSpotId()).isEmpty() || !guests.openSpot(r.getSpotId()).isEmpty()) throw conflict("An open parking session already exists for this reservation.");
-  r.start();return sessions.saveAndFlush(new ParkingSession(r,now));
+  r.start();var session=sessions.saveAndFlush(new ParkingSession(r,now));
+  domainEvents.publish("parking.session.started","Parking Infrastructure","ParkingSession",session.getId(),r.getTenantId(),List.of(r.getProfile().getAccountId()),Map.of("session_id",session.getId().toString(),"reservation_id",r.getId().toString()));
+  return session;
  }
  @Transactional
  public ParkingSession exit(SpotgoUserPrincipal actor,UUID id) {
@@ -196,7 +228,9 @@ public class ParkingCommandServiceImpl {
   var r=reservations.lock(s.getReservationId()).orElseThrow(()->missing("Reservation"));
   var now=clock.instant();s.close(now);
   boolean exceeded=now.isAfter(r.getEndAt().plusSeconds(ParkingTariffs.toleranceMinutes(r.getTenant().getRules())*60));
-  r.complete(exceeded);sessions.saveAndFlush(s);payments.completed(r,s);return s;
+  r.complete(exceeded);sessions.saveAndFlush(s);payments.completed(r,s);
+  domainEvents.publish("parking.session.completed","Parking Infrastructure","ParkingSession",s.getId(),r.getTenantId(),List.of(r.getProfile().getAccountId()),Map.of("session_id",s.getId().toString(),"reservation_id",r.getId().toString(),"overstay",Boolean.toString(exceeded)));
+  return s;
  }
  @Transactional
  public GuestParkingSession guestEnter(SpotgoUserPrincipal actor,UUID spotId,String plate,PhysicalPaymentMethod method) {

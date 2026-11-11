@@ -20,6 +20,8 @@ public class OccupancyAlert {
  @Enumerated(EnumType.STRING) @Column(name="alert_type",nullable=false) private AlertType alertType; @Enumerated(EnumType.STRING) @Column(name="severity",nullable=false) private Severity severity;
  @Column(name="evidence_ref",nullable=true) private String evidenceRef;
  @Column(name="created_at",nullable=false) private Instant createdAt; @Column(name="acknowledged_at",nullable=true) private Instant acknowledgedAt; @Column(name="closed_at",nullable=true) private Instant closedAt;
+ @Enumerated(EnumType.STRING) @Column(name="resolution_classification",length=40) private AlertResolutionClassification resolutionClassification;
+ @Column(name="resolution_action",length=1000) private String resolutionAction;
  @Enumerated(EnumType.STRING) @Column(name="status",nullable=false) private AlertStatus status;
  protected OccupancyAlert(){}
  
@@ -40,6 +42,11 @@ public class OccupancyAlert {
   return evidenceRef!=null&&evidenceRef.startsWith(prefix)?evidenceRef.substring(prefix.length()):null;
  }
  public void acknowledge(Instant now){if(status==AlertStatus.OPEN){acknowledgedAt=instant(now);status=AlertStatus.ACKNOWLEDGED;}}
- public void close(Instant now){if(status!=AlertStatus.CLOSED){closedAt=instant(now);status=AlertStatus.CLOSED;}}
+ public void close(Instant now,AlertResolutionClassification classification,String action){
+  if(status==AlertStatus.CLOSED)return;
+  if(classification==null)throw new IllegalArgumentException("A resolution classification is required.");
+  if(action==null||action.isBlank()||action.length()>1000)throw new IllegalArgumentException("A resolution action between 1 and 1000 characters is required.");
+  resolutionClassification=classification;resolutionAction=action.trim();closedAt=instant(now);status=AlertStatus.CLOSED;
+ }
 
 }

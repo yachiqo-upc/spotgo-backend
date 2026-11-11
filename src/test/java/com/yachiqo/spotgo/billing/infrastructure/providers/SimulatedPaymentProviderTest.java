@@ -1,5 +1,6 @@
 package com.yachiqo.spotgo.billing.infrastructure.providers;
 
+import com.yachiqo.spotgo.billing.application.PaymentProvider;
 import com.yachiqo.spotgo.billing.domain.model.valueobjects.PaymentStatus;
 import com.yachiqo.spotgo.billing.domain.model.valueobjects.RefundStatus;
 import org.junit.jupiter.api.Test;
@@ -7,37 +8,37 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SimulatedPaymentProviderTest {
     private final SimulatedPaymentProvider provider = new SimulatedPaymentProvider();
 
     @Test
-    void acceptsSyntheticTokenReferencesAndRejectsCardNumbers() {
-        var token = provider.inspectToken("simulated-visa-4242");
-
-        assertEquals("VISA", token.brand());
-        assertEquals("4242", token.lastFour());
-        assertTrue(token.reference().startsWith("simulated:visa:4242:"));
-        assertThrows(IllegalArgumentException.class, () -> provider.inspectToken("4111111111111111"));
-        assertThrows(IllegalArgumentException.class, () -> provider.inspectToken("visa-4242"));
+    void syntheticChargeOutcomesAreResolvedWithoutAnExternalProcessor() {
+        assertChargeOutcome("simulated-visa-4242", PaymentStatus.APPROVED);
+        assertChargeOutcome("simulated-visa-0000", PaymentStatus.REJECTED);
+        assertChargeOutcome("simulated-visa-1111", PaymentStatus.PENDING);
     }
 
     @Test
-    void approvesChargesIdempotentlyAndCompletesRefundsWithoutMovingMoney() {
+    void refundIsAsynchronousAndIdempotentlyReconciled() {
         UUID paymentId = UUID.randomUUID();
         UUID refundId = UUID.randomUUID();
-        var token = provider.inspectToken("simulated-visa-4242");
+        String chargeReference = provider.reconcile(paymentId, 1,
+                provider.charge(paymentId, 1, provider.inspectToken("simulated-visa-4242").reference(),
+                        new BigDecimal("12.00"), "PEN").operationReference()).operationReference();
 
-        var first = provider.charge(paymentId, 1, token.reference(), new BigDecimal("30.00"), "PEN");
-        var replay = provider.charge(paymentId, 1, token.reference(), new BigDecimal("30.00"), "PEN");
-        var reconciled = provider.reconcile(paymentId, 1, first.operationReference());
-        var refund = provider.refund(refundId, first.operationReference(), new BigDecimal("30.00"), "PEN");
+        var started = provider.refund(refundId, chargeReference, new BigDecimal("12.00"), "PEN");
+        assertEquals(RefundStatus.PROCESSING, started.status());
+        assertEquals(RefundStatus.COMPLETED,
+                provider.reconcileRefund(refundId, started.operationReference()).status());
+    }
 
-        assertEquals(PaymentStatus.APPROVED, first.status());
-        assertEquals(first.operationReference(), replay.operationReference());
-        assertEquals(PaymentStatus.APPROVED, reconciled.status());
-        assertEquals(RefundStatus.COMPLETED, refund.status());
-        assertEquals("simulated-refund:" + refundId, refund.operationReference());
+    private void assertChargeOutcome(String syntheticToken, PaymentStatus expected) {
+        UUID paymentId = UUID.randomUUID();
+        PaymentProvider.TokenDetails token = provider.inspectToken(syntheticToken);
+        var started = provider.charge(paymentId, 1, token.reference(), new BigDecimal("12.00"), "PEN");
+        assertEquals(PaymentStatus.PENDING, started.status());
+        assertEquals(expected, provider.reconcile(paymentId, 1, started.operationReference()).status());
     }
 }

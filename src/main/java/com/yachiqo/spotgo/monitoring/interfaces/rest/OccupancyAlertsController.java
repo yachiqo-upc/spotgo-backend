@@ -30,9 +30,9 @@ public class OccupancyAlertsController {
  @GetMapping @Operation(summary="List alerts in my scope", description = "Returns alerts associated with the tenant administered by the caller or otherwise visible to their role.")
  public List<AlertView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam(required=false) UUID tenantId){return service.alerts(actor,tenantId).stream().map(AlertView::of).toList();}
  @PostMapping("/{alertId}/acknowledge") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Acknowledge an alert",description="Sets acknowledgedAt and changes the alert status to ACKNOWLEDGED.")
- public AlertView acknowledge(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId){return AlertView.of(service.updateAlert(actor,alertId,false));}
- @PostMapping("/{alertId}/close") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Close an alert for a resolved incident",description="Requires a RESOLVED conflict or a recovered health event. Sets closedAt; closing a notification does not imply that the sensor recovered.")
- public AlertView close(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId){return AlertView.of(service.updateAlert(actor,alertId,true));}
+ public AlertView acknowledge(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId){return AlertView.of(service.acknowledgeAlert(actor,alertId));}
+ @PostMapping("/{alertId}/close") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Close an alert with its recorded resolution",description="Requires a RESOLVED conflict or a recovered health event, plus the incident classification and action taken. The classification, action and closure time are retained in the alert history.")
+ public AlertView close(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID alertId,@Valid @RequestBody AlertResolutionBody body){return AlertView.of(service.closeAlert(actor,alertId,body.resolutionClassification(),body.resolutionAction()));}
 
  @PutMapping(value="/{alertId}/evidence",consumes=org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
  @PreAuthorize("hasRole('PARKING_ADMIN')")

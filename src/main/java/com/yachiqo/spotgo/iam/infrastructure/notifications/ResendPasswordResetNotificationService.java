@@ -49,6 +49,18 @@ public class ResendPasswordResetNotificationService implements PasswordResetNoti
 
     @Override
     public void sendPasswordResetCode(String email, String code) {
+        sendCode(email, "SpotGo password reset code",
+                "Your SpotGo password reset code is: " + code + "\n\nThis code can be used only once and expires soon.");
+    }
+
+    @Override
+    public void sendAccountInvitationCode(String email, String code) {
+        sendCode(email, "You are invited to SpotGo",
+                "Your SpotGo account is ready. Use this one-time code to set your password in the app: "
+                        + code + "\n\nThe code expires soon and can be used only once.");
+    }
+
+    private void sendCode(String email, String subject, String text) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("Missing Resend API key configuration");
         }
@@ -59,8 +71,8 @@ public class ResendPasswordResetNotificationService implements PasswordResetNoti
         var payload = new ResendEmailRequest(
                 fromEmail,
                 List.of(email),
-                "SpotGo password reset code",
-                "Your SpotGo password reset code is: " + code + "\n\nThis code can be used only once and expires soon.");
+                subject,
+                text);
 
         var request = HttpRequest.newBuilder(URI.create(resendUrl))
                 .timeout(REQUEST_TIMEOUT)

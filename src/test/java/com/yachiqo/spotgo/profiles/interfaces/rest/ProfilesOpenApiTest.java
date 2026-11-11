@@ -46,6 +46,8 @@ class ProfilesOpenApiTest {
         assertTrue(paths.has("/api/v1/authentication/sign-in"));
         assertFalse(paths.has("/api/v1/receipts"));
         assertTrue(api("06-complete-backend").path("paths").has("/api/v1/digital-payments"));
+        assertTrue(api("06-complete-backend").path("paths").has("/api/v1/capacity-alerts"));
+        assertTrue(api("06-complete-backend").path("paths").has("/api/v1/notifications/devices"));
         assertFalse(api("06-complete-backend").path("paths").has("/api/v1/receipts"));
     }
 
@@ -76,6 +78,27 @@ class ProfilesOpenApiTest {
         JsonNode properties = document.path("components").path("schemas").path("ProfileResource").path("properties");
         assertNotEquals(properties.path("id").path("example").asText(), properties.path("accountId").path("example").asText());
         assertFalse(properties.path("accountId").path("description").asText().isBlank());
+    }
+
+    @Test void completeBackendDocumentsEveryRestOperation() throws Exception {
+        JsonNode paths = api("06-complete-backend").path("paths");
+        var documentedMethods = java.util.Set.of("get", "post", "put", "patch", "delete", "head", "options");
+        int operationCount = 0;
+        var endpoints = paths.fields();
+        while (endpoints.hasNext()) {
+            var endpoint = endpoints.next();
+            var operations = endpoint.getValue().fields();
+            while (operations.hasNext()) {
+                var operation = operations.next();
+                if (!documentedMethods.contains(operation.getKey())) continue;
+                assertFalse(operation.getValue().path("summary").asText().isBlank(),
+                        "Missing title for " + operation.getKey().toUpperCase() + " " + endpoint.getKey());
+                assertFalse(operation.getValue().path("description").asText().isBlank(),
+                        "Missing description for " + operation.getKey().toUpperCase() + " " + endpoint.getKey());
+                operationCount++;
+            }
+        }
+        assertEquals(121, operationCount);
     }
 
     @Test void unauthenticatedProfileRequestMatchesDocumented401() throws Exception {

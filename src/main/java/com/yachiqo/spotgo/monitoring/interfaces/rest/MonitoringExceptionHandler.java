@@ -11,7 +11,7 @@ import java.util.Map;
 @RestControllerAdvice(basePackages="com.yachiqo.spotgo.monitoring.interfaces.rest") @Order(Ordered.HIGHEST_PRECEDENCE)
 public class MonitoringExceptionHandler {
  @ExceptionHandler(ResponseStatusException.class)
- public ResponseEntity<?> status(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"Operacion rechazada":e.getReason()));}
+ public ResponseEntity<?> status(ResponseStatusException e){return ResponseEntity.status(e.getStatusCode()).body(Map.of("message",e.getReason()==null?"Operation rejected.":e.getReason()));}
  @ExceptionHandler({IllegalArgumentException.class,HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class})
  public ResponseEntity<?> invalid(Exception e){return ResponseEntity.badRequest().body(Map.of("message",e instanceof IllegalArgumentException?e.getMessage():"Invalid JSON, UUID, or timestamp."));}
  @ExceptionHandler({DataIntegrityViolationException.class,PessimisticLockingFailureException.class})

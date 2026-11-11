@@ -7,6 +7,7 @@ import com.yachiqo.spotgo.iam.interfaces.rest.resources.AuthenticatedUserResourc
 import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.*;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.VehicleRepository;
+import com.yachiqo.spotgo.profiles.domain.model.valueobjects.DriverProfileType;
 import com.yachiqo.spotgo.parking.application.internal.commandservices.ParkingCommandServiceImpl;
 import com.yachiqo.spotgo.parking.application.internal.queryservices.ParkingQueryServiceImpl;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.*;
@@ -67,7 +68,7 @@ class ParkingInfrastructureTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
 
-  for(String table:List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
+  for(String table:List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts")) jdbc.update("DELETE FROM "+table);
   superAuth=register("super");
   var sr=roles.findByAccountId(superAuth.accountId()).orElseThrow();sr.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(sr);
@@ -209,10 +210,32 @@ class ParkingInfrastructureTest {
   assertThrows(ParkingException.class,()->commands.createMap(admin,p.getId(),1,List.of(Map.of("type","SPOT","spot_id",spot.getId().toString()))));
  }
  @Test void availabilityIsDerivedAndDoesNotClaimPhysicalOccupancy(){
-  var r=reserve();var available=queries.availability(zone.getId(),r.getStartAt(),r.getEndAt());
+  var r=reserve();var available=queries.availability(driver,zone.getId(),r.getStartAt(),r.getEndAt());
   assertFalse(available.stream().filter(a->a.spotId().equals(spot.getId())).findFirst().orElseThrow().bookable());
   assertEquals("UNAVAILABLE",available.get(0).physicalOccupancy());
   assertEquals(OperationalStatus.ACTIVE,commands.spot(spot.getId()).getOperationalStatus());
+ }
+ @Test void driverProfileTypeFiltersZonesAndIsEnforcedForAvailabilityAndReservation(){
+  commands.updateZone(admin,zone.getId(),zone.getName(),zone.getLocation(),zone.getColorCode(),zone.getStatus(),Set.of(DriverProfileType.TAXI));
+  assertTrue(queries.zones(driver,tenant.getId()).isEmpty());
+  assertThrows(org.springframework.security.access.AccessDeniedException.class,()->queries.availability(driver,zone.getId(),now.get().plusSeconds(60),now.get().plusSeconds(3600)));
+  assertThrows(org.springframework.security.access.AccessDeniedException.class,this::reserve);
+
+  profiles.assign(admin,tenant.getId(),profiles.driver(driver).getId(),DriverProfileType.TAXI);
+  assertEquals(Set.of(DriverProfileType.TAXI),queries.zones(driver,tenant.getId()).getFirst().getAllowedProfileTypes());
+  assertNotNull(reserve());
+ }
+ @Test void unconfiguredZoneAllowsAllDriverProfileTypesAndDefaultsToPrivate(){
+  assertEquals(EnumSet.allOf(DriverProfileType.class),zone.getAllowedProfileTypes());
+  assertNotNull(reserve());
+ }
+ @Test void parkingZoneHttpPersistsAndReturnsAllowedProfileTypes() throws Exception {
+  var requestBody=Map.of("name","Taxi only","location",Map.of("reference","East"),"colorCode","#112233","allowedProfileTypes",List.of("TAXI"));
+  var created=request("POST","/api/v1/parking-zones?tenantId="+tenant.getId(),requestBody,adminAuth.accessToken());
+  assertEquals(201,created.statusCode());
+  var jsonZone=json.readTree(created.body());assertEquals(List.of("TAXI"),json.convertValue(jsonZone.path("allowedProfileTypes"),List.class));
+  var id=UUID.fromString(jsonZone.path("zoneId").asText());
+  assertEquals(403,request("GET","/api/v1/parking-spots/availability?zoneId="+id+"&startAt="+now.get().plusSeconds(60)+"&endAt="+now.get().plusSeconds(3600),null,driverAuth.accessToken()).statusCode());
  }
  @Test void swaggerAndHttpActuallyEnforceRoles() throws Exception {
   assertEquals(401,request("GET","/api/v1/reservations",null,null).statusCode());

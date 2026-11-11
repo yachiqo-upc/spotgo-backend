@@ -36,7 +36,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                 "/api/v1/authentication/sign-in", "/api/v1/authentication/sign-up",
-                                "/api/v1/authentication/refresh", "/api/v1/authentication/password-reset/request",
+                                "/api/v1/authentication/refresh", "/api/v1/authentication/google",
+                                "/api/v1/authentication/password-reset/request",
                                 "/api/v1/authentication/password-reset/confirm").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())

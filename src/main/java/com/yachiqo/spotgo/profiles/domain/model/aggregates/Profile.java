@@ -11,7 +11,7 @@ import java.util.UUID;
 import static com.yachiqo.spotgo.profiles.domain.model.valueobjects.ProfileText.required;
 
 @Getter // Lombok generates the PK accessor getId() and FK accessor getAccountId().
-@Entity //JPA reconoce esto como una entidad de guardado
+@Entity // JPA-managed profile entity.
 @Table(name = "profiles")
 
 // Profile entity structure.
@@ -74,7 +74,7 @@ public class Profile extends AbstractDomainAggregateRoot<Profile>{
 
 
     public void update(String firstName, String lastName, String phone) {
-        this.firstName = required(firstName, "Nombres");
+        this.firstName = required(firstName, "First name");
         this.lastName = required(lastName, "Apellidos");
         this.phone = required(phone, "Telefono");
     }

@@ -4,13 +4,19 @@ import com.yachiqo.spotgo.iam.domain.model.aggregates.*;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.*;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.TenantStatus;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.TenantRepository;
+import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
+import com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile;
+import com.yachiqo.spotgo.shared.application.events.SpotgoDomainEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.UUID;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -20,11 +26,18 @@ public class AccountAdministrationService {
     private final SessionRepository sessions;
     private final AuditEntryRepository audits;
     private final TenantRepository parkings;
+    private final ProfilesManagementService profiles;
+    private final AuthenticationService authentication;
     private final Clock clock;
+    private final SpotgoDomainEventPublisher domainEvents;
+    public record ProvisionedParkingAdmin(Account account, RoleAssignment roleAssignment, Profile profile) {}
     public AccountAdministrationService(AccountRepository accounts, RoleAssignmentRepository roles,
-            SessionRepository sessions, AuditEntryRepository audits, TenantRepository parkings, Clock clock) {
+            SessionRepository sessions, AuditEntryRepository audits, TenantRepository parkings,
+            ProfilesManagementService profiles, AuthenticationService authentication, Clock clock,
+            SpotgoDomainEventPublisher domainEvents) {
         this.accounts = accounts; this.roles = roles; this.sessions = sessions; this.audits = audits;
-        this.parkings = parkings; this.clock = clock;
+        this.parkings = parkings; this.profiles = profiles; this.authentication = authentication;
+        this.clock = clock; this.domainEvents = domainEvents;
     }
     public Account own(SpotgoUserPrincipal actor) { return account(actor.getAccountId()); }
     public Page<Account> list(SpotgoUserPrincipal actor, int page, int size) {
@@ -43,7 +56,10 @@ public class AccountAdministrationService {
         account.changeStatus(status);
         if (status != AccountStatus.ACTIVE) sessions.revokeAll(id, clock.instant(), SessionStatus.ACTIVE, SessionStatus.REVOKED);
         audits.save(new AuditEntry(accounts.getReferenceById(actor.getAccountId()), "ACCOUNT_STATUS_CHANGE " + id, "SUCCESS", source, clock.instant()));
-        return accounts.saveAndFlush(account);
+        var saved=accounts.saveAndFlush(account);
+        domainEvents.publish("identity.account.status_changed","Identity & Access Management","Account",id,null,List.of(id),
+                Map.of("account_id",id.toString(),"status",status.name()));
+        return saved;
     }
     @Transactional
     public RoleAssignment assign(SpotgoUserPrincipal actor, UUID id, UserRole role, UUID tenantId,
@@ -57,7 +73,26 @@ public class AccountAdministrationService {
         var assignment = roles.findByAccountId(id).orElseGet(() -> new RoleAssignment(account, role, tenantId, start, to, enabled));
         assignment.assign(role, tenantId, start, to, enabled);
         audits.save(new AuditEntry(accounts.getReferenceById(actor.getAccountId()), "ROLE_ASSIGNMENT_CHANGE " + id, "SUCCESS", source, clock.instant()));
-        return roles.saveAndFlush(assignment);
+        var saved=roles.saveAndFlush(assignment);
+        domainEvents.publish("identity.role.assigned","Identity & Access Management","RoleAssignment",saved.getId(),tenantId,
+                List.of(id),Map.of("account_id",id.toString(),"role",role.name()));
+        return saved;
+    }
+    @Transactional
+    public ProvisionedParkingAdmin provisionParkingAdmin(SpotgoUserPrincipal actor, UUID tenantId,
+            String email, String firstName, String lastName, String phone, String source) {
+        requireSuper(actor);
+        var tenant = parkings.findById(tenantId).orElseThrow(() -> notFound());
+        if (tenant.getStatus() != TenantStatus.ACTIVE)
+            throw new IamException(HttpStatus.CONFLICT, "Parking Admin accounts can only be assigned to an active tenant.");
+
+        var account = authentication.provisionParkingAdminAccount(email, tenantId, source);
+        var profile = profiles.provisionParkingAdminProfile(actor, account.getId(), firstName, lastName, phone);
+        var assignment = roles.findByAccountId(account.getId()).orElseThrow(() ->
+                new IamException(HttpStatus.INTERNAL_SERVER_ERROR, "The Parking Admin role assignment was not created."));
+        audits.save(new AuditEntry(accounts.getReferenceById(actor.getAccountId()),
+                "PARKING_ADMIN_PROVISIONED " + account.getId(), "SUCCESS", source, clock.instant()));
+        return new ProvisionedParkingAdmin(account, assignment, profile);
     }
     public Page<AuditEntry> audit(SpotgoUserPrincipal actor, UUID accountId, int page, int size) {
         requireSuper(actor);

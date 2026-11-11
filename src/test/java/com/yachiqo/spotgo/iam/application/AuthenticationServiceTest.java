@@ -4,6 +4,7 @@ import com.yachiqo.spotgo.iam.domain.model.aggregates.*;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.*;
 import com.yachiqo.spotgo.iam.infrastructure.persistence.jpa.repositories.*;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
+import com.yachiqo.spotgo.iam.infrastructure.security.GoogleIdentityVerifier;
 import com.yachiqo.spotgo.iam.interfaces.rest.resources.AuthenticatedUserResource;
 import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.ProfileRepository;
@@ -48,14 +49,15 @@ class AuthenticationServiceTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired Clock clock;
     @MockitoBean PasswordResetNotificationService notifications;
+    @MockitoBean GoogleIdentityVerifier googleIdentityVerifier;
     @Value("${local.server.port}") int port;
     private final ObjectMapper json = new ObjectMapper();
 
     @BeforeEach void clean() {
-        for (String table : List.of("occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "audit_entries", "sessions",
+        for (String table : List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "audit_entries", "sessions",
                 "credentials", "role_assignments", "passwordResetCodes", "tenants", "payment_tokens", "vehicles", "profiles", "accounts"))
             jdbc.update("DELETE FROM " + table);
-        reset(notifications);
+        reset(notifications, googleIdentityVerifier);
     }
     private AuthenticatedUserResource register(String name) { return service.signUp(name + "@example.com", "Password123!", "TEST"); }
     private SpotgoUserPrincipal principal(AuthenticatedUserResource auth) { return authentication.authenticate(tokens.parseAccessToken(auth.accessToken())); }
@@ -265,6 +267,119 @@ class AuthenticationServiceTest {
         var invalid = Credential.password(account, encoder.encode("Password123!"));
         ReflectionTestUtils.setField(invalid, "secretHash", null);
         assertThrows(DataIntegrityViolationException.class, () -> credentials.saveAndFlush(invalid));
+    }
+
+    @Test void googleIdTokenCreatesDriverAndRepeatedSignInUsesTheVerifiedSubject() throws Exception {
+        when(googleIdentityVerifier.verify("verified-token"))
+                .thenReturn(new GoogleIdentity("google-subject-1", "google@example.com"));
+        String body = json.writeValueAsString(Map.of("idToken", "verified-token"));
+
+        var first = request("POST", "/api/v1/authentication/google", body, null);
+        assertEquals(200, first.statusCode());
+        var firstUser = json.readTree(first.body());
+        UUID accountId = UUID.fromString(firstUser.path("accountId").asText());
+        assertEquals("google@example.com", accounts.findById(accountId).orElseThrow().getEmail());
+        assertEquals(UserRole.DRIVER, roles.findByAccountId(accountId).orElseThrow().getRoleType());
+        var credential = credentials.findGoogleByExternalSubject("google-subject-1").orElseThrow();
+        assertEquals(accountId, credential.getAccountId());
+        assertNull(credential.getSecretHash());
+
+        var second = request("POST", "/api/v1/authentication/google", body, null);
+        assertEquals(200, second.statusCode());
+        assertEquals(accountId.toString(), json.readTree(second.body()).path("accountId").asText());
+        assertNotEquals(firstUser.path("sessionId").asText(), json.readTree(second.body()).path("sessionId").asText());
+        assertEquals(1, accounts.count());
+    }
+
+    @Test void googleEmailCollisionRequiresLinkingFromTheAuthenticatedAccount() throws Exception {
+        var existing = register("existing");
+        when(googleIdentityVerifier.verify("verified-token"))
+                .thenReturn(new GoogleIdentity("different-google-subject", "existing@example.com"));
+        String body = json.writeValueAsString(Map.of("idToken", "verified-token"));
+
+        var response = request("POST", "/api/v1/authentication/google", body, null);
+        assertEquals(409, response.statusCode());
+        assertTrue(credentials.findAllByAccountId(existing.accountId()).stream()
+                .noneMatch(c -> c.getAuthenticationMethod() == AuthenticationMethod.GOOGLE));
+        assertEquals(1, accounts.count());
+    }
+
+    @Test void authenticatedAccountCanLinkGoogleWithoutEmailBasedMerging() throws Exception {
+        var existing = register("link");
+        when(googleIdentityVerifier.verify("verified-token"))
+                .thenReturn(new GoogleIdentity("link-google-subject", "link@example.com"));
+        String body = json.writeValueAsString(Map.of("idToken", "verified-token"));
+
+        var linked = request("POST", "/api/v1/authentication/google/link", body, existing.accessToken());
+        assertEquals(204, linked.statusCode());
+        assertEquals(existing.accountId(), credentials.findGoogleByExternalSubject("link-google-subject").orElseThrow().getAccountId());
+
+        var signedIn = request("POST", "/api/v1/authentication/google", body, null);
+        assertEquals(200, signedIn.statusCode());
+        assertEquals(existing.accountId().toString(), json.readTree(signedIn.body()).path("accountId").asText());
+        assertEquals(1, accounts.count());
+    }
+
+    @Test void superAdminCanOnboardTenantAndProvisionMoreAdminAccountsWithInvitations() throws Exception {
+        var superAdmin = superUser();
+        var tenantBody = Map.of(
+                "tenant", Map.of("name", "North Parking", "address", "Av. Demo 100",
+                        "coordinates", Map.of("latitude", -12.0464, "longitude", -77.0428),
+                        "contactData", Map.of("email", "parking@example.com"),
+                        "rules", Map.of("tariff_rules", Map.of("period_minutes", 60, "price_per_period", 5),
+                                "lock_duration_minutes", 10, "overstay_tolerance_minutes", 5)),
+                "parkingAdmin", Map.of("email", "admin.one@example.com", "firstName", "Ana",
+                        "lastName", "Admin", "phone", "900000001"));
+        var onboarded = request("POST", "/api/v1/tenants/onboard", json.writeValueAsString(tenantBody), superAdmin.accessToken());
+        assertEquals(201, onboarded.statusCode(), onboarded.body());
+        var response = json.readTree(onboarded.body());
+        UUID tenantId = UUID.fromString(response.path("tenant").path("tenantId").asText());
+        UUID adminAccountId = UUID.fromString(response.path("parkingAdmin").path("id").asText());
+        assertEquals(UserRole.PARKING_ADMIN, roles.findByAccountId(adminAccountId).orElseThrow().getRoleType());
+        assertEquals(tenantId, roles.findByAccountId(adminAccountId).orElseThrow().getTenantId());
+        assertTrue(profiles.existsByAccountId(adminAccountId));
+        assertEquals(adminAccountId.toString(), response.path("profile").path("accountId").asText());
+
+        var setupCode = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(notifications).sendAccountInvitationCode(eq("admin.one@example.com"), setupCode.capture());
+        var passwordSet = request("POST", "/api/v1/authentication/password-reset/confirm",
+                json.writeValueAsString(Map.of("email", "admin.one@example.com", "code", setupCode.getValue(),
+                        "newPassword", "ParkingAdmin123!")), null);
+        assertEquals(204, passwordSet.statusCode(), passwordSet.body());
+        assertEquals(UserRole.PARKING_ADMIN,
+                service.signIn("admin.one@example.com", "ParkingAdmin123!", "TEST").role());
+
+        var secondAdmin = request("POST", "/api/v1/accounts/parking-admin",
+                json.writeValueAsString(Map.of("tenantId", tenantId, "email", "admin.two@example.com",
+                        "firstName", "Luis", "lastName", "Admin", "phone", "900000002")), superAdmin.accessToken());
+        assertEquals(201, secondAdmin.statusCode(), secondAdmin.body());
+        var second = json.readTree(secondAdmin.body());
+        UUID secondAccountId = UUID.fromString(second.path("account").path("id").asText());
+        assertEquals(tenantId, roles.findByAccountId(secondAccountId).orElseThrow().getTenantId());
+        assertTrue(profiles.existsByAccountId(secondAccountId));
+        verify(notifications).sendAccountInvitationCode(eq("admin.two@example.com"), anyString());
+        assertEquals(3, accounts.count());
+    }
+
+    @Test void tenantOnboardingRollsBackWhenInvitationCannotBeSent() throws Exception {
+        var superAdmin = superUser();
+        doThrow(new IllegalStateException("Resend unavailable"))
+                .when(notifications).sendAccountInvitationCode(eq("admin.fail@example.com"), anyString());
+        var tenantBody = Map.of(
+                "tenant", Map.of("name", "Rollback Parking", "address", "Av. Demo 200",
+                        "coordinates", Map.of("latitude", -12.0464, "longitude", -77.0428),
+                        "contactData", Map.of("email", "rollback@example.com"),
+                        "rules", Map.of("tariff_rules", Map.of("period_minutes", 60, "price_per_period", 5))),
+                "parkingAdmin", Map.of("email", "admin.fail@example.com", "firstName", "Eva",
+                        "lastName", "Admin", "phone", "900000003"));
+
+        var response = request("POST", "/api/v1/tenants/onboard", json.writeValueAsString(tenantBody), superAdmin.accessToken());
+        assertEquals(503, response.statusCode(), response.body());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM tenants", Integer.class));
+        assertEquals(1, accounts.count());
+        assertEquals(1, roles.count());
+        assertEquals(0, profiles.count());
+        assertEquals(0, resets.count());
     }
 
     @Test void auditIsRestrictedToSuperAdminAndContainsSecurityEventsWithoutPasswords() throws Exception {

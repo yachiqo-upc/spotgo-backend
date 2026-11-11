@@ -29,17 +29,17 @@ public class ParkingZonesController {
  private final ParkingCommandServiceImpl commands; private final ParkingQueryServiceImpl queries;
  public ParkingZonesController(ParkingCommandServiceImpl commands,ParkingQueryServiceImpl queries){this.commands=commands;this.queries=queries;}
 
- @GetMapping @Operation(summary="List zones for a tenant", description = "Returns parking zones registered for the tenant identified by tenantId.")
- public List<ZoneView> list(@RequestParam UUID tenantId){return queries.zones(tenantId).stream().map(ZoneView::of).toList();}
- @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Create a parking zone in my tenant", description = "Creates a zone for the authenticated parking administrator's tenant using the supplied zone details.")
+ @GetMapping @Operation(summary="List accessible zones for a tenant", description = "Returns zones for the requested tenant. DRIVER sees only zones allowing the driver's tenant-specific profile type (PRIVATE when no explicit classification exists); PARKING_ADMIN is limited to the assigned tenant; SUPER_ADMIN can inspect any tenant.")
+ public List<ZoneView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam UUID tenantId){return queries.zones(actor,tenantId).stream().map(ZoneView::of).toList();}
+ @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Create a parking zone in my tenant", description = "Creates a zone for the authenticated parking administrator's tenant. allowedProfileTypes controls which driver classifications may access the zone; omit it to allow TAXI, EMPLOYEE, and PRIVATE.")
  @ApiResponse(responseCode="201",description="Parking zone created.")
  public ZoneView create(@AuthenticationPrincipal SpotgoUserPrincipal actor,@RequestParam UUID tenantId,@Valid @RequestBody ZoneBody body) {
-  return ZoneView.of(commands.createZone(actor,tenantId,body.name(),body.location(),body.colorCode()));
+  return ZoneView.of(commands.createZone(actor,tenantId,body.name(),body.location(),body.colorCode(),body.allowedProfileTypes()));
  }
- @PutMapping("/{zoneId}") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Update a parking zone in my tenant", description = "Updates the specified zone after verifying that it belongs to the authenticated parking administrator's tenant.")
+ @PutMapping("/{zoneId}") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Update a parking zone in my tenant", description = "Updates the specified zone after verifying tenant ownership. Include allowedProfileTypes to replace the permitted driver classifications; omit it to keep the current list.")
  public ZoneView update(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID zoneId,@Valid @RequestBody ZoneBody body) {
   if(body.status()==null)throw new IllegalArgumentException("status is required.");
-  return ZoneView.of(commands.updateZone(actor,zoneId,body.name(),body.location(),body.colorCode(),body.status()));
+  return ZoneView.of(commands.updateZone(actor,zoneId,body.name(),body.location(),body.colorCode(),body.status(),body.allowedProfileTypes()));
  }
 
 }
