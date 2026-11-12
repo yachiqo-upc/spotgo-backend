@@ -13,7 +13,7 @@ public final class PushDeviceResources {
     private PushDeviceResources() {}
 
     public record RegistrationRequest(
-            @NotBlank @Size(max = 4096) String token,
+            @NotBlank @Size(max = 256) String installationId,
             @NotNull DevicePlatform platform) {}
 
     public record DeviceResource(UUID deviceTokenId, DevicePlatform platform, Instant createdAt, Instant lastSeenAt) {

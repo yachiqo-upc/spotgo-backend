@@ -44,6 +44,11 @@ public class DigitalPayment {
  public Profile getProfile(){return profile;}
  public void subscriptionRequest(String reference){if(operationType!=PaymentOperationType.SUBSCRIPTION||status!=PaymentStatus.INITIATED||reference==null||reference.length()>8192)throw new IllegalArgumentException("Invalid subscription request.");resultReference=reference;}
  public void subscriptionAdjustmentRequest(String reference){if(operationType!=PaymentOperationType.SUBSCRIPTION_ADJUSTMENT||status!=PaymentStatus.INITIATED||reference==null||reference.length()>8192)throw new IllegalArgumentException("Invalid subscription adjustment request.");resultReference=reference;}
+ public void reservationChangeRequest(UUID changeId){
+  if(operationType!=PaymentOperationType.RESERVATION_ADJUSTMENT||status!=PaymentStatus.INITIATED||changeId==null)
+   throw new IllegalArgumentException("Invalid reservation change request.");
+  resultReference="reservation-change:"+changeId;
+ }
  public void replaceToken(PaymentToken next){if(status!=PaymentStatus.REJECTED||next==null)throw new IllegalArgumentException("A different token can be used only for a declined payment.");token=next;}
  public void seen(Instant now){lastSeenAt=now;}
  public void pending(){status=PaymentStatus.PENDING;}

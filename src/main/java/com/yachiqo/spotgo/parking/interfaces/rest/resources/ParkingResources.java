@@ -20,7 +20,9 @@ public final class ParkingResources {
  public record SpotBody(@NotBlank String code,@NotBlank @Schema(description="Parking spot category; this is not TAXI/EMPLOYEE/PRIVATE.",example="STANDARD") String spotType,@NotNull Map<String,Object> features,OperationalStatus operationalStatus) {}
  public record PlanBody(@NotNull UUID zoneId,@Min(1) int version,@NotBlank String fileReference) {}
  public record MapBody(@NotNull UUID floorPlanId,@Min(1) int version,@NotNull List<Map<String,Object>> elements) {}
- public record ReserveBody(@NotNull UUID spotId,@NotNull UUID vehicleId,@NotNull Instant startAt,@NotNull Instant endAt) {}
+  public record ReserveBody(@NotNull UUID spotId,@NotNull UUID vehicleId,@NotNull Instant startAt,@NotNull Instant endAt) {}
+  public record RescheduleBody(@NotNull Instant startAt,@NotNull Instant endAt) {}
+  public record ExtendBody(@NotNull Instant endAt, UUID spotId) {}
  public record PaymentBody(@NotNull UUID paymentId) {}
  public record EntryBody(@NotNull UUID reservationId) {}
  public record GuestBody(@NotNull UUID spotId,@NotBlank String manualPlate,@NotNull PhysicalPaymentMethod physicalPaymentMethod) {}
@@ -44,9 +46,20 @@ public final class ParkingResources {
  public record MapView(UUID mapId,UUID floorPlanId,int version,List<Map<String,Object>> elements,PublicationStatus status,Instant generatedAt) {
   public static MapView of(DigitalParkingMap m){return new MapView(m.getId(),m.getFloorPlanId(),m.getVersion(),m.getElements(),m.getStatus(),m.getGeneratedAt());}
  }
- public record ReservationView(UUID reservationId,UUID tenantId,UUID zoneId,UUID spotId,UUID profileId,UUID vehicleId,UUID paymentId,Instant startAt,Instant endAt,BigDecimal amount,ReservationStatus status,LockStatus lockStatus,Instant lockedAt,Instant lockExpiresAt,Instant createdAt,Instant updatedAt) {
-  public static ReservationView of(Reservation r){return new ReservationView(r.getId(),r.getTenantId(),r.getZoneId(),r.getSpotId(),r.getProfileId(),r.getVehicleId(),r.getPaymentId(),r.getStartAt(),r.getEndAt(),r.getAmount(),r.getStatus(),r.getLockStatus(),r.getLockedAt(),r.getLockExpiresAt(),r.getCreatedAt(),r.getUpdatedAt());}
- }
+  public record ReservationView(UUID reservationId,UUID tenantId,UUID zoneId,UUID spotId,UUID profileId,UUID vehicleId,UUID paymentId,UUID parentReservationId,Instant startAt,Instant endAt,BigDecimal amount,ReservationStatus status,LockStatus lockStatus,Instant lockedAt,Instant lockExpiresAt,Instant createdAt,Instant updatedAt) {
+   public static ReservationView of(Reservation r){return new ReservationView(r.getId(),r.getTenantId(),r.getZoneId(),r.getSpotId(),r.getProfileId(),r.getVehicleId(),r.getPaymentId(),r.getParentReservationId(),r.getStartAt(),r.getEndAt(),r.getAmount(),r.getStatus(),r.getLockStatus(),r.getLockedAt(),r.getLockExpiresAt(),r.getCreatedAt(),r.getUpdatedAt());}
+  }
+  public record ReservationChangeView(UUID changeId,UUID reservationId,Instant startAt,Instant endAt,BigDecimal amount,
+   BigDecimal paymentAmount,UUID paymentId,com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus status,Instant refundDueAt) {
+   public static ReservationChangeView of(com.yachiqo.spotgo.parking.application.ParkingPaymentGateway.ReservationChangeResult result){
+    var change=result.change();return new ReservationChangeView(change.getId(),change.getReservationId(),change.getStartAt(),change.getEndAt(),
+     change.getAmount(),result.paymentAmount(),result.paymentId(),change.getStatus(),change.getRefundDueAt());
+    }
+    public static ReservationChangeView of(com.yachiqo.spotgo.parking.domain.model.aggregates.ReservationChange change){
+     return new ReservationChangeView(change.getId(),change.getReservationId(),change.getStartAt(),change.getEndAt(),
+      change.getAmount(),change.getPaymentAmount(),change.getPaymentId(),change.getStatus(),change.getRefundDueAt());
+    }
+  }
  public record SessionView(UUID sessionId,UUID reservationId,UUID spotId,UUID profileId,UUID vehicleId,Instant entryAt,Instant exitAt,ParkingSessionStatus status) {
   public static SessionView of(ParkingSession s){return new SessionView(s.getId(),s.getReservationId(),s.getSpotId(),s.getProfileId(),s.getVehicleId(),s.getEntryAt(),s.getExitAt(),s.getStatus());}
  }

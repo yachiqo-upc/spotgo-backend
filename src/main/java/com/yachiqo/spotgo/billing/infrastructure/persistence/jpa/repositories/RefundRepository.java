@@ -6,5 +6,6 @@ import jakarta.persistence.LockModeType;
 import java.util.*;
 public interface RefundRepository extends JpaRepository<Refund,UUID> {
  @Query("select r from Refund r where r.payment.id=:id order by r.requestedAt") List<Refund> byPayment(@Param("id") UUID id);
+ @Query("select r from Refund r where r.reservationChange.id=:id order by r.requestedAt") List<Refund> byReservationChange(@Param("id") UUID id);
 @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select r from Refund r where r.id=:id") Optional<Refund> lock(@Param("id") UUID id);
 }

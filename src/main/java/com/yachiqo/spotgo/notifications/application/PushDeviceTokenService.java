@@ -33,13 +33,13 @@ public class PushDeviceTokenService {
     }
 
     @Transactional
-    public PushDeviceToken register(SpotgoUserPrincipal actor, String token, DevicePlatform platform) {
-        if (token == null || token.isBlank() || token.length() > 4096 || platform == null)
-            throw new IllegalArgumentException("A valid device token and platform are required.");
-        String normalized = token.trim();
+    public PushDeviceToken register(SpotgoUserPrincipal actor, String installationId, DevicePlatform platform) {
+        if (installationId == null || installationId.isBlank() || installationId.length() > 256 || platform == null)
+            throw new IllegalArgumentException("A valid Firebase installation ID and platform are required.");
+        String normalized = installationId.trim();
         Account account = accounts.findById(actor.getAccountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "The account is no longer available."));
-        var registration = devices.findByToken(normalized).orElse(null);
+        var registration = devices.findByInstallationId(normalized).orElse(null);
         if (registration == null) registration = new PushDeviceToken(account, normalized, platform, clock.instant());
         else registration.register(account, normalized, platform, clock.instant());
         return devices.saveAndFlush(registration);

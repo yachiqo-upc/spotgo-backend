@@ -33,7 +33,7 @@ class DbSeederTest {
         jdbc.execute("CREATE TABLE audit_entries (audit_id UUID PRIMARY KEY, account_id UUID REFERENCES accounts(account_id), action VARCHAR NOT NULL, result VARCHAR NOT NULL, source VARCHAR NOT NULL, occurred_at TIMESTAMP WITH TIME ZONE NOT NULL, correlation_id VARCHAR NOT NULL)");
         jdbc.execute("CREATE TABLE tenants (tenant_id UUID PRIMARY KEY, name VARCHAR NOT NULL, status VARCHAR NOT NULL, coordinates JSONB NOT NULL, address VARCHAR NOT NULL, token_id UUID, contact_data JSONB NOT NULL, rules JSONB NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE profiles (profile_id UUID PRIMARY KEY, account_id UUID UNIQUE NOT NULL, first_name VARCHAR NOT NULL, last_name VARCHAR NOT NULL, phone VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
-        jdbc.execute("CREATE TABLE payment_tokens (token_id UUID PRIMARY KEY, profile_id UUID NOT NULL, provider_token_ref VARCHAR NOT NULL, brand VARCHAR NOT NULL, last_four VARCHAR NOT NULL, expiration_month SMALLINT NOT NULL, expiration_year SMALLINT NOT NULL, status VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, revoked_at TIMESTAMP WITH TIME ZONE)");
+        jdbc.execute("CREATE TABLE payment_tokens (token_id UUID PRIMARY KEY, profile_id UUID NOT NULL, provider_token_ref VARCHAR NOT NULL, brand VARCHAR NOT NULL, last_four VARCHAR NOT NULL, expiration_month SMALLINT NOT NULL, expiration_year SMALLINT NOT NULL, is_default BOOLEAN NOT NULL, status VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, revoked_at TIMESTAMP WITH TIME ZONE)");
         jdbc.execute("CREATE TABLE vehicles (vehicle_id UUID PRIMARY KEY, profile_id UUID NOT NULL REFERENCES profiles(profile_id), plate VARCHAR UNIQUE, make VARCHAR NOT NULL, model VARCHAR NOT NULL, color VARCHAR NOT NULL, status VARCHAR NOT NULL, created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL)");
         jdbc.execute("CREATE TABLE driver_classifications (classification_id UUID PRIMARY KEY, profile_id UUID NOT NULL REFERENCES profiles(profile_id), tenant_id UUID NOT NULL, profile_type VARCHAR NOT NULL, assigned_by UUID NOT NULL REFERENCES profiles(profile_id), created_at TIMESTAMP WITH TIME ZONE NOT NULL, updated_at TIMESTAMP WITH TIME ZONE NOT NULL, UNIQUE(profile_id,tenant_id))");
         // These old tables share names with the new model but their columns are incompatible.
@@ -52,7 +52,8 @@ class DbSeederTest {
         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM role_assignments WHERE role_type='SUPER_ADMIN'", Integer.class));
         assertEquals(1, count("sessions"));
         assertEquals(2, count("audit_entries"));
-        assertEquals(1, count("tenants"));
+        assertEquals(2, count("tenants"));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM tenants WHERE name='Miraflores Parking'", Integer.class));
         assertEquals(3, count("profiles"));
         assertEquals(3, count("vehicles"));
         assertEquals(2, count("driver_classifications"));

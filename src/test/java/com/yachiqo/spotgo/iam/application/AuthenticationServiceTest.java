@@ -54,7 +54,7 @@ class AuthenticationServiceTest {
     private final ObjectMapper json = new ObjectMapper();
 
     @BeforeEach void clean() {
-        for (String table : List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "audit_entries", "sessions",
+        for (String table : List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds","reservation_changes", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions", "guest_parking_sessions", "reservations", "digital_parking_maps", "floor_plans", "parking_spots", "parking_zones", "driver_classifications", "digital_payments", "audit_entries", "sessions",
                 "credentials", "role_assignments", "passwordResetCodes", "tenants", "payment_tokens", "vehicles", "profiles", "accounts"))
             jdbc.update("DELETE FROM " + table);
         reset(notifications, googleIdentityVerifier);

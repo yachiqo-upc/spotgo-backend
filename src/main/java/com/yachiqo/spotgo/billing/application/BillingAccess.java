@@ -6,16 +6,17 @@ import com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.ProfileRepository;
 import com.yachiqo.spotgo.billing.domain.model.aggregates.*;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationChangeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import java.util.UUID;
 @Service
 public class BillingAccess {
- private final ProfilesManagementService profiles;private final ProfileRepository repository;private final ReservationRepository reservations;
+ private final ProfilesManagementService profiles;private final ProfileRepository repository;private final ReservationRepository reservations;private final ReservationChangeRepository reservationChanges;
  private final com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.AdditionalChargeRepository charges;
  private final com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.SubscriptionRepository subscriptions;
- public BillingAccess(ProfilesManagementService profiles,ProfileRepository repository,ReservationRepository reservations,com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.AdditionalChargeRepository charges,com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.SubscriptionRepository subscriptions){this.profiles=profiles;this.repository=repository;this.reservations=reservations;this.charges=charges;this.subscriptions=subscriptions;}
+ public BillingAccess(ProfilesManagementService profiles,ProfileRepository repository,ReservationRepository reservations,ReservationChangeRepository reservationChanges,com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.AdditionalChargeRepository charges,com.yachiqo.spotgo.billing.infrastructure.persistence.jpa.repositories.SubscriptionRepository subscriptions){this.profiles=profiles;this.repository=repository;this.reservations=reservations;this.reservationChanges=reservationChanges;this.charges=charges;this.subscriptions=subscriptions;}
  public Profile profile(SpotgoUserPrincipal actor){
   if(actor==null || (actor.getRole()!=UserRole.DRIVER&&actor.getRole()!=UserRole.PARKING_ADMIN))throw new AccessDeniedException("This role requires a driver or administrator profile.");
   return profiles.current(actor);
@@ -37,8 +38,9 @@ public class BillingAccess {
  public void payment(SpotgoUserPrincipal actor,DigitalPayment payment){
   if(actor!=null&&actor.getRole()==UserRole.SUPER_ADMIN)return;
   if(actor!=null&&payment.getProfile().getAccountId().equals(actor.getAccountId()))return;
-  var reservation=reservations.byPayment(payment.getId());
-  if(reservation.isPresent()){tenant(actor,reservation.get().getTenantId());return;}
+   var reservation=reservations.byPayment(payment.getId());
+   if(reservation.isPresent()){tenant(actor,reservation.get().getTenantId());return;}
+   var change=reservationChanges.byPayment(payment.getId());if(change.isPresent()){tenant(actor,change.get().getReservation().getTenantId());return;}
   var charge=charges.byPayment(payment.getId());if(charge.isPresent()){tenant(actor,charge.get().getReservation().getTenantId());return;}
   var subscription=subscriptions.byPayment(payment.getId());if(subscription.isPresent()&&subscription.get().getTenantId()!=null){tenant(actor,subscription.get().getTenantId());return;}
   throw new AccessDeniedException("Payment is outside your access scope.");

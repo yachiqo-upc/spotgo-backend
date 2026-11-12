@@ -54,7 +54,7 @@
     "tenants":  [
                     {
                         "tenant_id":  "00000000-0000-4000-8000-000000000021",
-                        "name":  "Parking Sol - Demo",
+                        "name":  "Parking Sol",
                         "status":  "ACTIVE",
                         "contact_data":  {
                                              "email":  "ana.admin@example.com",
@@ -64,7 +64,7 @@
                                             "latitude":  -12.0464,
                                             "longitude":  -77.0428
                                         },
-                        "address":  "Demo Avenue 123, Lima",
+                        "address":  "Av. Garcilaso de la Vega 123, Lima",
                         "token_id":  "00000000-0000-4000-8000-000000000072",
                         "rules":  {
                                       "tariff_rules":  {
@@ -82,6 +82,34 @@
                                   },
                         "created_at":  "2026-11-09T07:00:00Z",
                         "updated_at":  "2026-11-09T07:00:00Z"
+                    },
+                    {
+                        "tenant_id": "00000000-0000-4000-8000-000000000022",
+                        "name": "Miraflores Parking",
+                        "status": "ACTIVE",
+                        "contact_data": {
+                            "email": "demo.miraflores@example.test",
+                            "phone": "900000022"
+                        },
+                        "coordinates": {
+                            "latitude": -12.1211,
+                            "longitude": -77.0297
+                        },
+                        "address": "Av. Larco 123, Miraflores, Lima",
+                        "token_id": null,
+                        "rules": {
+                            "tariff_rules": {
+                                "period_minutes": 60,
+                                "price_per_period": 7,
+                                "rounding": "CEILING"
+                            },
+                            "overstay_tolerance_minutes": 5,
+                            "lock_duration_minutes": 10,
+                            "allocation_rules": {},
+                            "coexistence_rules": ["Demo location and operation; this is not a real parking facility"]
+                        },
+                        "created_at": "2026-11-09T07:00:00Z",
+                        "updated_at": "2026-11-09T07:00:00Z"
                     }
                 ],
     "role_assignments":  [
@@ -118,7 +146,7 @@
                          "profile_id":  "00000000-0000-4000-8000-000000000011",
                          "account_id":  "00000000-0000-4000-8000-000000000001",
                          "first_name":  "Ana",
-                         "last_name":  "Demo",
+                         "last_name":  "Torres",
                          "phone":  "900000001",
                          "created_at":  "2026-11-09T07:00:00Z",
                          "updated_at":  "2026-11-09T07:00:00Z"
@@ -127,7 +155,7 @@
                          "profile_id":  "00000000-0000-4000-8000-000000000012",
                          "account_id":  "00000000-0000-4000-8000-000000000002",
                          "first_name":  "Juan",
-                         "last_name":  "Demo",
+                         "last_name":  "Paredes",
                          "phone":  "900000002",
                          "created_at":  "2026-11-09T07:00:00Z",
                          "updated_at":  "2026-11-09T07:00:00Z"
@@ -136,7 +164,7 @@
                          "profile_id":  "00000000-0000-4000-8000-000000000013",
                          "account_id":  "00000000-0000-4000-8000-000000000003",
                          "first_name":  "Sofia",
-                         "last_name":  "Demo",
+                         "last_name":  "Ramos",
                          "phone":  "900000003",
                          "created_at":  "2026-11-09T07:00:00Z",
                          "updated_at":  "2026-11-09T07:00:00Z"
@@ -244,18 +272,29 @@
                               "updated_at":  "2026-11-09T07:00:00Z"
                           },
                           {
-                              "zone_id":  "00000000-0000-4000-8000-000000000032",
-                              "tenant_id":  "00000000-0000-4000-8000-000000000021",
-                              "name":  "Floor2-A",
-                              "location":  {
-                                               "reference":  "Second floor, right ramp"
-                                           },
-                              "color_code":  "#43A047",
-                               "allowed_profile_types":  ["TAXI", "EMPLOYEE", "PRIVATE"],
-                              "status":  "ACTIVE",
-                              "created_at":  "2026-11-09T07:00:00Z",
-                              "updated_at":  "2026-11-09T07:00:00Z"
-                          }
+                               "zone_id":  "00000000-0000-4000-8000-000000000032",
+                               "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                               "name":  "Floor2-A",
+                               "location":  {
+                                                "reference":  "Second floor, right ramp"
+                                            },
+                               "color_code":  "#43A047",
+                                "allowed_profile_types":  ["TAXI", "EMPLOYEE", "PRIVATE"],
+                               "status":  "ACTIVE",
+                               "created_at":  "2026-11-09T07:00:00Z",
+                               "updated_at":  "2026-11-09T07:00:00Z"
+                           },
+                           {
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "tenant_id": "00000000-0000-4000-8000-000000000022",
+                               "name": "Miraflores Zone",
+                               "location": {"reference": "Level 1"},
+                               "color_code": "#7B1FA2",
+                               "allowed_profile_types": ["TAXI", "EMPLOYEE", "PRIVATE"],
+                               "status": "ACTIVE",
+                               "created_at": "2026-11-09T07:00:00Z",
+                               "updated_at": "2026-11-09T07:00:00Z"
+                           }
                       ],
     "parking_spots":  [
                           {
@@ -292,16 +331,32 @@
                               "operational_status":  "ACTIVE"
                           },
                           {
-                              "spot_id":  "00000000-0000-4000-8000-000000000044",
-                              "zone_id":  "00000000-0000-4000-8000-000000000032",
-                              "code":  "A-02",
-                              "spot_type":  "STANDARD",
-                              "features":  {
-                                               "covered":  true,
-                                               "ev_charger":  false
-                                           },
-                              "operational_status":  "ACTIVE"
-                          }
+                               "spot_id":  "00000000-0000-4000-8000-000000000044",
+                               "zone_id":  "00000000-0000-4000-8000-000000000032",
+                               "code":  "A-02",
+                               "spot_type":  "STANDARD",
+                               "features":  {
+                                                "covered":  true,
+                                                "ev_charger":  false
+                                            },
+                               "operational_status":  "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000045",
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "code": "D-01",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000046",
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "code": "D-02",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": true},
+                               "operational_status": "ACTIVE"
+                           }
                       ],
     "floor_plans":  [
                         {
@@ -370,6 +425,7 @@
                                "last_four":  "4242",
                                "expiration_month":  12,
                                "expiration_year":  2030,
+                               "is_default":  false,
                                "status":  "ACTIVE",
                                "created_at":  "2026-11-09T07:00:00Z",
                                "revoked_at":  null
@@ -382,11 +438,12 @@
                                "last_four":  "4242",
                                "expiration_month":  12,
                                "expiration_year":  2030,
+                               "is_default":  false,
                                "status":  "ACTIVE",
                                "created_at":  "2026-11-09T07:00:00Z",
-                               "revoked_at":  null
-                           }
-                       ],
+                                "revoked_at":  null
+                            }
+                        ],
     "digital_payments":  [
                              {
                                  "payment_id":  "00000000-0000-4000-8000-000000000081",
@@ -471,12 +528,13 @@
                                  "last_seen_at":  "2026-11-09T12:30:00Z",
                                  "result_reference":  "/api/v1/subscriptions/00000000-0000-4000-8000-000000000192",
                                  "created_at":  "2026-11-09T12:30:00Z",
-                                 "approved_at":  "2026-11-09T12:30:00Z"
-                             }
-                         ],
+                                  "approved_at":  "2026-11-09T12:30:00Z"
+                            }
+                          ],
     "reservations":  [
                          {
                              "reservation_id":  "00000000-0000-4000-8000-000000000091",
+                             "parent_reservation_id":  null,
                              "tenant_id":  "00000000-0000-4000-8000-000000000021",
                              "profile_id":  "00000000-0000-4000-8000-000000000012",
                              "vehicle_id":  "00000000-0000-4000-8000-000000000051",
@@ -495,6 +553,7 @@
                          },
                          {
                              "reservation_id":  "00000000-0000-4000-8000-000000000092",
+                             "parent_reservation_id":  null,
                              "tenant_id":  "00000000-0000-4000-8000-000000000021",
                              "profile_id":  "00000000-0000-4000-8000-000000000012",
                              "vehicle_id":  "00000000-0000-4000-8000-000000000051",
@@ -712,8 +771,9 @@
                     {
                         "refund_id":  "00000000-0000-4000-8000-000000000221",
                         "payment_id":  "00000000-0000-4000-8000-000000000082",
+                        "reservation_change_id":  null,
                         "amount":  1,
-                        "reason":  "Demo billing adjustment",
+                        "reason":  "Billing adjustment",
                         "status":  "COMPLETED",
                         "provider_operation_ref":  "demo-refund-001",
                         "requested_at":  "2026-11-09T12:20:00Z",
@@ -726,8 +786,8 @@
                                   "payment_id":  "00000000-0000-4000-8000-000000000081",
                                   "document_type":  "ELECTRONIC_RECEIPT",
                                   "document_number":  "00000001",
-                                  "series":  "DEMO",
-                                  "legal_name":  "Juan Demo",
+                                  "series":  "R001",
+                                  "legal_name":  "Juan Paredes",
                                   "tax_data":  {
                                                    "document_type":  "DNI",
                                                    "document_number":  "00000000"
@@ -740,8 +800,8 @@
                                   "payment_id":  "00000000-0000-4000-8000-000000000082",
                                   "document_type":  "ELECTRONIC_RECEIPT",
                                   "document_number":  "00000002",
-                                  "series":  "DEMO",
-                                  "legal_name":  "Juan Demo",
+                                  "series":  "R001",
+                                  "legal_name":  "Juan Paredes",
                                   "tax_data":  {
                                                    "document_type":  "DNI",
                                                    "document_number":  "00000000"
@@ -754,8 +814,8 @@
                                   "payment_id":  "00000000-0000-4000-8000-000000000083",
                                   "document_type":  "ELECTRONIC_RECEIPT",
                                   "document_number":  "00000003",
-                                  "series":  "DEMO",
-                                  "legal_name":  "Juan Demo",
+                                  "series":  "R001",
+                                  "legal_name":  "Juan Paredes",
                                   "tax_data":  {
                                                    "document_type":  "DNI",
                                                    "document_number":  "00000000"

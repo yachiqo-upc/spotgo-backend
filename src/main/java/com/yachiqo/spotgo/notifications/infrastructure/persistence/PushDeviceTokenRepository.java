@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PushDeviceTokenRepository extends JpaRepository<PushDeviceToken, UUID> {
-    Optional<PushDeviceToken> findByToken(String token);
+    Optional<PushDeviceToken> findByInstallationId(String installationId);
 
     Optional<PushDeviceToken> findByIdAndAccount_Id(UUID id, UUID accountId);
 

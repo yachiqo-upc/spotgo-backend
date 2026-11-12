@@ -11,6 +11,7 @@ import com.yachiqo.spotgo.parking.application.internal.commandservices.ParkingCo
 import com.yachiqo.spotgo.parking.domain.model.aggregates.*;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationRepository;
+import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.ReservationChangeRepository;
 import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.*;
 import com.yachiqo.spotgo.profiles.infrastructure.persistence.jpa.repositories.VehicleRepository;
@@ -42,7 +43,7 @@ class BillingIntegrationTest {
  @Autowired BillingService billing;@Autowired BillingQueryService queries;@Autowired ParkingCommandServiceImpl parking;
  @Autowired AuthenticationService iam;@Autowired JwtTokenService jwt;@Autowired SessionAuthenticationService authentication;
  @Autowired RoleAssignmentRepository roles;@Autowired ProfilesManagementService profiles;@Autowired VehicleRepository vehicles;
- @Autowired ReservationRepository reservations;@Autowired DigitalPaymentRepository payments;@Autowired PaymentAttemptRepository attempts;
+  @Autowired ReservationRepository reservations;@Autowired ReservationChangeRepository reservationChanges;@Autowired DigitalPaymentRepository payments;@Autowired PaymentAttemptRepository attempts;
  @Autowired OutstandingBalanceRepository balances;@Autowired AdditionalChargeRepository charges;@Autowired SubscriptionRepository subscriptions;
  @Autowired RefundRepository refunds;@Autowired BillingDocumentRepository documents;@Autowired JdbcTemplate jdbc;
  @MockitoBean PaymentProvider provider;@MockitoBean SubscriptionPlans plans;@MockitoBean Clock clock;
@@ -60,8 +61,8 @@ class BillingIntegrationTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));outcome.set(PaymentStatus.APPROVED);
   when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-  for(String table:List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","outstanding_balances","additional_charges","subscriptions","payment_attempts",
-   "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
+   for(String table:List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents","refunds","reservation_changes","outstanding_balances","additional_charges","subscriptions","payment_attempts",
+    "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts"))jdbc.update("DELETE FROM "+table);
   when(plans.get("DRIVER_TEST")).thenReturn(driverPlan);when(plans.get("TENANT_TEST")).thenReturn(tenantPlan);when(plans.all()).thenReturn(List.of(driverPlan,tenantPlan));
   when(plans.snapshotForTenant(anyMap(),anyCollection())).thenAnswer(invocation->invocation.getArgument(0));
@@ -112,7 +113,7 @@ class BillingIntegrationTest {
   assertEquals(403,request("PATCH","/api/v1/vehicles/"+car.path("id").asText(),Map.of("color","Negro"),otherAuth.accessToken()).statusCode());
   assertEquals("Blue",httpJson("GET","/api/v1/vehicles",null,access,200).get(0).path("color").asText());
  }
- @Test void completeHttpReservationPaymentAndOnTimeStayHasNoDebt() throws Exception {
+  @Test void completeHttpReservationPaymentAndOnTimeStayHasNoDebt() throws Exception {
   Instant start=now.get().plusSeconds(60),end=start.plusSeconds(3600);
   var reservation=httpJson("POST","/api/v1/reservations",Map.of("spotId",spot.getId(),"vehicleId",vehicle.getId(),"startAt",start.toString(),"endAt",end.toString()),driverAuth.accessToken(),201);
   String id=reservation.path("reservationId").asText();
@@ -192,11 +193,24 @@ class BillingIntegrationTest {
   verify(provider,times(1)).refund(any(),anyString(),any(),anyString());
   assertTrue(httpJson("GET","/api/v1/parking-sessions",null,driverAuth.accessToken(),200).isEmpty());
  }
- @Test void tokenMetadataComesFromProviderAndNeverStoresPanOrCvv() throws Exception {
-  var t=token(driver);assertEquals(driverProfile.getId(),t.getProfileId());assertEquals("4242",t.getLastFour());
-  var response=request("GET","/api/v1/payment-tokens",null,driverAuth.accessToken());assertEquals(200,response.statusCode());assertFalse(response.body().contains("providerTokenRef"));
-  assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE lower(table_name)='payment_tokens' AND lower(column_name) IN ('pan','cvv','card_number')",Integer.class));
- }
+  @Test void tokenMetadataComesFromProviderAndNeverStoresPanOrCvv() throws Exception {
+   var t=token(driver);assertEquals(driverProfile.getId(),t.getProfileId());assertEquals("4242",t.getLastFour());
+   var response=request("GET","/api/v1/payment-tokens",null,driverAuth.accessToken());assertEquals(200,response.statusCode());assertFalse(response.body().contains("providerTokenRef"));
+   assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE lower(table_name)='payment_tokens' AND lower(column_name) IN ('pan','cvv','card_number')",Integer.class));
+  }
+  @Test void driverCanSaveAndChooseOneFavoritePaymentMethod() throws Exception {
+   var first=httpJson("POST","/api/v1/payment-tokens",Map.of("providerTokenRef","simulated-visa-4242"),driverAuth.accessToken(),201);
+   assertTrue(first.path("isDefault").asBoolean());
+   var second=httpJson("POST","/api/v1/payment-tokens",Map.of("providerTokenRef","simulated-mastercard-1234"),driverAuth.accessToken(),201);
+   assertFalse(second.path("isDefault").asBoolean());
+
+   var selected=httpJson("PUT","/api/v1/payment-tokens/"+second.path("tokenId").asText()+"/default",null,driverAuth.accessToken(),200);
+   assertTrue(selected.path("isDefault").asBoolean());
+   var methods=httpJson("GET","/api/v1/payment-tokens",null,driverAuth.accessToken(),200);
+   assertFalse(methods.get(0).path("isDefault").asBoolean());
+   assertTrue(methods.get(1).path("isDefault").asBoolean());
+   assertEquals(Boolean.TRUE,jdbc.queryForObject("SELECT is_default FROM payment_tokens WHERE token_id=?",Boolean.class,UUID.fromString(second.path("tokenId").asText())));
+  }
  @Test void revokingTokenPreventsNewPayments(){
   var t=token(driver);billing.revokeToken(driver,t.getId());var r=reserve();
   assertThrows(BillingException.class,()->billing.reservationPayment(driver,r.getId(),t.getId(),"revoked"));
@@ -224,10 +238,66 @@ class BillingIntegrationTest {
    var gate=new CountDownLatch(1);
    var a=executor.submit(()->{gate.await();return billing.reservationPayment(driver,r.getId(),t.getId(),"concurrent").getId();});
    var b=executor.submit(()->{gate.await();return billing.reservationPayment(driver,r.getId(),t.getId(),"concurrent").getId();});
-   gate.countDown();assertEquals(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS));
+    gate.countDown();assertEquals(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS));
+   }
+   assertEquals(1,payments.findAll().size());
   }
-  assertEquals(1,payments.findAll().size());
- }
+  @Test void rescheduleChargesOnlyTheApprovedDifferenceAndAppliesTheNewInterval() {
+   Instant start=now.get().plusSeconds(3600),end=start.plusSeconds(3600);
+   var reservation=parking.reserve(driver,spot.getId(),vehicle.getId(),start,end);payReservation(reservation);
+   var change=parking.reschedule(driver,reservation.getId(),start,end.plusSeconds(3600)).change();
+   assertEquals(com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus.PENDING_PAYMENT,change.getStatus());
+   assertEquals(new BigDecimal("5.00"),change.getPaymentAmount());
+   var adjustment=billing.reservationChangePayment(driver,change.getId(),token(driver).getId(),"reschedule-"+change.getId());
+   assertEquals(new BigDecimal("5.00"),adjustment.getAmount());
+   assertEquals(PaymentStatus.APPROVED,billing.process(driver,adjustment.getId(),false).getStatus());
+   var updated=reservations.findById(reservation.getId()).orElseThrow();
+   assertEquals(end.plusSeconds(3600),updated.getEndAt());assertEquals(new BigDecimal("10.00"),updated.getAmount());
+   assertEquals(com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus.APPLIED,
+    reservationChanges.findById(change.getId()).orElseThrow().getStatus());
+  }
+  @Test void reducedRescheduleRefundWaitsFiveMinutesAfterTheLatestEdit() {
+   Instant start=now.get().plusSeconds(3600),end=start.plusSeconds(7200);
+   var reservation=parking.reserve(driver,spot.getId(),vehicle.getId(),start,end);var original=payReservation(reservation);
+   var change=parking.reschedule(driver,reservation.getId(),start,start.plusSeconds(3600)).change();
+   assertEquals(com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus.REFUND_SCHEDULED,change.getStatus());
+   assertEquals(new BigDecimal("5.00"),reservations.findById(reservation.getId()).orElseThrow().getAmount());
+   now.set(now.get().plusSeconds(299));billing.processReservationChangeRefunds();
+   assertTrue(refunds.byPayment(original.getId()).isEmpty());
+   now.set(now.get().plusSeconds(1));billing.processReservationChangeRefunds();
+   var issued=refunds.byPayment(original.getId());assertEquals(1,issued.size());
+   assertEquals(new BigDecimal("5.00"),issued.getFirst().getAmount());assertEquals(RefundStatus.COMPLETED,issued.getFirst().getStatus());
+   assertEquals(com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus.REFUNDED,
+    reservationChanges.findById(change.getId()).orElseThrow().getStatus());
+  }
+  @Test void activeReservationExtensionCreatesAndPaysALinkedSegmentBeforeOriginalEnd() throws Exception {
+   Instant start=now.get().plusSeconds(60),end=start.plusSeconds(3600);
+   var reservation=parking.reserve(driver,spot.getId(),vehicle.getId(),start,end);payReservation(reservation);
+  parking.reserve(other,spot.getId(),otherVehicle.getId(),end,end.plusSeconds(3600));
+   now.set(start);var session=parking.enter(admin,reservation.getId());now.set(start.plusSeconds(300));
+  var alternateZone=parking.createZone(admin,tenant.getId(),"Floor2-A",Map.of(),"#2563EB");
+  var alternateSpot=parking.createSpot(admin,alternateZone.getId(),"B-01","STANDARD",Map.of());
+  var segmentResponse=httpJson("POST","/api/v1/reservations/"+reservation.getId()+"/extend",
+   Map.of("endAt",end.plusSeconds(3600).toString(),"spotId",alternateSpot.getId().toString()),driverAuth.accessToken(),201);
+  var segment=reservations.findById(UUID.fromString(segmentResponse.path("reservationId").asText())).orElseThrow();
+  assertEquals(alternateSpot.getId().toString(),segmentResponse.path("spotId").asText());
+  assertEquals(reservation.getId().toString(),segmentResponse.path("parentReservationId").asText());
+   assertEquals(reservation.getId(),segment.getParentReservationId());assertEquals(end,segment.getStartAt());
+  assertEquals(alternateSpot.getId(),segment.getSpotId());
+   var extensionPayment=billing.reservationPayment(driver,segment.getId(),token(driver).getId(),"extension-"+segment.getId());
+   billing.process(driver,extensionPayment.getId(),false);
+   assertEquals(ReservationStatus.RESERVED,reservations.findById(segment.getId()).orElseThrow().getStatus());
+   now.set(end.plusSeconds(3600));parking.exit(admin,session.getId());
+   assertEquals(ReservationStatus.COMPLETED,reservations.findById(segment.getId()).orElseThrow().getStatus());
+  }
+  @Test void reservationReceiptIsAnInformationalPdfAndRemainsOwnerScoped() throws Exception {
+   var reservation=reserve();payReservation(reservation);
+   var response=request("GET","/api/v1/reservations/"+reservation.getId()+"/receipt",null,driverAuth.accessToken());
+   assertEquals(200,response.statusCode());assertTrue(response.headers().firstValue("Content-Type").orElse("").startsWith("application/pdf"));
+   assertTrue(response.body().startsWith("%PDF-1.4"));assertTrue(response.body().contains("INFORMATIONAL RECEIPT - NOT A TAX DOCUMENT"));
+   assertEquals(403,request("GET","/api/v1/reservations/"+reservation.getId()+"/receipt",null,otherAuth.accessToken()).statusCode());
+   assertEquals(503,request("POST","/api/v1/reservations/"+reservation.getId()+"/receipt/email","{}",driverAuth.accessToken()).statusCode());
+  }
  @Test void approvedPaymentConfirmsOnlyItsReservation(){
   var r=reserve();var p=payReservation(r);assertEquals(PaymentStatus.APPROVED,p.getStatus());assertNotNull(p.getApprovedAt());
   assertEquals(ReservationStatus.RESERVED,reservations.findById(r.getId()).orElseThrow().getStatus());assertEquals(PaymentAttemptStatus.SUCCESS,attempts.byPayment(p.getId()).get(0).getStatus());
