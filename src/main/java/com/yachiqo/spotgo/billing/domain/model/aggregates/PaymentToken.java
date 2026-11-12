@@ -24,7 +24,8 @@ public class PaymentToken {
  @Column(name="last_four",nullable=false,length=4) private String lastFour;
  @Column(name="expiration_month",nullable=false) private short expirationMonth;
  @Column(name="expiration_year",nullable=false) private short expirationYear;
-  @Enumerated(EnumType.STRING) @Column(nullable=false) private PaymentTokenStatus status;
+ @Column(name="is_default",nullable=false) private boolean defaultMethod;
+   @Enumerated(EnumType.STRING) @Column(nullable=false) private PaymentTokenStatus status;
 
  @Column(name="created_at",nullable=false,updatable=false) private Instant createdAt;
  @Column(name="revoked_at") private Instant revokedAt;
@@ -32,9 +33,11 @@ public class PaymentToken {
  public PaymentToken(Profile profile,String ref,String brand,String lastFour,int month,int year,Instant now) {
   if(lastFour==null||!lastFour.matches("[0-9]{4}")||month<1||month>12||year<2000||year>2200)throw new IllegalArgumentException("Invalid summarized card details.");
   this.profile=Objects.requireNonNull(profile);providerTokenRef=text(ref);this.brand=text(brand);this.lastFour=lastFour;
-  expirationMonth=(short)month;expirationYear=(short)year;createdAt=now;status=PaymentTokenStatus.ACTIVE;
- }
- public UUID getProfileId(){return profile.getId();}
+   expirationMonth=(short)month;expirationYear=(short)year;createdAt=now;status=PaymentTokenStatus.ACTIVE;
+  }
+  public boolean isDefault(){return defaultMethod;}
+  public void setDefault(boolean value){defaultMethod=value;}
+  public UUID getProfileId(){return profile.getId();}
  public void revoke(Instant now){status=PaymentTokenStatus.REVOKED;revokedAt=now;}
  public boolean usable(Instant now){
   var expiry=java.time.YearMonth.of(expirationYear,expirationMonth);

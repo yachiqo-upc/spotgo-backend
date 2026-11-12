@@ -20,13 +20,14 @@ public class ParkingQueryServiceImpl {
  private final ParkingSessionRepository sessions;private final GuestParkingSessionRepository guests;
  private final com.yachiqo.spotgo.parking.application.ParkingOccupancyGateway occupancy;
  private final ProfilesManagementService profiles;private final ParkingCommandServiceImpl commands;private final Clock clock;
- private final DriverClassificationRepository classifications;
- public ParkingQueryServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,FloorPlanRepository plans,
-  DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,GuestParkingSessionRepository guests,
-  ProfilesManagementService profiles,ParkingCommandServiceImpl commands,Clock clock,com.yachiqo.spotgo.parking.application.ParkingOccupancyGateway occupancy,
-  DriverClassificationRepository classifications) {
+  private final DriverClassificationRepository classifications;
+  private final ReservationChangeRepository reservationChanges;
+  public ParkingQueryServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,FloorPlanRepository plans,
+   DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,GuestParkingSessionRepository guests,
+   ProfilesManagementService profiles,ParkingCommandServiceImpl commands,Clock clock,com.yachiqo.spotgo.parking.application.ParkingOccupancyGateway occupancy,
+   DriverClassificationRepository classifications,ReservationChangeRepository reservationChanges) {
   this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;
-  this.sessions=sessions;this.guests=guests;this.profiles=profiles;this.commands=commands;this.clock=clock;this.occupancy=occupancy;this.classifications=classifications;
+   this.sessions=sessions;this.guests=guests;this.profiles=profiles;this.commands=commands;this.clock=clock;this.occupancy=occupancy;this.classifications=classifications;this.reservationChanges=reservationChanges;
  }
  public List<Tenant> tenants(){return tenants.findAll();}
  public Tenant tenant(UUID id){return commands.tenant(id);}
@@ -50,9 +51,12 @@ public class ParkingQueryServiceImpl {
   if(actor.getRole()==UserRole.DRIVER)return reservations.byProfile(profiles.driver(actor).getId());
   commands.admin(actor,actor.getTenantId());return reservations.byTenant(actor.getTenantId());
  }
- public Reservation reservation(SpotgoUserPrincipal actor,UUID id) {
-  var r=reservations.findById(id).orElseThrow(()->ParkingCommandServiceImpl.missing("Reservation"));commands.reservationAccess(actor,r);return r;
- }
+  public Reservation reservation(SpotgoUserPrincipal actor,UUID id) {
+   var r=reservations.findById(id).orElseThrow(()->ParkingCommandServiceImpl.missing("Reservation"));commands.reservationAccess(actor,r);return r;
+  }
+  public List<ReservationChange> reservationChanges(SpotgoUserPrincipal actor,UUID id) {
+   reservation(actor,id);return reservationChanges.byReservation(id);
+  }
  public List<ParkingSession> sessions(SpotgoUserPrincipal actor) {
   if(actor.getRole()==UserRole.DRIVER)return sessions.byProfile(profiles.driver(actor).getId());
   commands.admin(actor,actor.getTenantId());return sessions.byTenant(actor.getTenantId());
@@ -68,7 +72,8 @@ public class ParkingQueryServiceImpl {
    boolean operational=s.getOperationalStatus()==com.yachiqo.spotgo.parking.domain.model.valueobjects.OperationalStatus.ACTIVE
     && s.getZone().getStatus()==com.yachiqo.spotgo.parking.domain.model.valueobjects.ZoneStatus.ACTIVE
     && s.getZone().getTenant().getStatus()==com.yachiqo.spotgo.parking.domain.model.valueobjects.TenantStatus.ACTIVE;
-   boolean blocked=reservations.overlappingSpot(s.getId(),start,end).stream().anyMatch(r->r.blocks(clock.instant()))
+    boolean blocked=reservations.overlappingSpot(s.getId(),start,end).stream().anyMatch(r->r.blocks(clock.instant()))
+     ||commands.pendingChangeOverlaps(s.getId(),start,end,null)
     || !sessions.openSpot(s.getId()).isEmpty() || !guests.openSpot(s.getId()).isEmpty();
    String physical=occupancy.physicalOccupancy(s.getId());boolean immediate=!start.isAfter(clock.instant());
    boolean observedBlock=immediate&&!physical.equals("AVAILABLE");

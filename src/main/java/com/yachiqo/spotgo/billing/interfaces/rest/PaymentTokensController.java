@@ -29,14 +29,20 @@ public class PaymentTokensController {
  private final BillingService service;private final BillingQueryService queries;private final SubscriptionPlans plans;
  public PaymentTokensController(BillingService service,BillingQueryService queries,SubscriptionPlans plans){this.service=service;this.queries=queries;this.plans=plans;}
 
- @GetMapping @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="List my payment methods",description="Returns the brand, last four digits, expiration, status, and whether the token is the tenant's default payment method. Does not expose providerTokenRef.")
- public List<TokenView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor){var defaultId=service.defaultPaymentTokenId(actor);return queries.tokens(actor).stream().map(t->TokenView.of(t,Objects.equals(t.getId(),defaultId))).toList();}
- @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Register a tokenized payment method",description="The academic default accepts synthetic references such as simulated-visa-4242 and returns summarized details. It rejects card numbers and security codes; no real payment method is contacted.")
- @ApiResponse(responseCode="201",description="Payment method registered.")
- public TokenView create(@AuthenticationPrincipal SpotgoUserPrincipal actor,@Valid @RequestBody TokenBody body){return TokenView.of(service.registerToken(actor,body.providerTokenRef()));}
- @PutMapping("/{tokenId}/default") @PreAuthorize("hasRole('PARKING_ADMIN')") @Operation(summary="Set the tenant's default payment method",description="The tenant's default payment method is used for prorated charges when new parking spots are added.")
- public TokenView setDefault(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID tokenId){return TokenView.of(service.setDefaultPaymentToken(actor,tokenId),true);}
+  @GetMapping @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="List my payment methods",description="Returns the brand, last four digits, expiration, status, and whether the token is the driver's or tenant's default payment method. Does not expose providerTokenRef.")
+  public List<TokenView> list(@AuthenticationPrincipal SpotgoUserPrincipal actor){return queries.tokens(actor).stream().map(t->view(actor,t)).toList();}
+  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Register a tokenized payment method",description="The local simulator accepts synthetic references such as simulated-visa-4242 and returns summarized details. It rejects card numbers and security codes; no real payment method is contacted.")
+  @ApiResponse(responseCode="201",description="Payment method registered.")
+  public TokenView create(@AuthenticationPrincipal SpotgoUserPrincipal actor,@Valid @RequestBody TokenBody body){return view(actor,service.registerToken(actor,body.providerTokenRef()));}
+  @PutMapping("/{tokenId}/default") @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Set the default payment method",description="Drivers choose the favorite method used for their payments. Parking Admins set the tenant method used for prorated charges.")
+  public TokenView setDefault(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID tokenId){return view(actor,service.setDefaultPaymentToken(actor,tokenId));}
  @DeleteMapping("/{tokenId}") @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Revoke my payment method",description="Preserves the history, sets the status to REVOKED, and records revokedAt.")
- public TokenView revoke(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID tokenId){return TokenView.of(service.revokeToken(actor,tokenId));}
+  public TokenView revoke(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID tokenId){return TokenView.of(service.revokeToken(actor,tokenId));}
+
+  private TokenView view(SpotgoUserPrincipal actor,com.yachiqo.spotgo.billing.domain.model.aggregates.PaymentToken token){
+   boolean isDefault=actor.getRole()==com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole.DRIVER
+    ?token.isDefault():Objects.equals(token.getId(),service.defaultPaymentTokenId(actor));
+   return TokenView.of(token,isDefault);
+  }
 
 }

@@ -47,10 +47,10 @@ public class PushNotificationService {
         Map<String, String> data = eventData(event);
         for (int start = 0; start < registrations.size(); start += MAX_BATCH_SIZE) {
             var batch = registrations.subList(start, Math.min(start + MAX_BATCH_SIZE, registrations.size()));
-            var invalid = gateway.send(batch.stream().map(PushDeviceToken::getToken).toList(),
+            var invalid = gateway.send(batch.stream().map(PushDeviceToken::getInstallationId).toList(),
                     content.title(), content.body(), data);
             if (!invalid.isEmpty()) {
-                devices.deleteAll(batch.stream().filter(device -> invalid.contains(device.getToken())).toList());
+                devices.deleteAll(batch.stream().filter(device -> invalid.contains(device.getInstallationId())).toList());
             }
         }
     }

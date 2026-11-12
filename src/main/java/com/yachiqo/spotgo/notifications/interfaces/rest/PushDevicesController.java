@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/api/v1/notifications/devices", produces = "application/json")
-@Tag(name = "Push Notifications", description = "Registers the signed-in user's Firebase device tokens for event-driven push notifications.")
+@Tag(name = "Push Notifications", description = "Registers the signed-in user's Firebase Installation IDs for event-driven push notifications.")
 @ApiResponses({
         @ApiResponse(responseCode = "401", description = "A valid accessToken is required.", content = @io.swagger.v3.oas.annotations.media.Content),
         @ApiResponse(responseCode = "500", description = "Unexpected server error.", content = @io.swagger.v3.oas.annotations.media.Content)
@@ -29,19 +29,19 @@ public class PushDevicesController {
     }
 
     @GetMapping
-    @Operation(summary = "List my registered devices", description = "Returns registration metadata for the signed-in account without exposing Firebase device tokens.")
+    @Operation(summary = "List my registered devices", description = "Returns registration metadata for the signed-in account without exposing Firebase Installation IDs.")
     @ApiResponse(responseCode = "200", description = "The current account's registered devices.")
     public List<PushDeviceResources.DeviceResource> ownDevices(@AuthenticationPrincipal SpotgoUserPrincipal actor) {
         return service.ownDevices(actor).stream().map(PushDeviceResources.DeviceResource::from).toList();
     }
 
     @PostMapping(consumes = "application/json")
-    @Operation(summary = "Register or refresh a device token", description = "Stores the Firebase registration token for this authenticated account. Re-registering a token updates its owner and last-seen time. The raw token is never returned.")
-    @ApiResponse(responseCode = "200", description = "The device token is registered.")
-    @ApiResponse(responseCode = "400", description = "The token or platform is invalid.", content = @io.swagger.v3.oas.annotations.media.Content)
+    @Operation(summary = "Register or refresh a device installation", description = "Stores the Firebase Installation ID for this authenticated account. Re-registering an installation updates its owner and last-seen time. The ID is never returned.")
+    @ApiResponse(responseCode = "200", description = "The device installation is registered.")
+    @ApiResponse(responseCode = "400", description = "The installation ID or platform is invalid.", content = @io.swagger.v3.oas.annotations.media.Content)
     public PushDeviceResources.DeviceResource register(@AuthenticationPrincipal SpotgoUserPrincipal actor,
                                                        @Valid @RequestBody PushDeviceResources.RegistrationRequest body) {
-        return PushDeviceResources.DeviceResource.from(service.register(actor, body.token(), body.platform()));
+        return PushDeviceResources.DeviceResource.from(service.register(actor, body.installationId(), body.platform()));
     }
 
     @DeleteMapping("/{deviceTokenId}")

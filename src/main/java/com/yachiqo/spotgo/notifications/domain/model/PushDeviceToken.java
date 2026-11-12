@@ -22,8 +22,8 @@ public class PushDeviceToken {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    @Column(name = "device_token", nullable = false, length = 4096)
-    private String token;
+    @Column(name = "device_token", nullable = false, length = 256)
+    private String installationId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 16)
@@ -37,14 +37,14 @@ public class PushDeviceToken {
 
     protected PushDeviceToken() {}
 
-    public PushDeviceToken(Account account, String token, DevicePlatform platform, Instant now) {
-        register(account, token, platform, now);
+    public PushDeviceToken(Account account, String installationId, DevicePlatform platform, Instant now) {
+        register(account, installationId, platform, now);
         createdAt = now;
     }
 
-    public void register(Account account, String token, DevicePlatform platform, Instant now) {
+    public void register(Account account, String installationId, DevicePlatform platform, Instant now) {
         this.account = Objects.requireNonNull(account);
-        this.token = requiredToken(token);
+        this.installationId = requiredInstallationId(installationId);
         this.platform = Objects.requireNonNull(platform);
         this.lastSeenAt = Objects.requireNonNull(now);
     }
@@ -53,9 +53,9 @@ public class PushDeviceToken {
         return account.getId();
     }
 
-    private static String requiredToken(String token) {
-        if (token == null || token.isBlank() || token.length() > 4096)
-            throw new IllegalArgumentException("A valid Firebase device token is required.");
-        return token.trim();
+    private static String requiredInstallationId(String installationId) {
+        if (installationId == null || installationId.isBlank() || installationId.length() > 256)
+            throw new IllegalArgumentException("A valid Firebase installation ID is required.");
+        return installationId.trim();
     }
 }

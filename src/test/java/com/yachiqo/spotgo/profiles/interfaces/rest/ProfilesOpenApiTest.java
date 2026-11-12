@@ -98,7 +98,7 @@ class ProfilesOpenApiTest {
                 operationCount++;
             }
         }
-        assertEquals(121, operationCount);
+        assertEquals(127, operationCount);
     }
 
     @Test void unauthenticatedProfileRequestMatchesDocumented401() throws Exception {

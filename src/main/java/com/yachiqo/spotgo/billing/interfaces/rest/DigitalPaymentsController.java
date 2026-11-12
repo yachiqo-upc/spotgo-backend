@@ -35,7 +35,12 @@ public class DigitalPaymentsController {
  public PaymentView get(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID paymentId){return PaymentView.of(queries.payment(actor,paymentId));}
  @PostMapping("/reservations/{reservationId}") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('DRIVER')") @Operation(summary="Create a payment for my reservation",description="Uses the reservation amount and sets reservations.payment_id. Repeating the same idempotencyKey and request returns the existing operation; reusing the key with a different request returns 409.")
  @ApiResponse(responseCode="201",description="Operation created or retrieved idempotently.")
- public PaymentView reservation(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID reservationId,@Valid @RequestBody PaymentBody body){return PaymentView.of(service.reservationPayment(actor,reservationId,body.tokenId(),body.idempotencyKey()));}
+  public PaymentView reservation(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID reservationId,@Valid @RequestBody PaymentBody body){return PaymentView.of(service.reservationPayment(actor,reservationId,body.tokenId(),body.idempotencyKey()));}
+  @PostMapping("/reservation-changes/{changeId}") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('DRIVER')")
+  @Operation(summary="Create a payment for a rescheduling price increase",description="Charges only the difference calculated by the backend. The reservation change is applied only after payment approval.")
+  public PaymentView reservationChange(@AuthenticationPrincipal SpotgoUserPrincipal actor,@PathVariable UUID changeId,@Valid @RequestBody PaymentBody body){
+   return PaymentView.of(service.reservationChangePayment(actor,changeId,body.tokenId(),body.idempotencyKey()));
+  }
  @PostMapping("/subscriptions") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('DRIVER','PARKING_ADMIN')") @Operation(summary="Create a payment to subscribe to a plan",description="Accepts planCode, tokenId, and idempotencyKey. No subscription is created until payment is approved. Approval creates an ACTIVE row with a required payment_id and start_at set to the approval time. billing_period_months=1 represents one calendar month.")
  @ApiResponse(responseCode="201",description="Operation created or retrieved.")
  public PaymentView subscription(@AuthenticationPrincipal SpotgoUserPrincipal actor,@Valid @RequestBody SubscriptionBody body){return PaymentView.of(service.subscriptionPayment(actor,body.planCode(),body.tokenId(),body.idempotencyKey()));}

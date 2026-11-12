@@ -68,7 +68,7 @@ class ParkingInfrastructureTest {
  @BeforeEach void setup(){
   now.set(Instant.parse("2030-01-01T10:00:00Z"));when(clock.instant()).thenAnswer(i->now.get());when(clock.getZone()).thenReturn(ZoneOffset.UTC);
 
-  for(String table:List.of("capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
+  for(String table:List.of("favorite_tenants","capacity_alerts","occupancy_alerts","occupancy_reports","capacity_snapshots","occupancy_conflicts","sensor_health_events","occupancy_readings","occupancy_sensors","billing_documents", "refunds","reservation_changes", "outstanding_balances", "additional_charges", "subscriptions", "payment_attempts", "parking_sessions","guest_parking_sessions","reservations","digital_parking_maps","floor_plans","parking_spots","parking_zones",
    "driver_classifications","digital_payments","audit_entries","sessions","credentials","role_assignments","passwordResetCodes","tenants","payment_tokens","vehicles","profiles","accounts")) jdbc.update("DELETE FROM "+table);
   superAuth=register("super");
   var sr=roles.findByAccountId(superAuth.accountId()).orElseThrow();sr.assign(UserRole.SUPER_ADMIN,null,Instant.EPOCH,null,AssignmentStatus.ACTIVE);roles.saveAndFlush(sr);
@@ -103,6 +103,10 @@ class ParkingInfrastructureTest {
   new com.yachiqo.spotgo.shared.infrastructure.persistence.jpa.seeder.DbSeeder(jdbc,new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()).run();
   var seeded=queries.tenant(UUID.fromString("00000000-0000-4000-8000-000000000021"));
   assertTrue(seeded.getRules().get("tariff_rules") instanceof Map);
+  var demoTenantId=UUID.fromString("00000000-0000-4000-8000-000000000022");
+  assertEquals("Miraflores Parking",queries.tenant(demoTenantId).getName());
+  var demoZoneId=UUID.fromString("00000000-0000-4000-8000-000000000033");
+  assertEquals(2,queries.spots(driver,demoZoneId).size());
   var seededMap=maps.findById(UUID.fromString("00000000-0000-4000-8000-000000000151")).orElseThrow();
   assertEquals(2,seededMap.getElements().size());
   assertEquals("CLOSED",jdbc.queryForObject("SELECT status FROM guest_parking_sessions WHERE guest_session_id=?",String.class,UUID.fromString("00000000-0000-4000-8000-000000000171")));
@@ -246,10 +250,29 @@ class ParkingInfrastructureTest {
   for(String endpoint:List.of("tenants","parking-zones","parking-spots","floor-plans","digital-parking-maps","reservations","parking-sessions","guest-parking-sessions"))assertTrue(paths.has("/api/v1/"+endpoint),endpoint);
   assertFalse(paths.has("/api/v1/parkings"));assertFalse(paths.has("/api/v1/detectedSpots"));
  }
- @Test void invalidUuidAndIntervalProduce400() throws Exception {
+  @Test void invalidUuidAndIntervalProduce400() throws Exception {
   assertEquals(400,request("GET","/api/v1/parking-spots?zoneId=not-uuid",null,driverAuth.accessToken()).statusCode());
   assertEquals(400,request("POST","/api/v1/reservations",Map.of("spotId",spot.getId(),"vehicleId",vehicle.getId(),"startAt",now.get(),"endAt",now.get()),driverAuth.accessToken()).statusCode());
- }
+  }
+  @Test void favoriteEndpointsPersistIdempotentlyAndEnforceOwnerScope() throws Exception {
+   var body=Map.of("tenantId",tenant.getId());
+   var created=request("POST","/api/v1/favorites",body,driverAuth.accessToken());
+   assertEquals(201,created.statusCode());
+   var favorite=json.readTree(created.body());
+   var favoriteId=favorite.path("favoriteId").asText();
+   assertFalse(favoriteId.isBlank());
+   assertEquals(tenant.getId().toString(),favorite.path("tenantId").asText());
+
+   var repeated=request("POST","/api/v1/favorites",body,driverAuth.accessToken());
+   assertEquals(201,repeated.statusCode());
+   assertEquals(favoriteId,json.readTree(repeated.body()).path("favoriteId").asText());
+   assertEquals(1,json.readTree(request("GET","/api/v1/favorites",null,driverAuth.accessToken()).body()).size());
+   assertEquals(0,json.readTree(request("GET","/api/v1/favorites",null,otherAuth.accessToken()).body()).size());
+
+   assertEquals(404,request("DELETE","/api/v1/favorites/"+favoriteId,null,otherAuth.accessToken()).statusCode());
+   assertEquals(204,request("DELETE","/api/v1/favorites/"+favoriteId,null,driverAuth.accessToken()).statusCode());
+   assertEquals(0,json.readTree(request("GET","/api/v1/favorites",null,driverAuth.accessToken()).body()).size());
+  }
  @Test void tariffsValidatePeriodAndRoundOnlyWhenNeeded(){
   var t=now.get();assertEquals(new BigDecimal("5.00"),ParkingTariffs.price(rules(),t,t.plusSeconds(3600)));
   assertEquals(new BigDecimal("10.00"),ParkingTariffs.price(rules(),t,t.plusSeconds(3601)));

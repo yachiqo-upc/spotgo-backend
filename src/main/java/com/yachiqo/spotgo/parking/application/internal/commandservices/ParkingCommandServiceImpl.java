@@ -3,6 +3,7 @@ import com.yachiqo.spotgo.parking.application.*;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.*;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.*;
 import com.yachiqo.spotgo.parking.infrastructure.persistence.jpa.repositories.*;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus;
 import com.yachiqo.spotgo.iam.infrastructure.security.SpotgoUserPrincipal;
 import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
 import com.yachiqo.spotgo.profiles.application.internal.ProfilesManagementService;
@@ -27,7 +28,8 @@ public class ParkingCommandServiceImpl {
  private final ParkingSpotRepository spots;
  private final FloorPlanRepository plans;
  private final DigitalParkingMapRepository maps;
- private final ReservationRepository reservations;
+  private final ReservationRepository reservations;
+  private final ReservationChangeRepository reservationChanges;
  private final ParkingSessionRepository sessions;
  private final GuestParkingSessionRepository guests;
  private final VehicleRepository vehicles;
@@ -37,10 +39,10 @@ public class ParkingCommandServiceImpl {
  private final ParkingOccupancyGateway occupancy;
  private final SpotgoDomainEventPublisher domainEvents;
  private final Clock clock;
- public ParkingCommandServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,
-  FloorPlanRepository plans,DigitalParkingMapRepository maps,ReservationRepository reservations,ParkingSessionRepository sessions,
+  public ParkingCommandServiceImpl(TenantRepository tenants,ParkingZoneRepository zones,ParkingSpotRepository spots,
+   FloorPlanRepository plans,DigitalParkingMapRepository maps,ReservationRepository reservations,ReservationChangeRepository reservationChanges,ParkingSessionRepository sessions,
   GuestParkingSessionRepository guests,VehicleRepository vehicles,ProfilesManagementService profiles,DriverClassificationRepository classifications,ParkingPaymentGateway payments,Clock clock,ParkingOccupancyGateway occupancy,SpotgoDomainEventPublisher domainEvents) {
-  this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;
+   this.tenants=tenants;this.zones=zones;this.spots=spots;this.plans=plans;this.maps=maps;this.reservations=reservations;this.reservationChanges=reservationChanges;
   this.sessions=sessions;this.guests=guests;this.vehicles=vehicles;this.profiles=profiles;this.classifications=classifications;this.payments=payments;this.clock=clock;this.occupancy=occupancy;this.domainEvents=domainEvents;
  }
  public static ParkingException missing(String resource) {return new ParkingException(HttpStatus.NOT_FOUND,resource+" not found");}
@@ -167,13 +169,90 @@ public class ParkingCommandServiceImpl {
   if(!spot.getZone().getAllowedProfileTypes().contains(driverType))
    throw new AccessDeniedException("The driver's profile type is not allowed in this parking zone.");
   if(!start.isAfter(now)&&!occupancy.physicalOccupancy(spotId).equals("AVAILABLE"))throw conflict("There is no reliable physical confirmation that the parking spot is free now.");
-  if(reservations.overlappingSpot(spotId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("The parking spot already has an active reservation or hold.");
-  if(reservations.overlappingVehicle(vehicleId,start,end).stream().anyMatch(r->r.blocks(now))) throw conflict("The vehicle already has an overlapping reservation.");
+   if(reservations.overlappingSpot(spotId,start,end).stream().anyMatch(r->r.blocks(now))||pendingChangeOverlaps(spotId,start,end,null)) throw conflict("The parking spot already has an active reservation or hold.");
+   if(reservations.overlappingVehicle(vehicleId,start,end).stream().anyMatch(r->r.blocks(now))||pendingChangeOverlapsVehicle(vehicleId,start,end,null)) throw conflict("The vehicle already has an overlapping reservation.");
   if(!sessions.openSpot(spotId).isEmpty() || !guests.openSpot(spotId).isEmpty()) throw conflict("The parking spot has an open session.");
   var rules=spot.getZone().getTenant().getRules();
   var reservation=reservations.saveAndFlush(new Reservation(spot,profile,vehicle,start,end,payments.reservationPrice(profile.getId(),ParkingTariffs.price(rules,start,end),now),now,ParkingTariffs.lockMinutes(rules)));
   domainEvents.publish("parking.reservation.created","Parking Infrastructure","Reservation",reservation.getId(),reservation.getTenantId(),List.of(profile.getAccountId()),Map.of("reservation_id",reservation.getId().toString(),"status",reservation.getStatus().name()));
   return reservation;
+ }
+ public boolean pendingChangeOverlaps(UUID spotId,Instant start,Instant end,UUID exceptReservation) {
+  return reservationChanges.overlapping(spotId,start,end,ReservationChangeStatus.PENDING_PAYMENT).stream()
+   .anyMatch(c->exceptReservation==null||!c.getReservationId().equals(exceptReservation));
+ }
+ public boolean pendingChangeOverlapsVehicle(UUID vehicleId,Instant start,Instant end,UUID exceptReservation) {
+  return reservationChanges.overlappingVehicle(vehicleId,start,end,ReservationChangeStatus.PENDING_PAYMENT).stream()
+   .anyMatch(c->exceptReservation==null||!c.getReservationId().equals(exceptReservation));
+ }
+ @Transactional
+ public ParkingPaymentGateway.ReservationChangeResult reschedule(SpotgoUserPrincipal actor,UUID id,Instant start,Instant end) {
+  var current=reservations.findById(id).orElseThrow(()->missing("Reservation"));reservationAccess(actor,current);
+  if(actor==null||actor.getRole()!=UserRole.DRIVER)throw new AccessDeniedException("Only the driver can reschedule a reservation.");
+  payments.lockProfile(current.getProfileId());vehicles.lock(current.getVehicleId()).orElseThrow(()->missing("Vehicle"));
+  var spot=lockSpot(current.getSpotId());var r=reservations.lock(id).orElseThrow(()->missing("Reservation"));reservationAccess(actor,r);
+  var now=clock.instant();
+  if(r.getStatus()!=ReservationStatus.RESERVED||r.getParentReservationId()!=null)throw conflict("Only a confirmed primary reservation can be rescheduled.");
+  if(now.isAfter(r.getStartAt().minusSeconds(300)))throw conflict("Reservations can be rescheduled only until five minutes before they start.");
+  usableInterval(start,end);if(start.isBefore(now))throw new IllegalArgumentException("A reservation cannot be moved into the past.");
+  operational(spot);
+  if(reservations.overlappingSpot(r.getSpotId(),start,end).stream().anyMatch(other->!other.getId().equals(id)&&other.blocks(now))||
+     reservations.overlappingVehicle(r.getVehicleId(),start,end).stream().anyMatch(other->!other.getId().equals(id)&&other.blocks(now))||
+     pendingChangeOverlaps(r.getSpotId(),start,end,id)||pendingChangeOverlapsVehicle(r.getVehicleId(),start,end,id))throw conflict("The requested interval is no longer available.");
+  var base=ParkingTariffs.price(r.getTenant().getRules(),start,end);
+  var price=payments.reservationPrice(r.getProfileId(),base,now);
+  var result=payments.beginReschedule(actor,r,start,end,price);
+  domainEvents.publish("parking.reservation.reschedule_requested","Parking Infrastructure","Reservation",r.getId(),r.getTenantId(),
+   List.of(r.getProfile().getAccountId()),Map.of("reservation_id",r.getId().toString(),"change_id",result.change().getId().toString(),"status",result.change().getStatus().name()));
+  return result;
+ }
+ @Transactional
+ public Reservation extend(SpotgoUserPrincipal actor,UUID id,Instant end) {
+  return extend(actor,id,end,null);
+ }
+ @Transactional
+ public Reservation extend(SpotgoUserPrincipal actor,UUID id,Instant end,UUID requestedSpotId) {
+  var current=reservations.findById(id).orElseThrow(()->missing("Reservation"));reservationAccess(actor,current);
+  if(actor==null||actor.getRole()!=UserRole.DRIVER)throw new AccessDeniedException("Only the driver can extend a reservation.");
+  var root=current;
+  while(root.getParentReservation()!=null)root=root.getParentReservation();
+  payments.lockProfile(root.getProfileId());vehicles.lock(root.getVehicleId()).orElseThrow(()->missing("Vehicle"));
+  var originalSpot=lockSpot(root.getSpotId());root=reservations.lock(root.getId()).orElseThrow(()->missing("Reservation"));
+  reservationAccess(actor,root);var now=clock.instant();
+  if(root.getStatus()!=ReservationStatus.ACTIVE||!now.isBefore(root.getEndAt()))throw conflict("An extension requires an active reservation and payment before its original end time.");
+  if(sessions.byReservation(root.getId()).filter(s->s.getExitAt()==null).isEmpty())throw conflict("The reservation has no active parking session.");
+  var spot=requestedSpotId==null||requestedSpotId.equals(originalSpot.getId())?originalSpot:lockSpot(requestedSpotId);
+  if(!spot.getTenantId().equals(root.getTenantId()))throw conflict("An extension must use a parking spot in the same facility.");
+  operational(spot);
+  var driverType=classifications.findByProfileIdAndTenantId(root.getProfileId(),root.getTenantId())
+   .map(com.yachiqo.spotgo.profiles.domain.model.aggregates.DriverClassification::getProfileType)
+   .orElse(DriverProfileType.PRIVATE);
+  if(!spot.getZone().getAllowedProfileTypes().contains(driverType))
+   throw new AccessDeniedException("The driver's profile type is not allowed in this parking zone.");
+  var tail=root;
+  while(true){
+   var next=reservations.extensions(tail.getId()).stream()
+    .filter(candidate->candidate.getStatus()==ReservationStatus.PENDING_PAYMENT||candidate.getStatus()==ReservationStatus.RESERVED)
+    .max(Comparator.comparing(Reservation::getEndAt)).orElse(null);
+   if(next==null)break;
+   if(next.getStatus()==ReservationStatus.PENDING_PAYMENT)throw conflict("Pay for the existing extension before requesting another one.");
+   tail=next;
+  }
+  usableInterval(tail.getEndAt(),end);
+  if(!end.isAfter(tail.getEndAt()))throw new IllegalArgumentException("The extension must end after the current reservation segment.");
+  if(reservations.overlappingSpot(spot.getId(),tail.getEndAt(),end).stream().anyMatch(other->other.blocks(now))||
+     pendingChangeOverlaps(spot.getId(),tail.getEndAt(),end,null))throw conflict("The requested extension interval is not available.");
+  if(!spot.getId().equals(originalSpot.getId())&&(!sessions.openSpot(spot.getId()).isEmpty()||!guests.openSpot(spot.getId()).isEmpty()))
+   throw conflict("The selected parking spot has an active session.");
+  if(reservations.overlappingVehicle(root.getVehicleId(),tail.getEndAt(),end).stream().anyMatch(other->other.blocks(now)))
+   throw conflict("The vehicle has an overlapping reservation.");
+  if(pendingChangeOverlapsVehicle(root.getVehicleId(),tail.getEndAt(),end,null))throw conflict("The vehicle has a pending rescheduling change in that interval.");
+  var amount=payments.reservationPrice(root.getProfileId(),ParkingTariffs.price(root.getTenant().getRules(),tail.getEndAt(),end),now);
+  var extension=reservations.saveAndFlush(new Reservation(spot,root.getProfile(),root.getVehicle(),tail,tail.getEndAt(),end,
+   amount,now,ParkingTariffs.lockMinutes(root.getTenant().getRules())));
+  domainEvents.publish("parking.reservation.extension_requested","Parking Infrastructure","Reservation",extension.getId(),extension.getTenantId(),
+   List.of(root.getProfile().getAccountId()),Map.of("reservation_id",extension.getId().toString(),"parent_reservation_id",tail.getId().toString()));
+  return extension;
  }
  public void reservationAccess(SpotgoUserPrincipal actor,Reservation r) {
   if(actor!=null && actor.getRole()==UserRole.DRIVER && actor.getAccountId().equals(r.getProfile().getAccountId())) return;
@@ -224,11 +303,20 @@ public class ParkingCommandServiceImpl {
  @Transactional
  public ParkingSession exit(SpotgoUserPrincipal actor,UUID id) {
   var current=sessions.findById(id).orElseThrow(()->missing("Parking session"));admin(actor,current.getReservation().getTenantId());payments.lockProfile(current.getProfileId());
-  var s=sessions.lock(id).orElseThrow(()->missing("Parking session"));admin(actor,s.getReservation().getTenantId());
-  var r=reservations.lock(s.getReservationId()).orElseThrow(()->missing("Reservation"));
-  var now=clock.instant();s.close(now);
-  boolean exceeded=now.isAfter(r.getEndAt().plusSeconds(ParkingTariffs.toleranceMinutes(r.getTenant().getRules())*60));
-  r.complete(exceeded);sessions.saveAndFlush(s);payments.completed(r,s);
+   var s=sessions.lock(id).orElseThrow(()->missing("Parking session"));admin(actor,s.getReservation().getTenantId());
+   var r=reservations.lock(s.getReservationId()).orElseThrow(()->missing("Reservation"));
+   var now=clock.instant();s.close(now);
+   var tail=r;
+   while(true){
+    var next=reservations.extensions(tail.getId()).stream().filter(segment->segment.getStatus()==ReservationStatus.RESERVED)
+     .max(Comparator.comparing(Reservation::getEndAt)).orElse(null);
+    if(next==null)break;tail=next;
+   }
+   boolean exceeded=now.isAfter(tail.getEndAt().plusSeconds(ParkingTariffs.toleranceMinutes(tail.getTenant().getRules())*60));
+   r.complete(exceeded);
+   var segment=tail;
+   while(segment!=r){segment.complete(exceeded);segment=segment.getParentReservation();}
+   sessions.saveAndFlush(s);payments.completed(tail,s);
   domainEvents.publish("parking.session.completed","Parking Infrastructure","ParkingSession",s.getId(),r.getTenantId(),List.of(r.getProfile().getAccountId()),Map.of("session_id",s.getId().toString(),"reservation_id",r.getId().toString(),"overstay",Boolean.toString(exceeded)));
   return s;
  }

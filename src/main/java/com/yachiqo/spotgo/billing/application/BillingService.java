@@ -7,6 +7,7 @@ import com.yachiqo.spotgo.iam.domain.model.valueobjects.UserRole;
 import com.yachiqo.spotgo.profiles.domain.model.aggregates.Profile;
 import com.yachiqo.spotgo.parking.domain.model.aggregates.*;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationStatus;
+import com.yachiqo.spotgo.parking.domain.model.valueobjects.ReservationChangeStatus;
 import com.yachiqo.spotgo.parking.domain.model.valueobjects.OperationalStatus;
 import com.yachiqo.spotgo.parking.application.ParkingTariffs;
 import com.yachiqo.spotgo.parking.application.ParkingPaymentGateway;
@@ -34,7 +35,8 @@ public class BillingService {
  private final OutstandingBalanceRepository balances;
  private final RefundRepository refunds;
  private final BillingDocumentRepository documents;
- private final ReservationRepository reservations;
+  private final ReservationRepository reservations;
+  private final ReservationChangeRepository reservationChanges;
  private final TenantRepository tenants;
  private final ParkingSpotRepository parkingSpots;
  private final BillingAccess access;
@@ -45,15 +47,15 @@ public class BillingService {
  private final int retrySeconds;
  private final int debtHours;
  private final boolean afterTolerance;
- public BillingService(PaymentTokenRepository tokens,DigitalPaymentRepository payments,PaymentAttemptRepository attempts,
-  SubscriptionRepository subscriptions,AdditionalChargeRepository charges,OutstandingBalanceRepository balances,
-  RefundRepository refunds,BillingDocumentRepository documents,ReservationRepository reservations,TenantRepository tenants,ParkingSpotRepository parkingSpots,
+  public BillingService(PaymentTokenRepository tokens,DigitalPaymentRepository payments,PaymentAttemptRepository attempts,
+   SubscriptionRepository subscriptions,AdditionalChargeRepository charges,OutstandingBalanceRepository balances,
+   RefundRepository refunds,BillingDocumentRepository documents,ReservationRepository reservations,ReservationChangeRepository reservationChanges,TenantRepository tenants,ParkingSpotRepository parkingSpots,
    BillingAccess access,SubscriptionPlans plans,PaymentProvider provider,SpotgoDomainEventPublisher domainEvents,Clock clock,
   @Value("${app.billing.retry-delay-seconds:60}") int retrySeconds,
   @Value("${app.billing.debt-due-hours:24}") int debtHours,
   @Value("${app.billing.overstay-charge-basis:AFTER_TOLERANCE}") String basis) {
   this.tokens=tokens;this.payments=payments;this.attempts=attempts;this.subscriptions=subscriptions;this.charges=charges;
-  this.balances=balances;this.refunds=refunds;this.documents=documents;this.reservations=reservations;this.tenants=tenants;this.parkingSpots=parkingSpots;
+   this.balances=balances;this.refunds=refunds;this.documents=documents;this.reservations=reservations;this.reservationChanges=reservationChanges;this.tenants=tenants;this.parkingSpots=parkingSpots;
    this.access=access;this.plans=plans;this.provider=provider;this.domainEvents=domainEvents;this.clock=clock;this.retrySeconds=retrySeconds;this.debtHours=debtHours;
   if(retrySeconds<1||debtHours<1||!Set.of("AFTER_TOLERANCE","TOTAL_EXCESS").contains(basis))throw new IllegalArgumentException("Invalid billing policy.");
   afterTolerance=basis.equals("AFTER_TOLERANCE");
@@ -61,24 +63,36 @@ public class BillingService {
  public static BillingException missing(String resource){return new BillingException(HttpStatus.NOT_FOUND,resource+" not found");}
  public static BillingException conflict(String reason){return new BillingException(HttpStatus.CONFLICT,reason);}
  @Transactional
- public PaymentToken registerToken(SpotgoUserPrincipal actor,String reference) {
-  var profile=access.profile(actor);access.lockProfile(profile.getId());
-  var details=provider.inspectToken(text(reference));
-  var token=new PaymentToken(profile,details.reference(),details.brand(),details.lastFour(),details.expirationMonth(),details.expirationYear(),clock.instant());
-  if(!token.usable(clock.instant()))throw new IllegalArgumentException("Payment method has expired.");
-  return tokens.saveAndFlush(token);
- }
+  public PaymentToken registerToken(SpotgoUserPrincipal actor,String reference) {
+   var profile=access.profile(actor);access.lockProfile(profile.getId());
+   var details=provider.inspectToken(text(reference));
+   var token=new PaymentToken(profile,details.reference(),details.brand(),details.lastFour(),details.expirationMonth(),details.expirationYear(),clock.instant());
+   if(!token.usable(clock.instant()))throw new IllegalArgumentException("Payment method has expired.");
+   if(actor.getRole()==UserRole.DRIVER&&tokens.byProfile(profile.getId()).stream().noneMatch(PaymentToken::isDefault))token.setDefault(true);
+   return tokens.saveAndFlush(token);
+  }
  @Transactional
  public PaymentToken revokeToken(SpotgoUserPrincipal actor,UUID id){
   var profile=access.profile(actor);access.lockProfile(profile.getId());
   if(actor.getRole()==UserRole.PARKING_ADMIN){access.tenant(actor,actor.getTenantId());tenants.lock(actor.getTenantId()).orElseThrow(()->missing("Tenant"));}
   var t=tokens.lock(id).orElseThrow(()->missing("Payment token"));access.owner(actor,t.getProfile());
+  boolean wasDriverDefault=actor.getRole()==UserRole.DRIVER&&t.isDefault();
   for(var tenant:tenants.byDefaultPaymentTokenId(t.getId())){var locked=tenants.lock(tenant.getId()).orElseThrow(()->missing("Tenant"));locked.setDefaultPaymentTokenId(null);}
-  t.revoke(clock.instant());return tokens.saveAndFlush(t);
+  t.revoke(clock.instant());t.setDefault(false);
+  if(wasDriverDefault)tokens.byProfile(t.getProfileId()).stream().filter(candidate->candidate.usable(clock.instant())).findFirst().ifPresent(candidate->candidate.setDefault(true));
+  return tokens.saveAndFlush(t);
  }
  @Transactional
  public PaymentToken setDefaultPaymentToken(SpotgoUserPrincipal actor,UUID id){
-  if(actor==null||actor.getRole()!=UserRole.PARKING_ADMIN)throw new AccessDeniedException("Only PARKING_ADMIN can configure the tenant's payment method.");
+   if(actor==null)throw new AccessDeniedException("Authentication is required.");
+   if(actor.getRole()==UserRole.DRIVER){
+    var profile=access.profile(actor);access.lockProfile(profile.getId());
+    var token=tokens.lock(id).orElseThrow(()->missing("Payment token"));access.owner(actor,token.getProfile());
+    if(!token.usable(clock.instant()))throw conflict("The payment method is revoked or expired.");
+    tokens.byProfile(profile.getId()).forEach(candidate->candidate.setDefault(candidate.getId().equals(token.getId())));
+    return token;
+   }
+   if(actor.getRole()!=UserRole.PARKING_ADMIN)throw new AccessDeniedException("Only a driver or PARKING_ADMIN can configure a default payment method.");
   var profile=access.profile(actor);access.lockProfile(profile.getId());access.tenant(actor,actor.getTenantId());
   var tenant=tenants.lock(actor.getTenantId()).orElseThrow(()->missing("Tenant"));
   var token=tokens.lock(id).orElseThrow(()->missing("Payment token"));access.owner(actor,token.getProfile());
@@ -182,13 +196,53 @@ public class BillingService {
   BigDecimal prorated=plans.pricePerIotDevice(subscription.getPlan()).multiply(BigDecimal.valueOf(newSpotCount)).multiply(fraction);
   return amount(prorated.setScale(2,RoundingMode.HALF_UP));
  }
- public BigDecimal reservationPrice(UUID profile,BigDecimal base,Instant now) {
+  public BigDecimal reservationPrice(UUID profile,BigDecimal base,Instant now) {
   var active=subscriptions.byProfile(profile).stream().filter(s->s.activeAt(now)&&now.isBefore(SubscriptionPlans.periodEnd(s))).toList();
   if(active.size()>1)throw conflict("More than one subscription is active. Check the account's subscription configuration.");
   BigDecimal discount=active.isEmpty()?BigDecimal.ZERO:new BigDecimal(active.get(0).getPlan().getOrDefault("discount_percent",0).toString());
   if(discount.signum()<0||discount.compareTo(BigDecimal.valueOf(100))>=0)throw conflict("Invalid subscription discount.");
-  return base.multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2))).setScale(2,RoundingMode.HALF_UP);
- }
+   return base.multiply(BigDecimal.ONE.subtract(discount.movePointLeft(2))).setScale(2,RoundingMode.HALF_UP);
+  }
+  @Transactional
+  public ParkingPaymentGateway.ReservationChangeResult beginReschedule(SpotgoUserPrincipal actor,Reservation reservation,
+    Instant start,Instant end,BigDecimal nextAmount) {
+   if(actor==null||actor.getRole()!=UserRole.DRIVER)throw new AccessDeniedException("Only the driver can reschedule their reservation.");
+   var profile=access.profile(actor);access.owner(actor,reservation.getProfile());access.lockProfile(profile.getId());
+   if(reservation.getStatus()!=ReservationStatus.RESERVED||reservation.getParentReservationId()!=null)
+    throw conflict("Only a confirmed primary reservation can be rescheduled.");
+   var previous=reservationChanges.byReservation(reservation.getId());
+   if(previous.stream().anyMatch(c->c.getStatus()==ReservationChangeStatus.PENDING_PAYMENT))
+    throw conflict("Finish or reconcile the existing reservation change before editing it again.");
+   for(var change:previous)if(change.getStatus()==ReservationChangeStatus.REFUND_SCHEDULED){change.supersede();reservationChanges.saveAndFlush(change);}
+
+   var target=amount(nextAmount);
+   var available=reservationPaidBalance(reservation,previous);
+   var difference=target.subtract(available).setScale(2,RoundingMode.HALF_UP);
+   if(difference.signum()>0){
+    var change=reservationChanges.saveAndFlush(new ReservationChange(reservation,start,end,target,difference,
+      ReservationChangeStatus.PENDING_PAYMENT,null));
+    return new ParkingPaymentGateway.ReservationChangeResult(change,null,difference);
+   }
+   reservation.reschedule(start,end,target);reservations.saveAndFlush(reservation);
+   var refundDue=difference.signum()<0?clock.instant().plusSeconds(300):null;
+   var change=reservationChanges.saveAndFlush(new ReservationChange(reservation,start,end,target,BigDecimal.ZERO.setScale(2),
+     refundDue==null?ReservationChangeStatus.APPLIED:ReservationChangeStatus.REFUND_SCHEDULED,refundDue));
+   return new ParkingPaymentGateway.ReservationChangeResult(change,null,BigDecimal.ZERO.setScale(2));
+  }
+  private BigDecimal reservationPaidBalance(Reservation reservation,List<ReservationChange> changes) {
+   var captured=new LinkedHashMap<UUID,DigitalPayment>();
+   if(reservation.getPaymentId()!=null)payments.findById(reservation.getPaymentId()).filter(p->p.getStatus()==PaymentStatus.APPROVED)
+     .ifPresent(p->captured.put(p.getId(),p));
+   for(var change:changes)if(change.getPaymentId()!=null)payments.findById(change.getPaymentId())
+     .filter(p->p.getStatus()==PaymentStatus.APPROVED).ifPresent(p->captured.put(p.getId(),p));
+   BigDecimal total=BigDecimal.ZERO;
+   for(var payment:captured.values()){
+    BigDecimal refunded=refunds.byPayment(payment.getId()).stream().filter(r->r.getStatus()!=RefundStatus.FAILED)
+      .map(Refund::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
+    total=total.add(payment.getAmount().subtract(refunded));
+   }
+   return total.max(BigDecimal.ZERO).setScale(2,RoundingMode.HALF_UP);
+  }
  private PaymentToken ownToken(SpotgoUserPrincipal actor,UUID id){
   if(id==null)throw new IllegalArgumentException("Select a payment token.");
   var token=tokens.findById(id).orElseThrow(()->missing("Payment token"));access.owner(actor,token.getProfile());
@@ -211,7 +265,7 @@ public class BillingService {
   attempts.saveAndFlush(new PaymentAttempt(payment,1,clock.instant()));return payment;
  }
  @Transactional
- public DigitalPayment reservationPayment(SpotgoUserPrincipal actor,UUID reservationId,UUID tokenId,String key) {
+  public DigitalPayment reservationPayment(SpotgoUserPrincipal actor,UUID reservationId,UUID tokenId,String key) {
   var profile=access.profile(actor);if(actor.getRole()!=UserRole.DRIVER)throw new AccessDeniedException("Only the driver can pay for their reservation.");
   access.lockProfile(profile.getId());
   var r=reservations.lock(reservationId).orElseThrow(()->missing("Reservation"));access.owner(actor,r.getProfile());
@@ -220,8 +274,22 @@ public class BillingService {
   if(r.getPaymentId()!=null)throw conflict("The reservation already has a payment operation. View or retry that operation.");
   if(r.getStatus()!=ReservationStatus.PENDING_PAYMENT||!r.blocks(clock.instant()))throw conflict("The reservation hold is no longer active.");
   var payment=create(profile,ownToken(actor,tokenId),PaymentOperationType.RESERVATION,r.getAmount(),key,hash);
-  r.attachPayment(payment.getId());reservations.saveAndFlush(r);return payment;
- }
+   r.attachPayment(payment.getId());reservations.saveAndFlush(r);return payment;
+  }
+  @Transactional
+  public DigitalPayment reservationChangePayment(SpotgoUserPrincipal actor,UUID changeId,UUID tokenId,String key) {
+   var profile=access.profile(actor);if(actor.getRole()!=UserRole.DRIVER)throw new AccessDeniedException("Only the driver can pay for their reservation change.");
+   access.lockProfile(profile.getId());
+   var change=reservationChanges.lock(changeId).orElseThrow(()->missing("Reservation change"));
+   access.owner(actor,change.getReservation().getProfile());
+   if(change.getStatus()!=ReservationChangeStatus.PENDING_PAYMENT)throw conflict("The reservation change is not awaiting payment.");
+   String hash=hash(PaymentOperationType.RESERVATION_ADJUSTMENT,changeId,tokenId,profile,change.getPaymentAmount());
+   var replay=existing(key,hash,profile);if(replay!=null)return replay;
+   if(change.getPaymentId()!=null)throw conflict("The reservation change already has a payment operation. View or retry it.");
+   var payment=create(profile,ownToken(actor,tokenId),PaymentOperationType.RESERVATION_ADJUSTMENT,change.getPaymentAmount(),key,hash);
+   payment.reservationChangeRequest(changeId);payments.saveAndFlush(payment);
+   change.attachPayment(payment.getId());reservationChanges.saveAndFlush(change);return payment;
+  }
  @Transactional
  public DigitalPayment subscriptionPayment(SpotgoUserPrincipal actor,String code,UUID tokenId,String key) {
   var profile=access.profile(actor);access.lockProfile(profile.getId());
@@ -336,12 +404,20 @@ public class BillingService {
   access.lockProfile(current.getProfileId());
   return payments.lock(id).orElseThrow(()->missing("Payment"));
  }
- private void requireOpenSource(DigitalPayment payment){
-  switch(payment.getOperationType()){
-   case RESERVATION -> {
-    var r=reservations.byPayment(payment.getId()).orElseThrow(()->conflict("Payment has no associated reservation."));
-    if(r.getStatus()!=ReservationStatus.PENDING_PAYMENT||!r.blocks(clock.instant()))throw conflict("This reservation is no longer eligible for payment.");
-   }
+  private void requireOpenSource(DigitalPayment payment){
+   switch(payment.getOperationType()){
+    case RESERVATION -> {
+     var r=reservations.byPayment(payment.getId()).orElseThrow(()->conflict("Payment has no associated reservation."));
+     if(r.getStatus()!=ReservationStatus.PENDING_PAYMENT||!r.blocks(clock.instant()))throw conflict("This reservation is no longer eligible for payment.");
+     if(r.getParentReservationId()!=null&&!extensionPaymentWindow(r))throw conflict("An extension must be approved before the original reservation ends.");
+    }
+    case RESERVATION_ADJUSTMENT -> {
+     var change=reservationChanges.byPayment(payment.getId()).orElseThrow(()->conflict("Payment has no associated reservation change."));
+     var r=change.getReservation();
+     if(change.getStatus()!=ReservationChangeStatus.PENDING_PAYMENT||r.getStatus()!=ReservationStatus.RESERVED)
+      throw conflict("This reservation change is no longer eligible for payment.");
+     if(!clock.instant().isBefore(r.getStartAt().minusSeconds(300)))throw conflict("The rescheduling payment must be approved at least five minutes before the reservation starts.");
+    }
    case SUBSCRIPTION -> {
      var request=subscriptionRequest(payment);
      if(request.tenantId()!=null&&plans.isSpotPricedTenantPlan(request.plan())){
@@ -465,22 +541,24 @@ public class BillingService {
   PaymentStatus status=payment.getStatus();
   String type;
   if(status==PaymentStatus.APPROVED){
-   type=switch(payment.getOperationType()){
-    case RESERVATION -> "billing.reservation_payment.approved";
+    type=switch(payment.getOperationType()){
+     case RESERVATION -> "billing.reservation_payment.approved";
+     case RESERVATION_ADJUSTMENT -> "billing.reservation_change.approved";
     case SUBSCRIPTION -> "billing.subscription.started";
     case SUBSCRIPTION_ADJUSTMENT -> "billing.subscription.adjusted";
     default -> "billing.payment.approved";
    };
   }else if(status==PaymentStatus.REJECTED)type="billing.payment.rejected";
   else type="billing.payment.status_changed";
-  UUID tenantId=paymentTenantId(payment);
+   UUID tenantId=paymentTenantId(payment);
   Map<String,String> data=Map.of("payment_id",payment.getId().toString(),"operation_type",payment.getOperationType().name(),"status",status.name());
   domainEvents.publish(type,"Payments & Billing","DigitalPayment",payment.getId(),tenantId,
    List.of(payment.getProfile().getAccountId()),data);
  }
  private UUID paymentTenantId(DigitalPayment payment){
-  return switch(payment.getOperationType()){
-   case RESERVATION -> reservations.byPayment(payment.getId()).map(Reservation::getTenantId).orElse(null);
+   return switch(payment.getOperationType()){
+    case RESERVATION -> reservations.byPayment(payment.getId()).map(Reservation::getTenantId).orElse(null);
+    case RESERVATION_ADJUSTMENT -> reservationChanges.byPayment(payment.getId()).map(c->c.getReservation().getTenantId()).orElse(null);
    case SUBSCRIPTION -> subscriptions.byPayment(payment.getId()).map(Subscription::getTenantId).orElseGet(()->subscriptionRequest(payment).tenantId());
    case SUBSCRIPTION_ADJUSTMENT -> subscriptions.findById(subscriptionAdjustmentRequest(payment).subscriptionId()).map(Subscription::getTenantId).orElse(null);
    case ADDITIONAL_CHARGE -> charges.byPayment(payment.getId()).map(charge->charge.getReservation().getTenantId()).orElse(null);
@@ -488,17 +566,22 @@ public class BillingService {
   };
  }
  private void approved(DigitalPayment p) {
-  switch(p.getOperationType()){
-   case RESERVATION -> {
-    var r=reservations.byPayment(p.getId()).orElseThrow(()->conflict("Payment has no associated reservation."));
-    if(r.getStatus()==ReservationStatus.RESERVED||r.getStatus()==ReservationStatus.ACTIVE||r.getStatus()==ReservationStatus.COMPLETED||r.getStatus()==ReservationStatus.OVERSTAYED)return;
-     boolean confirmed=r.getStatus()==ReservationStatus.PENDING_PAYMENT&&r.blocks(clock.instant());
-     if(confirmed)r.confirm(p.getId(),clock.instant());
-     else {r.expire(clock.instant());requestRefundInternal(p,p.getAmount(),"LATE_RESERVATION_APPROVAL");}
-    reservations.saveAndFlush(r);
-     if(confirmed)domainEvents.publish("parking.reservation.confirmed","Parking Infrastructure","Reservation",r.getId(),r.getTenantId(),
-      List.of(r.getProfile().getAccountId()),Map.of("reservation_id",r.getId().toString(),"payment_id",p.getId().toString()));
-   }
+   switch(p.getOperationType()){
+    case RESERVATION -> {
+     var r=reservations.byPayment(p.getId()).orElseThrow(()->conflict("Payment has no associated reservation."));
+     if(r.getStatus()==ReservationStatus.RESERVED||r.getStatus()==ReservationStatus.ACTIVE||r.getStatus()==ReservationStatus.COMPLETED||r.getStatus()==ReservationStatus.OVERSTAYED)return;
+      boolean confirmed=r.getStatus()==ReservationStatus.PENDING_PAYMENT&&r.blocks(clock.instant())&&
+       (r.getParentReservationId()==null||extensionPaymentWindow(r));
+      if(confirmed)r.confirm(p.getId(),clock.instant());
+       else {
+        r.expire(clock.instant());if(r.getStatus()==ReservationStatus.PENDING_PAYMENT)r.cancel();
+        requestRefundInternal(p,p.getAmount(),"LATE_RESERVATION_APPROVAL");
+       }
+     reservations.saveAndFlush(r);
+      if(confirmed)domainEvents.publish("parking.reservation.confirmed","Parking Infrastructure","Reservation",r.getId(),r.getTenantId(),
+       List.of(r.getProfile().getAccountId()),Map.of("reservation_id",r.getId().toString(),"payment_id",p.getId().toString()));
+    }
+    case RESERVATION_ADJUSTMENT -> applyReservationChange(p);
    case ADDITIONAL_CHARGE -> {
     var c=charges.byPayment(p.getId()).orElseThrow(()->conflict("Payment has no associated charge."));c.paid();charges.saveAndFlush(c);
     balances.byCharge(c.getId()).ifPresent(b->{b.regularize(clock.instant());balances.saveAndFlush(b);});
@@ -514,8 +597,40 @@ public class BillingService {
     p.result(PaymentStatus.APPROVED,p.getProviderOperationRef(),"/api/v1/subscriptions/"+s.getId(),clock.instant());
    }
     case SUBSCRIPTION_ADJUSTMENT -> applySubscriptionAdjustment(p);
-   case REFUND -> throw conflict("Incompatible payment operation.");
+    case REFUND -> throw conflict("Incompatible payment operation.");
+   }
+   }
+  private Reservation rootReservation(Reservation reservation){
+   var current=reservation;
+   while(current.getParentReservation()!=null)current=current.getParentReservation();
+   return current;
   }
+  private boolean extensionPaymentWindow(Reservation extension){
+   var root=rootReservation(extension);var now=clock.instant();
+   return root.getStatus()==ReservationStatus.ACTIVE&&now.isBefore(root.getEndAt());
+  }
+  private void applyReservationChange(DigitalPayment payment){
+   var change=reservationChanges.lock(reservationChanges.byPayment(payment.getId())
+     .orElseThrow(()->conflict("Payment has no associated reservation change.")).getId())
+     .orElseThrow(()->missing("Reservation change"));
+   var r=reservations.lock(change.getReservationId()).orElseThrow(()->missing("Reservation"));
+   var now=clock.instant();
+   if(change.getStatus()!=ReservationChangeStatus.PENDING_PAYMENT||r.getStatus()!=ReservationStatus.RESERVED||
+      now.isAfter(r.getStartAt().minusSeconds(300))){
+    change.supersede();reservationChanges.saveAndFlush(change);
+    requestRefundInternal(payment,payment.getAmount(),"STALE_RESERVATION_CHANGE");return;
+   }
+   boolean spotConflict=reservations.overlappingSpot(r.getSpotId(),change.getStartAt(),change.getEndAt()).stream()
+     .anyMatch(other->!other.getId().equals(r.getId())&&other.blocks(now));
+   boolean vehicleConflict=reservations.overlappingVehicle(r.getVehicleId(),change.getStartAt(),change.getEndAt()).stream()
+      .anyMatch(other->!other.getId().equals(r.getId())&&other.blocks(now));
+   boolean pendingConflict=reservationChanges.overlapping(r.getSpotId(),change.getStartAt(),change.getEndAt(),ReservationChangeStatus.PENDING_PAYMENT).stream()
+      .anyMatch(other->!other.getReservationId().equals(r.getId()));
+   if(spotConflict||vehicleConflict||pendingConflict){
+    change.supersede();reservationChanges.saveAndFlush(change);requestRefundInternal(payment,payment.getAmount(),"RESERVATION_CHANGE_CONFLICT");return;
+   }
+   r.reschedule(change.getStartAt(),change.getEndAt(),change.getAmount());change.paymentApproved();
+   reservations.saveAndFlush(r);reservationChanges.saveAndFlush(change);
   }
  private void applySubscriptionAdjustment(DigitalPayment payment){
   var request=subscriptionAdjustmentRequest(payment);
@@ -539,15 +654,23 @@ public class BillingService {
    throw conflict("The payment does not match an approved reservation for this driver and amount.");
  }
  @Transactional
- public void cancelled(Reservation r) {
-  if(r.getPaymentId()==null)return;
-  var p=payments.lock(r.getPaymentId()).orElseThrow(()->missing("Payment"));
-  if(p.getStatus()==PaymentStatus.APPROVED){
-   var committed=refunds.byPayment(p.getId()).stream().filter(rf->rf.getStatus()!=RefundStatus.FAILED).map(Refund::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
-   var remaining=p.getAmount().subtract(committed);if(remaining.signum()>0)requestRefundInternal(p,remaining,"RESERVATION_CANCELLED");
+  public void cancelled(Reservation r) {
+   var paymentIds=new LinkedHashSet<UUID>();if(r.getPaymentId()!=null)paymentIds.add(r.getPaymentId());
+   for(var change:reservationChanges.byReservation(r.getId())){
+    if(change.getStatus()==ReservationChangeStatus.PENDING_PAYMENT||change.getStatus()==ReservationChangeStatus.REFUND_SCHEDULED){
+     change.supersede();reservationChanges.saveAndFlush(change);
+    }
+    if(change.getPaymentId()!=null)paymentIds.add(change.getPaymentId());
+   }
+   for(UUID id:paymentIds){
+    var p=payments.lock(id).orElseThrow(()->missing("Payment"));
+    if(p.getStatus()==PaymentStatus.APPROVED){
+     var committed=refunds.byPayment(p.getId()).stream().filter(rf->rf.getStatus()!=RefundStatus.FAILED).map(Refund::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
+     var remaining=p.getAmount().subtract(committed);if(remaining.signum()>0)requestRefundInternal(p,remaining,"RESERVATION_CANCELLED");
+    }else if(p.getStatus()==PaymentStatus.INITIATED||p.getStatus()==PaymentStatus.REJECTED)
+     p.result(PaymentStatus.CANCELLED,p.getProviderOperationRef(),"CANCELLED_WITH_RESERVATION",clock.instant());
+   }
   }
-  else if(p.getStatus()==PaymentStatus.INITIATED||p.getStatus()==PaymentStatus.REJECTED)p.result(PaymentStatus.CANCELLED,p.getProviderOperationRef(),"CANCELLED_WITH_RESERVATION",clock.instant());
- }
  @Transactional
  public void completed(Reservation r,ParkingSession session) {
   if(r.getStatus()!=ReservationStatus.OVERSTAYED||session.getExitAt()==null)return;
@@ -585,13 +708,16 @@ public class BillingService {
   access.lockProfile(p.getProfileId());p=payments.lock(payment).orElseThrow(()->missing("Payment"));return requestRefundInternal(p,amount,reason);
  }
  @Transactional
- public Refund processRefund(SpotgoUserPrincipal actor,UUID id) {
+  public Refund processRefund(SpotgoUserPrincipal actor,UUID id) {
   var current=refunds.findById(id).orElseThrow(()->missing("Refund"));access.payment(actor,current.getPayment());
   if(actor.getRole()!=UserRole.SUPER_ADMIN&&actor.getRole()!=UserRole.PARKING_ADMIN)throw new AccessDeniedException("Only an authorized administrator can perform this action.");
-  access.lockProfile(current.getPayment().getProfileId());payments.lock(current.getPaymentId());
-  var r=refunds.lock(id).orElseThrow(()->missing("Refund"));
-  if(r.getStatus()==RefundStatus.COMPLETED)return r;
-  BigDecimal otherRefunds=refunds.byPayment(r.getPaymentId()).stream().filter(other->!other.getId().equals(r.getId())&&other.getStatus()!=RefundStatus.FAILED).map(Refund::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
+   access.lockProfile(current.getPayment().getProfileId());payments.lock(current.getPaymentId());
+   var r=refunds.lock(id).orElseThrow(()->missing("Refund"));
+   return processRefundLocked(r);
+  }
+  private Refund processRefundLocked(Refund r) {
+   if(r.getStatus()==RefundStatus.COMPLETED)return r;
+   BigDecimal otherRefunds=refunds.byPayment(r.getPaymentId()).stream().filter(other->!other.getId().equals(r.getId())&&other.getStatus()!=RefundStatus.FAILED).map(Refund::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
   if(otherRefunds.add(r.getAmount()).compareTo(r.getPayment().getAmount())>0)throw conflict("The refundable amount has already been used.");
   PaymentProvider.RefundResult result;
   try{
@@ -604,8 +730,52 @@ public class BillingService {
   if(result==null||result.status()==null)throw conflict("Invalid refund response.");
   if(result.status()==RefundStatus.COMPLETED&&result.operationReference()==null)throw conflict("Refund has no verifiable provider reference.");
   RefundStatus previous=r.getStatus();r.result(result.status(),result.operationReference(),clock.instant());refunds.saveAndFlush(r);
-  if(previous!=r.getStatus())publishRefundEvent(r);return r;
- }
+   if(previous!=r.getStatus())publishRefundEvent(r);return r;
+  }
+  @Transactional
+  public void processReservationChangeRefunds() {
+   var now=clock.instant();
+   for(var candidate:reservationChanges.dueRefunds(ReservationChangeStatus.REFUND_SCHEDULED,now)){
+    var change=reservationChanges.lock(candidate.getId()).orElse(null);
+    if(change==null||change.getStatus()!=ReservationChangeStatus.REFUND_SCHEDULED||change.getRefundDueAt()==null||now.isBefore(change.getRefundDueAt()))continue;
+    var reservation=reservations.lock(change.getReservationId()).orElseThrow(()->missing("Reservation"));
+    access.lockProfile(reservation.getProfileId());
+    var history=reservationChanges.byReservation(reservation.getId());
+    BigDecimal refundable=reservationPaidBalance(reservation,history).subtract(change.getAmount()).max(BigDecimal.ZERO).setScale(2,RoundingMode.HALF_UP);
+    if(refundable.signum()==0){change.refundResult(true,false);reservationChanges.saveAndFlush(change);continue;}
+    var candidates=new ArrayList<DigitalPayment>();
+    if(reservation.getPaymentId()!=null)payments.findById(reservation.getPaymentId()).filter(p->p.getStatus()==PaymentStatus.APPROVED).ifPresent(candidates::add);
+    history.stream().filter(c->c.getPaymentId()!=null).sorted(Comparator.comparing(ReservationChange::getCreatedAt).reversed())
+      .forEach(c->payments.findById(c.getPaymentId()).filter(p->p.getStatus()==PaymentStatus.APPROVED).ifPresent(candidates::add));
+    BigDecimal remaining=refundable;
+    for(var payment:candidates){
+     if(remaining.signum()<=0)break;
+     BigDecimal committed=refunds.byPayment(payment.getId()).stream().filter(r->r.getStatus()!=RefundStatus.FAILED)
+       .map(Refund::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
+     BigDecimal capacity=payment.getAmount().subtract(committed).max(BigDecimal.ZERO);
+     BigDecimal slice=capacity.min(remaining).setScale(2,RoundingMode.HALF_UP);
+     if(slice.signum()>0)refunds.saveAndFlush(new Refund(payment,slice,"RESCHEDULE_REDUCTION",now,change));
+     remaining=remaining.subtract(slice);
+    }
+    if(remaining.signum()>0)throw conflict("The reservation refund exceeds the remaining captured amount.");
+    change.refundRequested();reservationChanges.saveAndFlush(change);
+   }
+   for(var candidate:reservationChanges.findByStatus(ReservationChangeStatus.REFUND_REQUESTED)){
+    var change=reservationChanges.lock(candidate.getId()).orElse(null);
+    if(change==null||change.getStatus()!=ReservationChangeStatus.REFUND_REQUESTED)continue;
+    var reservation=reservations.lock(change.getReservationId()).orElseThrow(()->missing("Reservation"));
+    access.lockProfile(reservation.getProfileId());
+    var associated=refunds.byReservationChange(change.getId());
+    for(var item:associated){
+     if(!Set.of(RefundStatus.REQUESTED,RefundStatus.PROCESSING,RefundStatus.RECONCILIATION_REQUIRED).contains(item.getStatus()))continue;
+     payments.lock(item.getPaymentId());var locked=refunds.lock(item.getId()).orElseThrow(()->missing("Refund"));processRefundLocked(locked);
+    }
+    associated=refunds.byReservationChange(change.getId());
+    boolean completed=!associated.isEmpty()&&associated.stream().allMatch(r->r.getStatus()==RefundStatus.COMPLETED);
+    boolean failed=associated.stream().anyMatch(r->r.getStatus()==RefundStatus.FAILED);
+    if(completed||failed){change.refundResult(completed,failed);reservationChanges.saveAndFlush(change);}
+   }
+  }
  private void publishRefundEvent(Refund refund){
   var payment=refund.getPayment();
   domainEvents.publish("billing.refund.status_changed","Payments & Billing","Refund",refund.getId(),
