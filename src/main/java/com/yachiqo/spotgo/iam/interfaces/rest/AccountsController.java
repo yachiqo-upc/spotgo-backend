@@ -46,11 +46,24 @@ public class AccountsController {
             @NotBlank String firstName, @NotBlank String lastName, @NotBlank String phone) {}
     public record ProvisionedParkingAdminResource(AccountResource account, RoleAssignmentResource roleAssignment,
                                                    ProfileResource profile) {}
+    public record UpdateMyDetailsResource(@NotBlank @Email String email, @NotBlank String firstName,
+            @NotBlank String lastName, @NotBlank String phone) {}
+    public record OwnDetailsResource(AccountResource account, ProfileResource profile) {}
 
     @GetMapping("/me")
     @Operation(tags = "Accounts", summary = "View my account", description = "Returns the account associated with the access token, including its email and status. Retrieve the personal profile from /profiles/me.")
     @ApiResponse(responseCode = "200", description = "Authenticated account found.")
     public AccountResource mine(@AuthenticationPrincipal SpotgoUserPrincipal actor) { return AccountResource.from(administration.own(actor)); }
+
+    @PutMapping("/me")
+    @Operation(tags = "Accounts", summary = "Update my account and profile details", description = "Updates the authenticated account email and personal profile name and phone in one transaction. The new email must be unique.")
+    @ApiResponse(responseCode = "200", description = "Account and profile details updated.")
+    public OwnDetailsResource updateMine(@AuthenticationPrincipal SpotgoUserPrincipal actor,
+            @Valid @RequestBody UpdateMyDetailsResource body, HttpServletRequest request) {
+        var updated = administration.updateOwnDetails(actor, body.email(), body.firstName(), body.lastName(),
+                body.phone(), request.getRemoteAddr());
+        return new OwnDetailsResource(AccountResource.from(updated.account()), ProfileResource.from(updated.profile()));
+    }
 
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")

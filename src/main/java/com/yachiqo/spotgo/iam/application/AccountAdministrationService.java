@@ -31,6 +31,7 @@ public class AccountAdministrationService {
     private final Clock clock;
     private final SpotgoDomainEventPublisher domainEvents;
     public record ProvisionedParkingAdmin(Account account, RoleAssignment roleAssignment, Profile profile) {}
+    public record OwnDetails(Account account, Profile profile) {}
     public AccountAdministrationService(AccountRepository accounts, RoleAssignmentRepository roles,
             SessionRepository sessions, AuditEntryRepository audits, TenantRepository parkings,
             ProfilesManagementService profiles, AuthenticationService authentication, Clock clock,
@@ -40,6 +41,28 @@ public class AccountAdministrationService {
         this.clock = clock; this.domainEvents = domainEvents;
     }
     public Account own(SpotgoUserPrincipal actor) { return account(actor.getAccountId()); }
+    @Transactional
+    public OwnDetails updateOwnDetails(SpotgoUserPrincipal actor, String email, String firstName,
+                                       String lastName, String phone, String source) {
+        var account = accounts.findByIdForUpdate(actor.getAccountId()).orElseThrow(() -> notFound());
+        String normalizedEmail = Account.normalizeEmail(email);
+        var owner = accounts.findByEmail(normalizedEmail).orElse(null);
+        if (owner != null && !owner.getId().equals(account.getId()))
+            throw new IamException(HttpStatus.CONFLICT, "Email is already in use.");
+
+        boolean emailChanged = !account.getEmail().equals(normalizedEmail);
+        account.changeEmail(normalizedEmail);
+        var profile = profiles.update(actor, firstName, lastName, phone);
+        account = accounts.saveAndFlush(account);
+        audits.save(new AuditEntry(accounts.getReferenceById(actor.getAccountId()),
+                "ACCOUNT_DETAILS_CHANGE", "SUCCESS", source, clock.instant()));
+        if (emailChanged) {
+            domainEvents.publish("identity.account.email_changed", "Identity & Access Management", "Account",
+                    account.getId(), null, List.of(account.getId()),
+                    Map.of("account_id", account.getId().toString()));
+        }
+        return new OwnDetails(account, profile);
+    }
     public Page<Account> list(SpotgoUserPrincipal actor, int page, int size) {
         requireSuper(actor); return accounts.findAll(page(page, size));
     }
