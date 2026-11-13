@@ -356,6 +356,102 @@
                                "spot_type": "STANDARD",
                                "features": {"covered": false, "ev_charger": true},
                                "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000047",
+                               "zone_id": "00000000-0000-4000-8000-000000000031",
+                               "code": "A-03",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": false, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000048",
+                               "zone_id": "00000000-0000-4000-8000-000000000031",
+                               "code": "A-04",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": true, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000049",
+                               "zone_id": "00000000-0000-4000-8000-000000000031",
+                               "code": "A-05",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": false, "accessible": true},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000050",
+                               "zone_id": "00000000-0000-4000-8000-000000000031",
+                               "code": "A-06",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": false, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000051",
+                               "zone_id": "00000000-0000-4000-8000-000000000032",
+                               "code": "A-03",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": true, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000052",
+                               "zone_id": "00000000-0000-4000-8000-000000000032",
+                               "code": "A-04",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": false, "accessible": true},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000053",
+                               "zone_id": "00000000-0000-4000-8000-000000000032",
+                               "code": "A-05",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": false, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000054",
+                               "zone_id": "00000000-0000-4000-8000-000000000032",
+                               "code": "A-06",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": true, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000055",
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "code": "D-03",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": false, "accessible": true},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000056",
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "code": "D-04",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": true, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000057",
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "code": "D-05",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": true, "ev_charger": false, "accessible": false},
+                               "operational_status": "ACTIVE"
+                           },
+                           {
+                               "spot_id": "00000000-0000-4000-8000-000000000058",
+                               "zone_id": "00000000-0000-4000-8000-000000000033",
+                               "code": "D-06",
+                               "spot_type": "STANDARD",
+                               "features": {"covered": false, "ev_charger": false, "accessible": true},
+                               "operational_status": "ACTIVE"
                            }
                       ],
     "floor_plans":  [
@@ -420,7 +516,7 @@
                            {
                                "token_id":  "00000000-0000-4000-8000-000000000071",
                                "profile_id":  "00000000-0000-4000-8000-000000000012",
-                               "provider_token_ref":  "demo-card-not-chargeable-001",
+                               "provider_token_ref":  "simulated:visa:4242:00000000-0000-4000-8000-000000000071",
                                "brand":  "VISA",
                                "last_four":  "4242",
                                "expiration_month":  12,
@@ -433,7 +529,7 @@
                            {
                                "token_id":  "00000000-0000-4000-8000-000000000072",
                                "profile_id":  "00000000-0000-4000-8000-000000000011",
-                               "provider_token_ref":  "demo-provider-token-admin",
+                               "provider_token_ref":  "simulated:visa:4242:00000000-0000-4000-8000-000000000072",
                                "brand":  "VISA",
                                "last_four":  "4242",
                                "expiration_month":  12,
@@ -518,7 +614,7 @@
                                  "token_id":  "00000000-0000-4000-8000-000000000072",
                                  "operation_type":  "SUBSCRIPTION",
                                  "profile_id":  "00000000-0000-4000-8000-000000000011",
-                                 "amount":  34,
+                                 "amount":  42,
                                  "currency":  "PEN",
                                  "status":  "APPROVED",
                                  "provider_operation_ref":  "demo-subscription-tenant",
@@ -697,14 +793,22 @@
                                            "billing_period_months":  1,
                                            "app_usage_price":  30,
                                            "price_per_iot_device":  1,
-                                           "price":  34,
-                                           "parking_spot_count":  4,
-                                           "included_sensors":  4,
+                                           "price":  42,
+                                           "parking_spot_count":  12,
+                                           "included_sensors":  12,
                                            "licensed_spot_ids": [
                                                "00000000-0000-4000-8000-000000000041",
                                                "00000000-0000-4000-8000-000000000042",
                                                "00000000-0000-4000-8000-000000000043",
-                                               "00000000-0000-4000-8000-000000000044"
+                                               "00000000-0000-4000-8000-000000000044",
+                                               "00000000-0000-4000-8000-000000000047",
+                                               "00000000-0000-4000-8000-000000000048",
+                                               "00000000-0000-4000-8000-000000000049",
+                                               "00000000-0000-4000-8000-000000000050",
+                                               "00000000-0000-4000-8000-000000000051",
+                                               "00000000-0000-4000-8000-000000000052",
+                                               "00000000-0000-4000-8000-000000000053",
+                                               "00000000-0000-4000-8000-000000000054"
                                            ]
                                        },
                               "start_at":  "2026-11-09T12:30:00Z",
@@ -876,6 +980,94 @@
                                                         "topic":  "demo/spotgo/sensors/4/occupancy"
                                                     },
                                   "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000245",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000047",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/5/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000246",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000048",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/6/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000247",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000049",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/7/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000248",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000031",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000050",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/8/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000249",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000051",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/9/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000250",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000052",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/10/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000251",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000053",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/11/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
+                              },
+                              {
+                                  "sensor_id":  "00000000-0000-4000-8000-000000000252",
+                                  "tenant_id":  "00000000-0000-4000-8000-000000000021",
+                                  "zone_id":  "00000000-0000-4000-8000-000000000032",
+                                  "spot_id":  "00000000-0000-4000-8000-000000000054",
+                                  "protocol":  "MQTT",
+                                  "status":  "ACTIVE",
+                                  "last_seen_at":  "2026-11-09T13:55:01Z",
+                                  "configuration":  { "topic":  "demo/spotgo/sensors/12/occupancy" },
+                                  "installed_at":  "2026-11-09T13:00:00Z"
                               }
                           ],
     "occupancy_readings":  [
@@ -918,6 +1110,86 @@
                                    "received_at":  "2026-11-09T13:55:01Z",
                                    "quality":  99,
                                    "payload_hash":  "bb3116d1e0111b75ce33e9c84459393692dc90994e08f855928150e2d5841c10"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000255",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000245",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000047",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "be7ed648fe0b2505aaa6b2b7499b97d610a5650ffd2cd0e91c48e320cec8ff9c"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000256",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000246",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000048",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "b792dad7c4a90964a2a7c591352bdfa2e7ba52c8fdfe50f69522658b8a7363a0"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000257",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000247",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000049",
+                                   "occupancy_status":  "OCCUPIED",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "6ac6dfc09da5b34d7850f6bbfe0c03035b33688c7be9936585a26da0b7b5d15b"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000258",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000248",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000050",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "34bab8d39480c888334f3438831c8183b3d32a77cd981e20e98fbbabcb9a09a2"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000259",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000249",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000051",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "6737f9ca4d249581b206788b8d45cdd4ef2fd5e00d6159da258efa14b36d69e6"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000260",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000250",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000052",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "85111f7a03cf7b825a51beb30dac307a0d9b8b8094ffda2fa35adb451fa43336"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000261",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000251",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000053",
+                                   "occupancy_status":  "OCCUPIED",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "a20624c276ed6fcb910e3b3face0d01ce0d3da7efd6034d2155cca800e6a88de"
+                               },
+                               {
+                                   "reading_id":  "00000000-0000-4000-8000-000000000262",
+                                   "sensor_id":  "00000000-0000-4000-8000-000000000252",
+                                   "spot_id":  "00000000-0000-4000-8000-000000000054",
+                                   "occupancy_status":  "AVAILABLE",
+                                   "occurred_at":  "2026-11-09T13:55:00Z",
+                                   "received_at":  "2026-11-09T13:55:01Z",
+                                   "quality":  99,
+                                   "payload_hash":  "702bcca130170fc303b6105cfdf840f5b25c218bec99dac5de15aadcfa282720"
                                }
                            ],
     "sensor_health_events":  [

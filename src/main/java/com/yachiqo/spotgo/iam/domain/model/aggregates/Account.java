@@ -31,6 +31,11 @@ public class Account extends AbstractDomainAggregateRoot<Account> {
         this.status = AccountStatus.ACTIVE;
     }
     public static String normalizeEmail(String email) { return email == null ? null : email.trim().toLowerCase(Locale.ROOT); }
+    public void changeEmail(String email) {
+        String normalized = normalizeEmail(email);
+        if (normalized == null || normalized.isBlank()) throw new IllegalArgumentException("Email is required.");
+        this.email = normalized;
+    }
     public void changeStatus(AccountStatus status) { this.status = Objects.requireNonNull(status); }
     public boolean isActive() { return status == AccountStatus.ACTIVE; }
     @PrePersist protected void onCreate() { createdAt = updatedAt = Instant.now(); }
